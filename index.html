@@ -602,11 +602,7 @@
     const reward = globalSettings.adReward || 50;
     tg.showConfirm(`Watch an ad to earn ${reward} coins?`, async (confirmed) => {
         if (confirmed) {
-            try {
-                // Show the rewarded ad
-                await show_9649353('pop'); // <-- actual ad runs here
-
-                // Reward the user after successful ad watch
+            try { await show_9649353('pop');              
                 const newCoins = (userData.coins || 0) + reward;
                 await syncUserData({ coins: newCoins });
                 tg.showAlert(`Ad watched! You earned ${reward} coins. 🎉`);
