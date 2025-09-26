@@ -828,7 +828,7 @@ window.requestWithdrawal = async function() {
 
         window.convertCoins = async function() { const amount = parseInt(document.getElementById('convert-amount').value); if (isNaN(amount) || amount <= 0) { tg.showAlert("Enter a valid coin amount."); return; } if (amount > (userData.coins || 0)) { tg.showAlert("You do not have enough coins."); return; } const rate = globalSettings.conversionRate || 1000; const converted = amount / rate; await syncUserData({ coins: (userData.coins || 0) - amount, exchangedTotal: (userData.exchangedTotal || 0) + converted }); tg.showAlert(`Converted ${amount} coins into ${converted.toFixed(4)} units.`); updateUI(); };
 
-        function loadReferralData() { const linkInput = document.getElementById('referral-link'); linkInput.value = `https://t.me/Finisher_farming_bot?start=${currentUser.id}`; const displayEl = document.getElementById('referral-history-list'); const referralCount = userData.referrals?.length || 0; if (referralCount === 0) { displayEl.innerHTML = `<p>No referrals yet. Share your link to earn 500 coins per referral!</p>`; } else { displayEl.innerHTML = `<p>You have referred <strong>${referralCount} users</strong> and earned <strong>${referralCount * 500} coins</strong>!</p><div style="margin-top: 10px;"><strong>Referral IDs:</strong><br>${userData.referrals.map(id => `• ${id}`).join('<br>')}</div>`; } }
+        function loadReferralData() { const linkInput = document.getElementById('referral-link'); linkInput.value = `https://t.me/mining_tech_bot?start=${currentUser.id}`; const displayEl = document.getElementById('referral-history-list'); const referralCount = userData.referrals?.length || 0; if (referralCount === 0) { displayEl.innerHTML = `<p>No referrals yet. Share your link to earn 500 coins per referral!</p>`; } else { displayEl.innerHTML = `<p>You have referred <strong>${referralCount} users</strong> and earned <strong>${referralCount * 500} coins</strong>!</p><div style="margin-top: 10px;"><strong>Referral IDs:</strong><br>${userData.referrals.map(id => `• ${id}`).join('<br>')}</div>`; } }
 
         window.copyReferralLink = async function() { const linkInput = document.getElementById('referral-link'); try { await navigator.clipboard.writeText(linkInput.value); tg.showAlert('Referral link copied!'); } catch (err) { linkInput.select(); document.execCommand('copy'); tg.showAlert('Referral link copied!'); } };
     
@@ -845,6 +845,11 @@ window.requestWithdrawal = async function() {
             }
         }
         async function loadAdminData() {
+    // Bind the event listener for the task type dropdown
+    document.getElementById('task-type-input').addEventListener('change', (e) => {
+        const keyContainer = document.getElementById('task-key-container');
+        keyContainer.classList.toggle('hidden', e.target.value !== 'youtube_video');
+    });
             // Load Settings
             const settings = (await db.collection('settings').doc('global').get()).data() || {};
             document.getElementById('setting-farm-rate').value = settings.farmRate || 100;
