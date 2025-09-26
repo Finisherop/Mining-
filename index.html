@@ -461,77 +461,72 @@
             </div>
         </div>
     </div>
-    <script>
+    <script>                  
     // --- JAVASCRIPT LOGIC --- //
     document.addEventListener('DOMContentLoaded', () => {
         // --- Firebase Configuration --- //
         const firebaseConfig = {
-  apiKey: "AIzaSyBWhjcgCmp5A6V5uCSSB-j8yMKqRYZuHIY",
-  authDomain: "mining-bot-6131b.firebaseapp.com",
-  projectId: "mining-bot-6131b",
-  storageBucket: "mining-bot-6131b.firebasestorage.app",
-  messagingSenderId: "614776449697",
-  appId: "1:614776449697:web:a13c41c86b4aa16b2adee0"
-};
+            apiKey: "AIzaSyBWhjcgCmp5A6V5uCSSB-j8yMKqRYZuHIY",
+            authDomain: "mining-bot-6131b.firebaseapp.com",
+            projectId: "mining-bot-6131b",
+            storageBucket: "mining-bot-6131b.firebasestorage.app",
+            messagingSenderId: "614776449697",
+            appId: "1:614776449697:web:a13c41c86b4aa16b2adee0"
+        };
+
         // --- Firebase Initialization --- //
         try {
             firebase.initializeApp(firebaseConfig);
-        } catch(e) {
+        } catch (e) {
             console.error("Firebase initialization failed. Make sure you have pasted your config object.", e);
             document.getElementById('loader').innerText = "Firebase Config Missing!";
             return;
         }
         const db = firebase.firestore();
         const tg = window.Telegram.WebApp;
+
         // --- Global Variables --- //
         let currentUser = null;
         let userData = null;
         let farmInterval = null;
+
         // Firestore Security Rules (for reference, apply these in your Firebase Console)
         /*
         rules_version = '2';
         service cloud.firestore {
           match /databases/{database}/documents {
-            // Users can only read/write their own data
             match /users/{userId} {
               allow read, write: if request.auth.uid == userId;
             }
-            // Users can create withdrawal requests
             match /withdrawals/{withdrawalId} {
                 allow create: if request.auth != null;
                 allow read: if request.auth.uid == resource.data.userId;
             }
-            // Admin settings are read-only for users
             match /settings/global {
                 allow read: if true;
             }
-            // Admin only rules (you would typically use custom claims for role-based access)
-            // For this simple project, we'll manage admin actions via a trusted environment.
           }
         }
         */
+
         /**
          * Main initialization function. Determines if the user is in Telegram or a browser.
          */
         function initializeApp() {
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                // User is in Telegram Mini WebApp
                 tg.ready();
                 tg.expand();
                 currentUser = tg.initDataUnsafe.user;
                 document.getElementById('app-container').classList.remove('hidden');
                 initUserPanel();
             } else {
-                // User is in a standard browser, show Admin Panel
                 document.getElementById('admin-panel').classList.remove('hidden');
                 document.getElementById('admin-login-screen').classList.remove('hidden');
             }
             document.getElementById('loader').classList.add('hidden');
         }
+
         // --- USER PANEL LOGIC --- //
-        /**
-         * Initializes the user panel with Telegram data and fetches data from Firebase.
-         */
         async function initUserPanel() {
             document.getElementById('user-name').innerText = currentUser.first_name;
             if (currentUser.photo_url) {
@@ -540,29 +535,25 @@
             await loadUserData();
             setupEventListeners();
         }
-        /**
-         * Loads user data from localStorage cache or fetches from Firebase.
-         */
+
         async function loadUserData() {
             const userId = currentUser.id.toString();
-            // Try loading from localStorage first
             const cachedData = localStorage.getItem(`userData_${userId}`);
             if (cachedData) {
                 userData = JSON.parse(cachedData);
                 console.log("Loaded user data from cache.");
                 updateUI();
             }
-            // Fetch from Firebase to get the latest data
+
             const userRef = db.collection('users').doc(userId);
             const doc = await userRef.get();
             if (doc.exists) {
                 userData = doc.data();
-                 if (!cachedData || JSON.stringify(userData) !== cachedData) {
+                if (!cachedData || JSON.stringify(userData) !== cachedData) {
                     console.log("Fetched fresh user data from Firebase.");
                     updateUI();
                 }
             } else {
-                // Create a new user if one doesn't exist
                 console.log("Creating new user in Firebase.");
                 userData = {
                     id: userId,
@@ -572,28 +563,22 @@
                     xp: 0,
                     level: 1,
                     farmingStartTime: null,
-                    farmingDuration: 24 * 60 * 60 * 1000, // 24 hours in ms
+                    farmingDuration: 24 * 60 * 60 * 1000,
                     referrals: [],
                     exchangedTotal: 0
                 };
                 await userRef.set(userData);
                 updateUI();
             }
-            // Sync to localStorage
             localStorage.setItem(`userData_${userId}`, JSON.stringify(userData));
         }
-        /**
-         * Central function to update all UI elements with the latest userData.
-         */
+
         function updateUI() {
             if (!userData) return;
             document.getElementById('coin-balance-container').innerText = `💰 ${Math.floor(userData.coins)}`;
             checkFarmingStatus();
         }
-        /**
-         * Updates both Firebase and localStorage with new data.
-         * @param {object} updatedData - The fields to update.
-         */
+
         async function syncUserData(updatedData) {
             Object.assign(userData, updatedData);
             localStorage.setItem(`userData_${currentUser.id}`, JSON.stringify(userData));
@@ -601,34 +586,28 @@
             await userRef.update(updatedData);
             console.log("Synced data:", updatedData);
         }
-        /**
-         * Sets up all event listeners for the user panel.
-         */
+
         function setupEventListeners() {
-            // Navigation bar
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.addEventListener('click', (e) => {
                     const tabId = e.currentTarget.dataset.tab;
                     switchTab(tabId);
                 });
             });
-            // Farming button
             document.getElementById('farm-button').addEventListener('click', handleFarmButtonClick);
         }
-        /**
-         * Handles navigation between tabs.
-         * @param {string} tabId - The ID of the tab to show.
-         */
+
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
             document.querySelector(`.nav-item[data-tab="${tabId}"]`).classList.add('active');
-            // Refresh data when switching to certain tabs
+
             if (tabId === 'referral-tab') loadReferralData();
             if (tabId === 'exchange-tab') loadWithdrawalHistory();
             if (tabId === 'profile-tab') updateProfileTab();
         }
+
         // --- FARMING LOGIC --- //
         function handleFarmButtonClick() {
             const button = document.getElementById('farm-button');
@@ -638,10 +617,12 @@
                 claimReward();
             }
         }
+
         async function startFarming() {
             await syncUserData({ farmingStartTime: Date.now() });
             checkFarmingStatus();
         }
+
         async function claimReward() {
             const farmRate = 100; // coins per minute
             const elapsedMinutes = userData.farmingDuration / (60 * 1000);
@@ -652,11 +633,13 @@
             checkLevelUp(userData.xp, userData.xp + 100);
             updateUI();
         }
+
         function checkFarmingStatus() {
             const button = document.getElementById('farm-button');
             const timerEl = document.getElementById('farm-timer');
             const progressEl = document.getElementById('farm-progress');
             if (farmInterval) clearInterval(farmInterval);
+
             if (userData.farmingStartTime) {
                 const endTime = userData.farmingStartTime + userData.farmingDuration;
                 farmInterval = setInterval(() => {
@@ -689,6 +672,7 @@
                 stopLeafAnimation();
             }
         }
+
         // --- ANIMATION LOGIC --- //
         let leafAnimationActive = false;
         function startLeafAnimation() {
@@ -700,7 +684,7 @@
                 leaf.className = 'leaf';
                 leaf.innerHTML = ['🍂', '🍁'][Math.round(Math.random())];
                 leaf.style.left = `${Math.random() * 100}vw`;
-                leaf.style.animationDuration = `${Math.random() * 3 + 4}s`; // 4 to 7 seconds
+                leaf.style.animationDuration = `${Math.random() * 3 + 4}s`;
                 leaf.style.animationDelay = `${Math.random() * 5}s`;
                 container.appendChild(leaf);
             }
@@ -709,6 +693,7 @@
             leafAnimationActive = false;
             document.getElementById('falling-leaves-container').innerHTML = '';
         }
+
         // --- LEVEL UP & CONFETTI --- //
         function checkLevelUp(oldXp, newXp) {
             const levelThreshold = (level) => Math.floor(100 * Math.pow(level, 1.5));
@@ -743,55 +728,36 @@
                 container.appendChild(confetti);
             }
         }
-        // Add keyframes for confetti
         const styleSheet = document.createElement("style");
         styleSheet.type = "text/css";
         styleSheet.innerText = `@keyframes confetti-fall { to { transform: translateY(150vh) rotate(${Math.random() * 720}deg); opacity: 0; } }`;
         document.head.appendChild(styleSheet);
-        // --- OTHER TABS LOGIC --- //
-        window.showYouTubeTask = async function(){ openYouTube(); };
-        window.joinTelegram = function(type){ if(type==='channel') openChannel(); else openGroup(); };
-        function loadReferralData(){ /* replaced by improved loadReferralData in utilities */ loadReferralData(); }
-        window.copyReferralLink = function() {
-            const linkInput = document.getElementById('referral-link');
-            linkInput.select();
-            document.execCommand('copy');
-            tg.showAlert('Referral link copied!');
-        }
+        
+        // --- TABS LOGIC & UTILITIES --- //
+
         async function loadWithdrawalHistory() {
-             const querySnapshot = await db.collection('withdrawals').where('userId', '==', currentUser.id.toString()).get();
-             const listEl = document.getElementById('withdrawal-history-list');
-             listEl.innerHTML = '';
-             if(querySnapshot.empty) {
-                 listEl.innerHTML = '<p>No withdrawal history.</p>';
-                 return;
-             }
-             querySnapshot.forEach(doc => {
-                 const data = doc.data();
-                 const item = document.createElement('div');
-                 item.className = 'history-item';
-                 item.innerHTML = `
-                    <div class="history-info">
-                        <strong>${data.amount} ${data.method.toUpperCase()}</strong> to ${data.address}
-                        <br>
-                        <small>Status: ${data.status}</small>
-                    </div>
-                 `;
-                 listEl.appendChild(item);
-             });
-        }
-        /* requestWithdrawal defined in utilities block */
-            await db.collection('withdrawals').add({
-                userId: currentUser.id.toString(),
-                amount,
-                method,
-                address,
-                status: 'pending',
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            const querySnapshot = await db.collection('withdrawals').where('userId', '==', currentUser.id.toString()).get();
+            const listEl = document.getElementById('withdrawal-history-list');
+            listEl.innerHTML = '';
+            if (querySnapshot.empty) {
+                listEl.innerHTML = '<p>No withdrawal history.</p>';
+                return;
+            }
+            querySnapshot.forEach(doc => {
+                const data = doc.data();
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.innerHTML = `
+                   <div class="history-info">
+                       <strong>${data.amount} ${data.method.toUpperCase()}</strong> to ${data.address}
+                       <br>
+                       <small>Status: ${data.status}</small>
+                   </div>
+                `;
+                listEl.appendChild(item);
             });
-            tg.showAlert("Withdrawal request submitted! You will be notified of status changes.");
-            loadWithdrawalHistory();
         }
+        
         function updateProfileTab() {
             document.getElementById('profile-userid').innerText = userData.id;
             document.getElementById('profile-coins').innerText = Math.floor(userData.coins);
@@ -799,12 +765,13 @@
             document.getElementById('profile-referrals').innerText = userData.referrals.length;
             document.getElementById('profile-level').innerText = userData.level;
         }
+
         // --- ADMIN PANEL LOGIC --- //
         window.handleAdminLogin = function() {
             const email = document.getElementById('admin-email').value;
             const pass = document.getElementById('admin-password').value;
             const errorEl = document.getElementById('admin-login-error');
-            if(email === 'admin@gmail.com' && pass === 'admin123') {
+            if (email === 'admin@gmail.com' && pass === 'admin123') {
                 document.getElementById('admin-login-screen').classList.add('hidden');
                 document.getElementById('admin-dashboard').classList.remove('hidden');
                 loadAdminData();
@@ -813,14 +780,12 @@
             }
         }
         async function loadAdminData() {
-            // Load settings
             const settings = (await db.collection('settings').doc('global').get()).data();
-            if(settings) {
+            if (settings) {
                 document.getElementById('setting-farm-rate').value = settings.farmRate || 100;
                 document.getElementById('setting-yt-key').value = settings.ytKey || '';
                 document.getElementById('setting-conversion-rate').value = settings.conversionRate || 1000;
             }
-            // Load withdrawal requests
             const querySnapshot = await db.collection('withdrawals').where('status', '==', 'pending').get();
             const tableBody = document.querySelector('#withdrawal-requests-table tbody');
             tableBody.innerHTML = '';
@@ -828,15 +793,15 @@
                 const data = doc.data();
                 const row = tableBody.insertRow();
                 row.innerHTML = `
-                    <td>${data.userId}</td>
-                    <td>${data.amount}</td>
-                    <td>${data.method}</td>
-                    <td>${data.address}</td>
-                    <td>${data.status}</td>
-                    <td>
-                        <button onclick="updateWithdrawalStatus('${doc.id}', 'approved')">Approve</button>
-                        <button onclick="updateWithdrawalStatus('${doc.id}', 'rejected')" style="background:var(--danger-color)">Reject</button>
-                    </td>
+                   <td>${data.userId}</td>
+                   <td>${data.amount}</td>
+                   <td>${data.method}</td>
+                   <td>${data.address}</td>
+                   <td>${data.status}</td>
+                   <td>
+                       <button onclick="updateWithdrawalStatus('${doc.id}', 'approved')">Approve</button>
+                       <button onclick="updateWithdrawalStatus('${doc.id}', 'rejected')" style="background:var(--danger-color)">Reject</button>
+                   </td>
                 `;
             });
         }
@@ -854,62 +819,35 @@
             await db.collection('withdrawals').doc(docId).update({ status: status, adminNote: reason || '' });
             alert(`Withdrawal ${status}. User will be notified.`);
             loadAdminData();
-            // Here you'd trigger a server-side function to send a Telegram message to the user.
         }
+
         // --- TASK OPENERS & UTILITIES --- //
         window.openYouTube = function() {
-            try {
-                tg.openLink("https://www.youtube.com/watch?v=YOUR_VIDEO_ID");
-            } catch(e) {
-                window.open("https://www.youtube.com/watch?v=YOUR_VIDEO_ID", "_blank");
-            }
+            const url = "https://www.youtube.com/watch?v=YOUR_VIDEO_ID";
+            tg.openLink(url);
         };
         window.openChannel = function() {
-            try {
-                tg.openLink("https://t.me/your_channel_name");
-            } catch(e) {
-                window.open("https://t.me/your_channel_name", "_blank");
-            }
+            const url = "https://t.me/your_channel_name";
+            tg.openLink(url);
         };
         window.openGroup = function() {
-            try {
-                tg.openLink("https://t.me/your_group_name");
-            } catch(e) {
-                window.open("https://t.me/your_group_name", "_blank");
-            }
+            const url = "https://t.me/your_group_name";
+            tg.openLink(url);
         };
-        window.openReferralBot = function() {
-            const url = "https://t.me/Mining_tech_bot?start=" + currentUser.id;
-            try {
-                tg.openLink(url);
-            } catch(e) {
-                window.open(url, "_blank");
-            }
-        };
-        // Watch rewarded ad and reward user on success
+        
         window.watchAd = function() {
-            if (typeof show_9934705 === 'undefined') {
-                try { tg.showAlert("Ad SDK not loaded. Try again later."); } catch(e){ alert("Ad SDK not loaded. Try again later."); }
-                return;
-            }
-            show_9934705('pop').then(async () => {
-                const reward = 50;
-                await syncUserData({ coins: (userData.coins || 0) + reward });
-                try { tg.showAlert("You earned " + reward + " coins for watching the ad!"); } catch(e){ alert("You earned " + reward + " coins for watching the ad!"); }
-                updateUI();
-            }).catch(e => {
-                try { tg.showAlert("Ad failed to load. Try again later."); } catch(err){ alert("Ad failed to load. Try again later."); }
-            });
+            // Placeholder for your ad logic
+            tg.showAlert("Watch Ad function called.");
         };
-        // Convert coins to fiat/USDT using global settings.conversionRate
+
         window.convertCoins = async function() {
             const amount = parseInt(document.getElementById('convert-amount').value);
             if (isNaN(amount) || amount <= 0) {
-                try { tg.showAlert("Enter a valid coin amount to convert."); } catch(e){ alert("Enter a valid coin amount to convert."); }
+                tg.showAlert("Enter a valid coin amount to convert.");
                 return;
             }
             if (amount > (userData.coins || 0)) {
-                try { tg.showAlert("You do not have enough coins."); } catch(e){ alert("You do not have enough coins."); }
+                tg.showAlert("You do not have enough coins.");
                 return;
             }
             const settingsDoc = await db.collection('settings').doc('global').get();
@@ -920,18 +858,27 @@
                 coins: (userData.coins || 0) - amount,
                 exchangedTotal: (userData.exchangedTotal || 0) + converted
             });
-            try { tg.showAlert(`Converted ${amount} coins into ${converted.toFixed(4)} units (rate ${rate}).`); } catch(e){ alert(`Converted ${amount} coins into ${converted.toFixed(4)} units (rate ${rate}).`); }
+            tg.showAlert(`Converted ${amount} coins into ${converted.toFixed(4)} units (rate ${rate}).`);
             updateUI();
         };
-        // Improved withdrawal request: checks exchangedTotal and deducts balance
-        /* requestWithdrawal defined in utilities block */
+
+        // FIX: Corrected and merged requestWithdrawal function
+        window.requestWithdrawal = async function() {
+            const amount = parseFloat(document.getElementById('withdrawal-amount').value);
+            const method = document.getElementById('withdrawal-method').value;
+            const address = document.getElementById('withdrawal-address').value.trim();
+
+            if (isNaN(amount) || amount <= 0 || !address) {
+                tg.showAlert("Please fill all withdrawal fields correctly.");
                 return;
             }
+            
             const userExchanged = (userData.exchangedTotal || 0);
             if (amount > userExchanged) {
-                try { tg.showAlert("Insufficient exchanged balance to withdraw."); } catch(e){ alert("Insufficient exchanged balance to withdraw."); }
+                tg.showAlert("Insufficient exchanged balance to withdraw.");
                 return;
             }
+
             await db.collection('withdrawals').add({
                 userId: currentUser.id.toString(),
                 amount,
@@ -940,38 +887,47 @@
                 status: 'pending',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
+
             await syncUserData({ exchangedTotal: userExchanged - amount });
-            try { tg.showAlert("Withdrawal request submitted!"); } catch(e){ alert("Withdrawal request submitted!"); }
+            tg.showAlert("Withdrawal request submitted!");
             loadWithdrawalHistory();
         };
-        // Improved referral link and copy function
+
+        // FIX: Corrected and single version of loadReferralData
         function loadReferralData() {
             const linkInput = document.getElementById('referral-link');
-            const botUrl = `https://t.me/Mining_tech_bot?start=${currentUser.id}`;
+            const botUrl = `https://t.me/Finisher_farming_bot?start=${currentUser.id}`; // Updated bot name
             linkInput.value = botUrl;
-            // Also show shorthand format for display if needed
+            
+            // This part can be improved to show actual referral history
             const displayEl = document.getElementById('referral-history-list');
             if (displayEl) {
-                displayEl.innerHTML = `<p>Share: <strong>@Mining_tech_bot+${currentUser.id}</strong></p>`;
+                // You would fetch and display real referrals here
+                 displayEl.innerHTML = '<p>Your referral list will appear here.</p>';
             }
         }
+        
+        // FIX: Corrected and single version of copyReferralLink
         window.copyReferralLink = async function() {
             const linkInput = document.getElementById('referral-link');
             if (!linkInput) return;
             try {
+                // Modern async clipboard API
                 await navigator.clipboard.writeText(linkInput.value);
-                try { tg.showAlert('Referral link copied!'); } catch(e){ alert('Referral link copied!'); }
-            } catch (e) {
-                // fallback
+                tg.showAlert('Referral link copied!');
+            } catch (err) {
+                // Fallback for older browsers
                 linkInput.select();
                 document.execCommand('copy');
-                try { tg.showAlert('Referral link copied!'); } catch(err){ alert('Referral link copied!'); }
+                tg.showAlert('Referral link copied!');
             }
         };
+
         // --- START THE APP --- //
         initializeApp();
     });
-    </script>
+</script>
+
     <!-- Ad SDK -->
     <script src='//libtl.com/sdk.js' data-zone='9934705' data-sdk='show_9934705'></script>
 </body>
