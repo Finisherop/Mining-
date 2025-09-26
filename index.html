@@ -484,9 +484,11 @@
             });
             document.getElementById('farm-button').addEventListener('click', handleFarmButtonClick);
             document.getElementById('task-type-input')?.addEventListener('change', (e) => {
-                 document.getElementById('task-key-container').classList.toggle('hidden', e.target.value !== 'youtube_video');
-            });
-        }
+    const keyContainer = document.getElementById('task-key-container');
+    if (keyContainer) {
+        keyContainer.classList.toggle('hidden', e.target.value !== 'youtube_video');
+    }
+});
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
