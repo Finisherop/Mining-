@@ -4,12 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>CRYPTO FARMING</title>
+    <link rel="icon" href="https://envs.sh/Gt3.jpg/IMG2025092696.jpg" type="image/jpeg">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
-
     <style>
         /* --- Global Styles & Dark Theme --- */
         :root {
@@ -23,7 +22,6 @@
             --danger-color: #f44336;
             --font-family: 'Helvetica Neue', Arial, sans-serif;
         }
-
         body {
             font-family: var(--font-family);
             background-color: var(--bg-color);
@@ -35,9 +33,7 @@
             flex-direction: column;
             height: 100vh;
         }
-
         .hidden { display: none !important; }
-
         /* --- Loader --- */
         #loader {
             position: fixed;
@@ -52,7 +48,6 @@
             z-index: 9999;
             font-size: 1.5em;
         }
-
         /* --- Main App Container --- */
         #app-container {
             display: flex;
@@ -60,7 +55,6 @@
             height: 100%;
             width: 100%;
         }
-        
         /* --- Header --- */
         .header {
             display: flex;
@@ -85,7 +79,6 @@
             font-size: 1.2em;
             font-weight: bold;
         }
-
         /* --- Main Content --- */
         .main-content {
             flex-grow: 1;
@@ -100,7 +93,6 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
         /* --- Farming Tab --- */
         #farming-tab {
             display: flex;
@@ -157,7 +149,6 @@
         #farm-button:active {
             transform: scale(0.95);
         }
-        
         /* --- Falling Leaves Animation --- */
         #falling-leaves-container {
             position: absolute;
@@ -180,7 +171,6 @@
                 transform: translateY(105vh) rotate(360deg);
             }
         }
-
         /* --- Level Up Popup --- */
         #level-up-popup {
             position: fixed;
@@ -206,7 +196,6 @@
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none;
         }
-        
         /* --- General Task/List Styles --- */
         .task-list, .history-list {
             display: flex;
@@ -240,7 +229,6 @@
             color: var(--primary-text);
             font-size: 1em;
         }
-        
         /* --- Navigation Bar --- */
         .nav-bar {
             display: flex;
@@ -261,7 +249,6 @@
             transform: scale(1.1);
             color: var(--primary-accent);
         }
-
         /* --- Admin Panel --- */
         #admin-panel {
             padding: 20px;
@@ -320,9 +307,7 @@
     </style>
 </head>
 <body>
-
     <div id="loader">Loading... 💰</div>
-
     <div id="app-container" class="hidden">
         <header class="header">
             <div id="coin-balance-container" class="coin-balance">
@@ -333,7 +318,6 @@
                 <img id="user-pic" class="profile-pic" src="https://t.me/i/userpic/320/1.jpg" alt="P">
             </div>
         </header>
-
         <main class="main-content">
             <div id="farming-tab" class="tab-content">
                  <div id="falling-leaves-container"></div>
@@ -399,7 +383,6 @@
                     <p id="conversion-rate">Conversion Rate: 1000 💰 = 1 INR</p>
                     <input type="number" id="convert-amount" placeholder="Enter coin amount">
                     <button onclick="convertCoins()">Convert</button>
-
                     <h4 style="margin-top: 20px;">Request Withdrawal</h4>
                     <select id="withdrawal-method">
                         <option value="upi">UPI</option>
@@ -425,7 +408,6 @@
                 </div>
             </div>
         </main>
-
         <nav class="nav-bar">
             <div class="nav-item active" data-tab="farming-tab">🏠<br>Farm</div>
             <div class="nav-item" data-tab="tasks-tab">📋<br>Tasks</div>
@@ -433,7 +415,6 @@
             <div class="nav-item" data-tab="exchange-tab">💸<br>Exchange</div>
             <div class="nav-item" data-tab="profile-tab">👤<br>Profile</div>
         </nav>
-        
         <div id="level-up-popup">
             <div id="confetti-container"></div>
             <h2>LEVEL UP!</h2>
@@ -441,7 +422,6 @@
             <p>🎉 Rewards Unlocked! 🎉</p>
         </div>
     </div>
-
     <div id="admin-panel" class="hidden">
         <div id="admin-login-screen">
             <div class="login-box">
@@ -452,10 +432,8 @@
                 <p id="admin-login-error" style="color:red;"></p>
             </div>
         </div>
-
         <div id="admin-dashboard" class="hidden">
             <h2>Admin Dashboard</h2>
-            
             <div class="admin-section">
                 <h3>Global Settings</h3>
                 <label>Farming Rate (coins/min):</label>
@@ -469,7 +447,6 @@
                 <br><br>
                 <button onclick="saveAdminSettings()">Save Settings</button>
             </div>
-
             <div class="admin-section">
                 <h3>Withdrawal Requests</h3>
                 <table id="withdrawal-requests-table" class="withdrawal-table">
@@ -477,7 +454,6 @@
                     <tbody></tbody>
                 </table>
             </div>
-
              <div class="admin-section">
                 <h3>Broadcast Message</h3>
                 <textarea id="broadcast-message" rows="4" style="width: 100%;"></textarea>
@@ -485,13 +461,9 @@
             </div>
         </div>
     </div>
-
-
     <script>
     // --- JAVASCRIPT LOGIC --- //
-    
     document.addEventListener('DOMContentLoaded', () => {
-        
         // --- Firebase Configuration --- //
         const firebaseConfig = {
   apiKey: "AIzaSyBWhjcgCmp5A6V5uCSSB-j8yMKqRYZuHIY",
@@ -501,7 +473,6 @@
   messagingSenderId: "614776449697",
   appId: "1:614776449697:web:a13c41c86b4aa16b2adee0"
 };
-        
         // --- Firebase Initialization --- //
         try {
             firebase.initializeApp(firebaseConfig);
@@ -510,15 +481,12 @@
             document.getElementById('loader').innerText = "Firebase Config Missing!";
             return;
         }
-
         const db = firebase.firestore();
         const tg = window.Telegram.WebApp;
-
         // --- Global Variables --- //
         let currentUser = null;
         let userData = null;
         let farmInterval = null;
-        
         // Firestore Security Rules (for reference, apply these in your Firebase Console)
         /*
         rules_version = '2';
@@ -542,7 +510,6 @@
           }
         }
         */
-
         /**
          * Main initialization function. Determines if the user is in Telegram or a browser.
          */
@@ -561,9 +528,7 @@
             }
             document.getElementById('loader').classList.add('hidden');
         }
-
         // --- USER PANEL LOGIC --- //
-
         /**
          * Initializes the user panel with Telegram data and fetches data from Firebase.
          */
@@ -575,13 +540,11 @@
             await loadUserData();
             setupEventListeners();
         }
-
         /**
          * Loads user data from localStorage cache or fetches from Firebase.
          */
         async function loadUserData() {
             const userId = currentUser.id.toString();
-            
             // Try loading from localStorage first
             const cachedData = localStorage.getItem(`userData_${userId}`);
             if (cachedData) {
@@ -589,11 +552,9 @@
                 console.log("Loaded user data from cache.");
                 updateUI();
             }
-
             // Fetch from Firebase to get the latest data
             const userRef = db.collection('users').doc(userId);
             const doc = await userRef.get();
-
             if (doc.exists) {
                 userData = doc.data();
                  if (!cachedData || JSON.stringify(userData) !== cachedData) {
@@ -621,7 +582,6 @@
             // Sync to localStorage
             localStorage.setItem(`userData_${userId}`, JSON.stringify(userData));
         }
-
         /**
          * Central function to update all UI elements with the latest userData.
          */
@@ -630,7 +590,6 @@
             document.getElementById('coin-balance-container').innerText = `💰 ${Math.floor(userData.coins)}`;
             checkFarmingStatus();
         }
-        
         /**
          * Updates both Firebase and localStorage with new data.
          * @param {object} updatedData - The fields to update.
@@ -642,7 +601,6 @@
             await userRef.update(updatedData);
             console.log("Synced data:", updatedData);
         }
-
         /**
          * Sets up all event listeners for the user panel.
          */
@@ -657,7 +615,6 @@
             // Farming button
             document.getElementById('farm-button').addEventListener('click', handleFarmButtonClick);
         }
-        
         /**
          * Handles navigation between tabs.
          * @param {string} tabId - The ID of the tab to show.
@@ -665,18 +622,14 @@
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
-            
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
             document.querySelector(`.nav-item[data-tab="${tabId}"]`).classList.add('active');
-            
             // Refresh data when switching to certain tabs
             if (tabId === 'referral-tab') loadReferralData();
             if (tabId === 'exchange-tab') loadWithdrawalHistory();
             if (tabId === 'profile-tab') updateProfileTab();
         }
-
         // --- FARMING LOGIC --- //
-        
         function handleFarmButtonClick() {
             const button = document.getElementById('farm-button');
             if (button.innerText.includes('Start')) {
@@ -685,38 +638,30 @@
                 claimReward();
             }
         }
-
         async function startFarming() {
             await syncUserData({ farmingStartTime: Date.now() });
             checkFarmingStatus();
         }
-
         async function claimReward() {
             const farmRate = 100; // coins per minute
             const elapsedMinutes = userData.farmingDuration / (60 * 1000);
             const coinsEarned = farmRate * elapsedMinutes;
             const newCoins = userData.coins + coinsEarned;
-            
             await syncUserData({ coins: newCoins, farmingStartTime: null, xp: userData.xp + 100 });
             alert(`You claimed ${coinsEarned.toFixed(0)} coins!`);
             checkLevelUp(userData.xp, userData.xp + 100);
             updateUI();
         }
-
         function checkFarmingStatus() {
             const button = document.getElementById('farm-button');
             const timerEl = document.getElementById('farm-timer');
             const progressEl = document.getElementById('farm-progress');
-
             if (farmInterval) clearInterval(farmInterval);
-
             if (userData.farmingStartTime) {
                 const endTime = userData.farmingStartTime + userData.farmingDuration;
-                
                 farmInterval = setInterval(() => {
                     const now = Date.now();
                     const timeLeft = endTime - now;
-
                     if (timeLeft <= 0) {
                         clearInterval(farmInterval);
                         button.innerText = 'Claim Reward';
@@ -726,19 +671,15 @@
                         stopLeafAnimation();
                         return;
                     }
-                    
                     button.innerText = 'Farming...';
                     button.disabled = true;
                     startLeafAnimation();
-                    
                     const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
                     const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
                     const seconds = Math.floor((timeLeft / 1000) % 60);
                     timerEl.innerText = `Time left: ${hours}h ${minutes}m ${seconds}s`;
-
                     const progress = 100 - (timeLeft / userData.farmingDuration) * 100;
                     progressEl.style.width = `${progress}%`;
-
                 }, 1000);
             } else {
                 button.innerText = 'Start Farming';
@@ -748,9 +689,7 @@
                 stopLeafAnimation();
             }
         }
-        
         // --- ANIMATION LOGIC --- //
-
         let leafAnimationActive = false;
         function startLeafAnimation() {
             if (leafAnimationActive) return;
@@ -766,14 +705,11 @@
                 container.appendChild(leaf);
             }
         }
-
         function stopLeafAnimation() {
             leafAnimationActive = false;
             document.getElementById('falling-leaves-container').innerHTML = '';
         }
-
         // --- LEVEL UP & CONFETTI --- //
-        
         function checkLevelUp(oldXp, newXp) {
             const levelThreshold = (level) => Math.floor(100 * Math.pow(level, 1.5));
             const currentLevelThreshold = levelThreshold(userData.level);
@@ -783,7 +719,6 @@
                 showLevelUpPopup(newLevel);
             }
         }
-        
         function showLevelUpPopup(level) {
             const popup = document.getElementById('level-up-popup');
             document.getElementById('new-level').innerText = `Level ${level}`;
@@ -793,7 +728,6 @@
                 popup.classList.remove('show');
             }, 4000);
         }
-
         function createConfetti() {
             const container = document.getElementById('confetti-container');
             container.innerHTML = '';
@@ -809,31 +743,23 @@
                 container.appendChild(confetti);
             }
         }
-        
         // Add keyframes for confetti
         const styleSheet = document.createElement("style");
         styleSheet.type = "text/css";
         styleSheet.innerText = `@keyframes confetti-fall { to { transform: translateY(150vh) rotate(${Math.random() * 720}deg); opacity: 0; } }`;
         document.head.appendChild(styleSheet);
-
-
         // --- OTHER TABS LOGIC --- //
-
         window.showYouTubeTask = async function(){ openYouTube(); };
             }
         }
-        
         window.joinTelegram = function(type){ if(type==='channel') openChannel(); else openGroup(); };
-        
         function loadReferralData(){ /* replaced by improved loadReferralData in utilities */ loadReferralData(); }
-
         window.copyReferralLink = function() {
             const linkInput = document.getElementById('referral-link');
             linkInput.select();
             document.execCommand('copy');
             tg.showAlert('Referral link copied!');
         }
-
         async function loadWithdrawalHistory() {
              const querySnapshot = await db.collection('withdrawals').where('userId', '==', currentUser.id.toString()).get();
              const listEl = document.getElementById('withdrawal-history-list');
@@ -856,7 +782,6 @@
                  listEl.appendChild(item);
              });
         }
-
         /* requestWithdrawal defined in utilities block */
             await db.collection('withdrawals').add({
                 userId: currentUser.id.toString(),
@@ -869,7 +794,6 @@
             tg.showAlert("Withdrawal request submitted! You will be notified of status changes.");
             loadWithdrawalHistory();
         }
-
         function updateProfileTab() {
             document.getElementById('profile-userid').innerText = userData.id;
             document.getElementById('profile-coins').innerText = Math.floor(userData.coins);
@@ -877,14 +801,11 @@
             document.getElementById('profile-referrals').innerText = userData.referrals.length;
             document.getElementById('profile-level').innerText = userData.level;
         }
-
         // --- ADMIN PANEL LOGIC --- //
-        
         window.handleAdminLogin = function() {
             const email = document.getElementById('admin-email').value;
             const pass = document.getElementById('admin-password').value;
             const errorEl = document.getElementById('admin-login-error');
-
             if(email === 'admin@gmail.com' && pass === 'admin123') {
                 document.getElementById('admin-login-screen').classList.add('hidden');
                 document.getElementById('admin-dashboard').classList.remove('hidden');
@@ -893,7 +814,6 @@
                 errorEl.innerText = "Invalid credentials.";
             }
         }
-        
         async function loadAdminData() {
             // Load settings
             const settings = (await db.collection('settings').doc('global').get()).data();
@@ -922,7 +842,6 @@
                 `;
             });
         }
-        
         window.saveAdminSettings = async function() {
             const settings = {
                 farmRate: parseInt(document.getElementById('setting-farm-rate').value),
@@ -932,7 +851,6 @@
             await db.collection('settings').doc('global').set(settings, { merge: true });
             alert("Settings saved!");
         }
-
         window.updateWithdrawalStatus = async function(docId, status) {
             const reason = prompt(`Enter reason for ${status} (optional):`);
             await db.collection('withdrawals').doc(docId).update({ status: status, adminNote: reason || '' });
@@ -940,8 +858,6 @@
             loadAdminData();
             // Here you'd trigger a server-side function to send a Telegram message to the user.
         }
-        
-        
         // --- TASK OPENERS & UTILITIES --- //
         window.openYouTube = function() {
             try {
@@ -950,7 +866,6 @@
                 window.open("https://www.youtube.com/watch?v=YOUR_VIDEO_ID", "_blank");
             }
         };
-
         window.openChannel = function() {
             try {
                 tg.openLink("https://t.me/your_channel_name");
@@ -958,7 +873,6 @@
                 window.open("https://t.me/your_channel_name", "_blank");
             }
         };
-
         window.openGroup = function() {
             try {
                 tg.openLink("https://t.me/your_group_name");
@@ -966,7 +880,6 @@
                 window.open("https://t.me/your_group_name", "_blank");
             }
         };
-
         window.openReferralBot = function() {
             const url = "https://t.me/Mining_tech_bot?start=" + currentUser.id;
             try {
@@ -975,7 +888,6 @@
                 window.open(url, "_blank");
             }
         };
-
         // Watch rewarded ad and reward user on success
         window.watchAd = function() {
             if (typeof show_9934705 === 'undefined') {
@@ -991,7 +903,6 @@
                 try { tg.showAlert("Ad failed to load. Try again later."); } catch(err){ alert("Ad failed to load. Try again later."); }
             });
         };
-
         // Convert coins to fiat/USDT using global settings.conversionRate
         window.convertCoins = async function() {
             const amount = parseInt(document.getElementById('convert-amount').value);
@@ -1014,18 +925,15 @@
             try { tg.showAlert(`Converted ${amount} coins into ${converted.toFixed(4)} units (rate ${rate}).`); } catch(e){ alert(`Converted ${amount} coins into ${converted.toFixed(4)} units (rate ${rate}).`); }
             updateUI();
         };
-
         // Improved withdrawal request: checks exchangedTotal and deducts balance
         /* requestWithdrawal defined in utilities block */
                 return;
             }
-
             const userExchanged = (userData.exchangedTotal || 0);
             if (amount > userExchanged) {
                 try { tg.showAlert("Insufficient exchanged balance to withdraw."); } catch(e){ alert("Insufficient exchanged balance to withdraw."); }
                 return;
             }
-
             await db.collection('withdrawals').add({
                 userId: currentUser.id.toString(),
                 amount,
@@ -1034,13 +942,10 @@
                 status: 'pending',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
-
             await syncUserData({ exchangedTotal: userExchanged - amount });
-
             try { tg.showAlert("Withdrawal request submitted!"); } catch(e){ alert("Withdrawal request submitted!"); }
             loadWithdrawalHistory();
         };
-
         // Improved referral link and copy function
         function loadReferralData() {
             const linkInput = document.getElementById('referral-link');
@@ -1052,7 +957,6 @@
                 displayEl.innerHTML = `<p>Share: <strong>@Mining_tech_bot+${currentUser.id}</strong></p>`;
             }
         }
-
         window.copyReferralLink = async function() {
             const linkInput = document.getElementById('referral-link');
             if (!linkInput) return;
@@ -1066,16 +970,11 @@
                 try { tg.showAlert('Referral link copied!'); } catch(err){ alert('Referral link copied!'); }
             }
         };
-
         // --- START THE APP --- //
         initializeApp();
     });
     </script>
     <!-- Ad SDK -->
     <script src='//libtl.com/sdk.js' data-zone='9934705' data-sdk='show_9934705'></script>
-
 </body>
 </html>
-
-
-
