@@ -815,7 +815,23 @@ window.requestWithdrawal = async function() {
         tg.showAlert("Error submitting withdrawal request. Please try again.");
     }
 };
-        
+        // --- ANIMATIONS & OTHER TABS --- //
+        let leafAnimationActive = false;
+        function startLeafAnimation() { if (leafAnimationActive) return; leafAnimationActive = true; const container = document.getElementById('falling-leaves-container'); for (let i = 0; i < 15; i++) { const leaf = document.createElement('div'); leaf.className = 'leaf'; leaf.innerHTML = ['🍂', '🍁'][Math.round(Math.random())]; leaf.style.left = `${Math.random() * 100}vw`; leaf.style.animationDuration = `${Math.random() * 3 + 4}s`; leaf.style.animationDelay = `${Math.random() * 5}s`; container.appendChild(leaf); } }
+        function stopLeafAnimation() { leafAnimationActive = false; document.getElementById('falling-leaves-container').innerHTML = ''; }
+        function checkLevelUp(oldXp, newXp) { const levelThreshold = (level) => Math.floor(100 * Math.pow(level, 1.5)); const currentLevelThreshold = levelThreshold(userData.level); if (newXp >= currentLevelThreshold) { const newLevel = userData.level + 1; syncUserData({ level: newLevel }); showLevelUpPopup(newLevel); } }
+        function showLevelUpPopup(level) { const popup = document.getElementById('level-up-popup'); document.getElementById('new-level').innerText = `Level ${level}`; popup.classList.add('show'); createConfetti(); setTimeout(() => popup.classList.remove('show'), 4000); }
+        function createConfetti() { const container = document.getElementById('confetti-container'); container.innerHTML = ''; for (let i = 0; i < 100; i++) { const confetti = document.createElement('div'); confetti.style.position = 'absolute'; confetti.style.width = `${Math.random() * 10 + 5}px`; confetti.style.height = confetti.style.width; confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`; confetti.style.left = `${Math.random() * 100}%`; confetti.style.top = `${-20}%`; confetti.style.animation = `confetti-fall ${Math.random() * 2 + 3}s linear ${Math.random() * 2}s forwards`; container.appendChild(confetti); } }
+        const styleSheet = document.createElement("style"); styleSheet.type = "text/css"; styleSheet.innerText = `@keyframes confetti-fall { to { transform: translateY(150vh) rotate(${Math.random() * 720}deg); opacity: 0; } }`; document.head.appendChild(styleSheet);
+
+        function updateProfileTab() { document.getElementById('profile-userid').innerText = userData.id; document.getElementById('profile-coins').innerText = Math.floor(userData.coins); document.getElementById('profile-exchanged').innerText = (userData.exchangedTotal || 0).toFixed(4); document.getElementById('profile-referrals').innerText = userData.referrals?.length || 0; document.getElementById('profile-level').innerText = userData.level; }
+
+        window.convertCoins = async function() { const amount = parseInt(document.getElementById('convert-amount').value); if (isNaN(amount) || amount <= 0) { tg.showAlert("Enter a valid coin amount."); return; } if (amount > (userData.coins || 0)) { tg.showAlert("You do not have enough coins."); return; } const rate = globalSettings.conversionRate || 1000; const converted = amount / rate; await syncUserData({ coins: (userData.coins || 0) - amount, exchangedTotal: (userData.exchangedTotal || 0) + converted }); tg.showAlert(`Converted ${amount} coins into ${converted.toFixed(4)} units.`); updateUI(); };
+
+        function loadReferralData() { const linkInput = document.getElementById('referral-link'); linkInput.value = `https://t.me/Finisher_farming_bot?start=${currentUser.id}`; const displayEl = document.getElementById('referral-history-list'); const referralCount = userData.referrals?.length || 0; if (referralCount === 0) { displayEl.innerHTML = `<p>No referrals yet. Share your link to earn 500 coins per referral!</p>`; } else { displayEl.innerHTML = `<p>You have referred <strong>${referralCount} users</strong> and earned <strong>${referralCount * 500} coins</strong>!</p><div style="margin-top: 10px;"><strong>Referral IDs:</strong><br>${userData.referrals.map(id => `• ${id}`).join('<br>')}</div>`; } }
+
+        window.copyReferralLink = async function() { const linkInput = document.getElementById('referral-link'); try { await navigator.clipboard.writeText(linkInput.value); tg.showAlert('Referral link copied!'); } catch (err) { linkInput.select(); document.execCommand('copy'); tg.showAlert('Referral link copied!'); } };
+    
         // --- ADMIN PANEL LOGIC (EXPANDED) --- //
         window.handleAdminLogin = function() {
             const email = document.getElementById('admin-email').value;
@@ -893,39 +909,57 @@ window.requestWithdrawal = async function() {
                 loadAdminTasks();
             }
         };
-        window.saveAdminTask = async function() {
-    const taskId = document.getElementById('task-id-input').value;
-    const taskData = {
-        name: document.getElementById('task-name-input').value,
-        reward: parseInt(document.getElementById('task-reward-input').value),
-        type: document.getElementById('task-type-input').value,
-        link: document.getElementById('task-link-input').value,
-        key: document.getElementById('task-key-input').value
-    };
-    
-    if (!taskData.name || !taskData.reward || !taskData.link) {
-        alert("Please fill Name, Reward, and Link fields.");
-        return;
-    }
-    
-    if (taskId) {
-        await db.collection('tasks').doc(taskId).update(taskData);
-        alert("Task updated!");
-    } else {
-        await db.collection('tasks').add(taskData);
-        alert("Task added!");
-    }
-    
-    // Reset form properly
-    document.getElementById('task-id-input').value = '';
-    document.getElementById('task-name-input').value = '';
-    document.getElementById('task-reward-input').value = '';
-    document.getElementById('task-link-input').value = '';
-    document.getElementById('task-key-input').value = '';
-    document.getElementById('task-key-container').classList.add('hidden');
-    
-    loadAdminTasks();
-};
+                window.saveAdminTask = async function() {
+            const taskId = document.getElementById('task-id-input').value;
+            const taskData = {
+                name: document.getElementById('task-name-input').value,
+                reward: parseInt(document.getElementById('task-reward-input').value),
+                type: document.getElementById('task-type-input').value,
+                link: document.getElementById('task-link-input').value,
+                key: document.getElementById('task-key-input').value.trim() // key ko trim kar dein
+            };
+            
+            if (!taskData.name || !taskData.reward || !taskData.link) {
+                alert("Please fill Name, Reward, and Link fields.");
+                return;
+            }
+
+            // YEH NAYA LOGIC HAI
+            // Agar task type YouTube hai, to check karo ki key khali to nahi hai
+            if (taskData.type === 'youtube_video' && !taskData.key) {
+                alert("For YouTube tasks, the secret key is required.");
+                return; // function ko yahin rok do
+            }
+
+            // Agar task type YouTube nahi hai, to key ko save mat karo
+            if (taskData.type !== 'youtube_video') {
+                delete taskData.key; // taskData object se key ko हटा do
+            }
+            
+            try {
+                if (taskId) {
+                    await db.collection('tasks').doc(taskId).update(taskData);
+                    alert("Task updated!");
+                } else {
+                    await db.collection('tasks').add(taskData);
+                    alert("Task added!");
+                }
+            } catch (error) {
+                console.error("Error saving task: ", error);
+                alert("Could not save the task. See console for details.");
+            }
+            
+            // Form ko reset karo
+            document.getElementById('task-id-input').value = '';
+            document.getElementById('task-name-input').value = '';
+            document.getElementById('task-reward-input').value = '';
+            document.getElementById('task-link-input').value = '';
+            document.getElementById('task-key-input').value = '';
+            document.getElementById('task-key-container').classList.add('hidden');
+            
+            loadAdminTasks();
+        };
+
         window.saveAdminSettings = async function() {
             const settings = {
                 farmRate: parseInt(document.getElementById('setting-farm-rate').value),
