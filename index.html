@@ -791,29 +791,38 @@
             }
         };
         window.saveAdminTask = async function() {
-            const taskId = document.getElementById('task-id-input').value;
-            const taskData = {
-                name: document.getElementById('task-name-input').value,
-                reward: parseInt(document.getElementById('task-reward-input').value),
-                type: document.getElementById('task-type-input').value,
-                link: document.getElementById('task-link-input').value,
-                key: document.getElementById('task-key-input').value
-            };
-            if (!taskData.name || !taskData.reward || !taskData.link) {
-                alert("Please fill Name, Reward, and Link fields.");
-                return;
-            }
-            if (taskId) {
-                await db.collection('tasks').doc(taskId).update(taskData);
-                alert("Task updated!");
-            } else {
-                await db.collection('tasks').add(taskData);
-                alert("Task added!");
-            }
-            document.getElementById('task-id-input').value = ''; // Reset form
-            document.querySelector('#admin-dashboard form')?.reset(); // A more robust way to find and reset form might be needed
-            loadAdminTasks();
-        };
+    const taskId = document.getElementById('task-id-input').value;
+    const taskData = {
+        name: document.getElementById('task-name-input').value,
+        reward: parseInt(document.getElementById('task-reward-input').value),
+        type: document.getElementById('task-type-input').value,
+        link: document.getElementById('task-link-input').value,
+        key: document.getElementById('task-key-input').value
+    };
+    
+    if (!taskData.name || !taskData.reward || !taskData.link) {
+        alert("Please fill Name, Reward, and Link fields.");
+        return;
+    }
+    
+    if (taskId) {
+        await db.collection('tasks').doc(taskId).update(taskData);
+        alert("Task updated!");
+    } else {
+        await db.collection('tasks').add(taskData);
+        alert("Task added!");
+    }
+    
+    // Reset form properly
+    document.getElementById('task-id-input').value = '';
+    document.getElementById('task-name-input').value = '';
+    document.getElementById('task-reward-input').value = '';
+    document.getElementById('task-link-input').value = '';
+    document.getElementById('task-key-input').value = '';
+    document.getElementById('task-key-container').classList.add('hidden');
+    
+    loadAdminTasks();
+};
         window.saveAdminSettings = async function() {
             const settings = {
                 farmRate: parseInt(document.getElementById('setting-farm-rate').value),
