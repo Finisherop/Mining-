@@ -599,19 +599,25 @@
         }
 
         window.watchAd = function() {
-            const reward = globalSettings.adReward || 50;
-            tg.showConfirm(`Watch an ad to earn ${reward} coins?`, async (confirmed) => {
-                if (confirmed) {
-                    // This is where you would show the actual ad.
-                    // For now, we'll simulate a successful ad watch.
-                    // In a real scenario, you'd use the Ad SDK's success callback.
-                    // For example: show_9934705('pop').then(async () => { ... });
-                    const newCoins = (userData.coins || 0) + reward;
-                    await syncUserData({ coins: newCoins });
-                    tg.showAlert(`Ad watched! You earned ${reward} coins. 🎉`);
-                }
-            });
-        };
+    const reward = globalSettings.adReward || 50;
+    tg.showConfirm(`Watch an ad to earn ${reward} coins?`, async (confirmed) => {
+        if (confirmed) {
+            try {
+                // Show the rewarded ad
+                await show_9649353('pop'); // <-- actual ad runs here
+
+                // Reward the user after successful ad watch
+                const newCoins = (userData.coins || 0) + reward;
+                await syncUserData({ coins: newCoins });
+                tg.showAlert(`Ad watched! You earned ${reward} coins. 🎉`);
+            } catch (e) {
+                // If ad failed or user closed it early
+                console.error('Ad failed or not completed:', e);
+                tg.showAlert('Ad could not be completed. No reward given.');
+            }
+        }
+    });
+};
 
 
         // --- FARMING LOGIC --- //
