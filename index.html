@@ -363,29 +363,482 @@
         let farmInterval = null;
         let globalSettings = {};
 
-        // --- Firestore Security Rules (for reference, apply these in your Firebase Console) --- //
-        /*
-        rules_version = '2';
-        service cloud.firestore {
-          match /databases/{database}/documents {
-            // Users can only read/write their own data
-            match /users/{userId} {
-              allow read, update: if request.auth.uid == userId;
-              allow create: if request.auth.uid != null;
+            async function initializeApp() {
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                tg.ready();
+                tg.expand();
+                currentUser = tg.initDataUnsafe.user;
+                document.getElementById('app-container').classList.remove('hidden');
+                await initUserPanel();
+            } else {
+                document.getElementById('admin-panel').classList.remove('hidden');
+                document.getElementById('admin-login-screen').classList.remove('hidden');
             }
-            // Admin-only write access to tasks, all users can read
-            match /tasks/{taskId} {
-              allow read: if request.auth.uid != null;
-              allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+            document.getElementById('loader').classList.add('hidden');
+        }
+
+        // --- USER PANEL LOGIC --- //
+        async function initUserPanel() {
+            document.getElementById('user-name').innerText = currentUser.first_name;
+            if (currentUser.photo_url) {
+                document.getElementById('user-pic').src = currentUser.photo_url;
             }
-            // Admin-only write access to settings, all users can read
-            match /settings/global {
-                allow read: if true;
-                allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+            await loadGlobalSettings();
+            await loadUserData();
+            setupEventListeners();
+        }
+
+        async function loadGlobalSettings() {
+            const doc = await db.collection('settings').doc('global').get();
+            if (doc.exists) {
+                globalSettings = doc.data();
+                document.getElementById('conversion-rate').innerText = `Rate: ${globalSettings.conversionRate || 1000} 💰 = 1 INR/USDT`;
             }
-            // Users can create withdrawals, only they can read their own
-             match /withdrawals/{withdrawalId} {
-                allow create: if request.auth != null;
-                allow read: if request.auth.uid == resource.data.userId;
-                // Admin can update status
-                allow update: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+        }
+
+        async function loadUserData() {
+            const userId = currentUser.id.toString();
+            const userRef = db.collection('users').doc(userId);
+            const doc = await userRef.get();
+
+            if (doc.exists) {
+                userData = doc.data();
+                console.log("Fetched fresh user data from Firebase.");
+            } else {
+                console.log("Creating new user in Firebase.");
+                userData = {
+                    id: userId,
+                    username: currentUser.username || 'N/A',
+                    firstName: currentUser.first_name,
+                    coins: 0,
+                    xp: 0,
+                    level: 1,
+                    farmingStartTime: null,
+                    farmingDuration: 24 * 60 * 60 * 1000,
+                    referrals: [],
+                    completedTasks: [],
+                    exchangedTotal: 0
+                };
+                await userRef.set(userData);
+                // Check for referral on first-time user creation
+                if (tg.initDataUnsafe.start_param) {
+                    await handleReferral(tg.initDataUnsafe.start_param, userId);
+                }
+            }
+             localStorage.setItem(`userData_${userId}`, JSON.stringify(userData));
+            updateUI();
+        }
+
+        async function handleReferral(referrerId, newUserId) {
+            if (referrerId === newUserId) {
+                console.log("User tried to refer themselves.");
+                return;
+            }
+            const referrerRef = db.collection('users').doc(referrerId);
+            const referralReward = 500; // 500 coins per referral
+
+            // Use a transaction to safely update the referrer's data
+            try {
+                await db.runTransaction(async (transaction) => {
+                    const referrerDoc = await transaction.get(referrerRef);
+                    if (!referrerDoc.exists) {
+                        throw "Referrer not found!";
+                    }
+                    const referrerData = referrerDoc.data();
+                    const newCoins = (referrerData.coins || 0) + referralReward;
+                    const newReferrals = [...(referrerData.referrals || []), newUserId];
+
+                    transaction.update(referrerRef, {
+                        coins: newCoins,
+                        referrals: newReferrals
+                    });
+                });
+                console.log(`Awarded ${referralReward} coins to referrer ${referrerId}`);
+                tg.showAlert(`Welcome! You were referred and your friend has been rewarded.`);
+            } catch (e) {
+                console.error("Referral transaction failed: ", e);
+            }
+        }
+
+        function updateUI() {
+            if (!userData) return;
+            document.getElementById('coin-balance-container').innerText = `💰 ${Math.floor(userData.coins)}`;
+            checkFarmingStatus();
+        }
+
+        async function syncUserData(updatedData) {
+            Object.assign(userData, updatedData);
+            localStorage.setItem(`userData_${currentUser.id}`, JSON.stringify(userData));
+            const userRef = db.collection('users').doc(currentUser.id.toString());
+            try {
+                await userRef.update(updatedData);
+                console.log("Synced data:", updatedData);
+                updateUI(); // Refresh UI after every sync
+            } catch (error) {
+                console.error("Error syncing data:", error);
+            }
+        }
+
+        function setupEventListeners() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', (e) => switchTab(e.currentTarget.dataset.tab));
+            });
+            document.getElementById('farm-button').addEventListener('click', handleFarmButtonClick);
+            document.getElementById('task-type-input')?.addEventListener('change', (e) => {
+                 document.getElementById('task-key-container').classList.toggle('hidden', e.target.value !== 'youtube_video');
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelector(`.nav-item[data-tab="${tabId}"]`).classList.add('active');
+
+            if (tabId === 'tasks-tab') loadTasks();
+            if (tabId === 'referral-tab') loadReferralData();
+            if (tabId === 'exchange-tab') loadWithdrawalHistory();
+            if (tabId === 'profile-tab') updateProfileTab();
+        }
+
+        // --- TASK LOGIC (NEW & DYNAMIC) --- //
+        async function loadTasks() {
+            const taskListEl = document.getElementById('task-list-dynamic');
+            taskListEl.innerHTML = '<h4>Loading tasks...</h4>';
+
+            const tasksSnapshot = await db.collection('tasks').get();
+            taskListEl.innerHTML = '';
+
+            // Add dynamic tasks from Firebase
+            tasksSnapshot.forEach(doc => {
+                const task = { id: doc.id, ...doc.data() };
+                const isCompleted = userData.completedTasks?.includes(task.id);
+                const taskItem = document.createElement('div');
+                taskItem.className = 'task-item';
+                taskItem.innerHTML = `
+                    <div class="task-info">
+                        <h4>${task.name}</h4>
+                        <p>Reward: ${task.reward} 💰</p>
+                    </div>
+                    <button id="task-btn-${task.id}" ${isCompleted ? 'disabled' : ''}>
+                        ${isCompleted ? 'Completed' : 'Go'}
+                    </button>
+                `;
+                taskListEl.appendChild(taskItem);
+                if (!isCompleted) {
+                    document.getElementById(`task-btn-${task.id}`).onclick = () => handleTaskClick(task);
+                }
+            });
+
+            // Add the static "Watch Ad" task
+            const adTaskItem = document.createElement('div');
+            adTaskItem.className = 'task-item';
+            adTaskItem.innerHTML = `
+                <div class="task-info">
+                    <h4>📺 Watch Ad</h4>
+                    <p>Reward: ${globalSettings.adReward || 50} 💰</p>
+                </div>
+                <button onclick="watchAd()">Watch</button>
+            `;
+            taskListEl.appendChild(adTaskItem);
+        }
+
+        async function handleTaskClick(task) {
+            const button = document.getElementById(`task-btn-${task.id}`);
+            button.disabled = true;
+            button.innerText = 'Checking...';
+
+            switch (task.type) {
+                case 'youtube_video':
+                    const key = prompt(`Please enter the secret key from the YouTube video:\n${task.link}`);
+                    if (key && key.trim() === task.key) {
+                        await grantTaskReward(task.id, task.reward);
+                    } else {
+                        tg.showAlert("Incorrect key. Please try again.");
+                        button.disabled = false;
+                        button.innerText = 'Go';
+                    }
+                    break;
+
+                case 'join_channel':
+                case 'join_group':
+                    tg.openLink(task.link);
+                    // IMPORTANT: True verification MUST happen on a server using Telegram's getChatMember API.
+                    // This is a client-side simulation for demo purposes.
+                    const verified = confirm("Please join the channel/group, then press OK to verify and claim your reward.");
+                    if (verified) {
+                         await grantTaskReward(task.id, task.reward);
+                    } else {
+                         button.disabled = false;
+                         button.innerText = 'Go';
+                    }
+                    break;
+
+                case 'visit_link':
+                default:
+                    tg.openLink(task.link);
+                     await grantTaskReward(task.id, task.reward);
+                    break;
+            }
+        }
+
+        async function grantTaskReward(taskId, reward) {
+            if (userData.completedTasks?.includes(taskId)) {
+                tg.showAlert("You have already completed this task.");
+                return;
+            }
+            const newCoins = (userData.coins || 0) + reward;
+            const newCompletedTasks = [...(userData.completedTasks || []), taskId];
+            await syncUserData({ coins: newCoins, completedTasks: newCompletedTasks });
+
+            tg.showAlert(`Task completed! You earned ${reward} coins. 🎉`);
+            const button = document.getElementById(`task-btn-${taskId}`);
+            if (button) {
+                button.innerText = 'Completed';
+                button.disabled = true;
+            }
+        }
+
+        window.watchAd = function() {
+            const reward = globalSettings.adReward || 50;
+            tg.showConfirm(`Watch an ad to earn ${reward} coins?`, async (confirmed) => {
+                if (confirmed) {
+                    // This is where you would show the actual ad.
+                    // For now, we'll simulate a successful ad watch.
+                    // In a real scenario, you'd use the Ad SDK's success callback.
+                    // For example: show_9934705('pop').then(async () => { ... });
+                    const newCoins = (userData.coins || 0) + reward;
+                    await syncUserData({ coins: newCoins });
+                    tg.showAlert(`Ad watched! You earned ${reward} coins. 🎉`);
+                }
+            });
+        };
+
+
+        // --- FARMING LOGIC --- //
+        function handleFarmButtonClick() {
+            const button = document.getElementById('farm-button');
+            if (button.innerText.includes('Start')) {
+                startFarming();
+            } else if (button.innerText.includes('Claim')) {
+                claimReward();
+            }
+        }
+
+        async function startFarming() {
+            await syncUserData({ farmingStartTime: Date.now() });
+            checkFarmingStatus();
+        }
+
+        async function claimReward() {
+            const farmRate = globalSettings.farmRate || 100;
+            const elapsedMinutes = userData.farmingDuration / (60 * 1000);
+            const coinsEarned = farmRate * elapsedMinutes;
+            const newCoins = userData.coins + coinsEarned;
+            const newXp = (userData.xp || 0) + 100;
+            await syncUserData({ coins: newCoins, farmingStartTime: null, xp: newXp });
+            tg.showAlert(`You claimed ${coinsEarned.toFixed(0)} coins!`);
+            checkLevelUp(userData.xp, newXp);
+            updateUI();
+        }
+
+        function checkFarmingStatus() {
+            const button = document.getElementById('farm-button');
+            const timerEl = document.getElementById('farm-timer');
+            const progressEl = document.getElementById('farm-progress');
+            if (farmInterval) clearInterval(farmInterval);
+
+            if (userData.farmingStartTime) {
+                const endTime = userData.farmingStartTime + userData.farmingDuration;
+                farmInterval = setInterval(() => {
+                    const now = Date.now();
+                    const timeLeft = endTime - now;
+                    if (timeLeft <= 0) {
+                        clearInterval(farmInterval);
+                        button.innerText = 'Claim Reward';
+                        button.disabled = false;
+                        timerEl.innerText = 'Farming complete!';
+                        progressEl.style.width = '100%';
+                        stopLeafAnimation();
+                        return;
+                    }
+                    button.innerText = 'Farming...';
+                    button.disabled = true;
+                    startLeafAnimation();
+                    const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
+                    const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
+                    const seconds = Math.floor((timeLeft / 1000) % 60);
+                    timerEl.innerText = `Time left: ${hours}h ${minutes}m ${seconds}s`;
+                    const progress = 100 - (timeLeft / userData.farmingDuration) * 100;
+                    progressEl.style.width = `${progress}%`;
+                }, 1000);
+            } else {
+                button.innerText = 'Start Farming';
+                button.disabled = false;
+                timerEl.innerText = 'Ready to farm!';
+                progressEl.style.width = '0%';
+                stopLeafAnimation();
+            }
+        }
+        
+        // --- ANIMATIONS & OTHER TABS --- //
+        // (Animations, Level up, Profile, Exchange, Referral... all existing logic remains here)
+        let leafAnimationActive = false;
+        function startLeafAnimation() { if (leafAnimationActive) return; leafAnimationActive = true; const container = document.getElementById('falling-leaves-container'); for (let i = 0; i < 15; i++) { const leaf = document.createElement('div'); leaf.className = 'leaf'; leaf.innerHTML = ['🍂', '🍁'][Math.round(Math.random())]; leaf.style.left = `${Math.random() * 100}vw`; leaf.style.animationDuration = `${Math.random() * 3 + 4}s`; leaf.style.animationDelay = `${Math.random() * 5}s`; container.appendChild(leaf); } }
+        function stopLeafAnimation() { leafAnimationActive = false; document.getElementById('falling-leaves-container').innerHTML = ''; }
+        function checkLevelUp(oldXp, newXp) { const levelThreshold = (level) => Math.floor(100 * Math.pow(level, 1.5)); const currentLevelThreshold = levelThreshold(userData.level); if (newXp >= currentLevelThreshold) { const newLevel = userData.level + 1; syncUserData({ level: newLevel }); showLevelUpPopup(newLevel); } }
+        function showLevelUpPopup(level) { const popup = document.getElementById('level-up-popup'); document.getElementById('new-level').innerText = `Level ${level}`; popup.classList.add('show'); createConfetti(); setTimeout(() => popup.classList.remove('show'), 4000); }
+        function createConfetti() { const container = document.getElementById('confetti-container'); container.innerHTML = ''; for (let i = 0; i < 100; i++) { const confetti = document.createElement('div'); confetti.style.position = 'absolute'; confetti.style.width = `${Math.random() * 10 + 5}px`; confetti.style.height = confetti.style.width; confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`; confetti.style.left = `${Math.random() * 100}%`; confetti.style.top = `${-20}%`; confetti.style.animation = `confetti-fall ${Math.random() * 2 + 3}s linear ${Math.random() * 2}s forwards`; container.appendChild(confetti); } }
+        const styleSheet = document.createElement("style"); styleSheet.type = "text/css"; styleSheet.innerText = `@keyframes confetti-fall { to { transform: translateY(150vh) rotate(${Math.random() * 720}deg); opacity: 0; } }`; document.head.appendChild(styleSheet);
+        async function loadWithdrawalHistory() { const querySnapshot = await db.collection('withdrawals').where('userId', '==', currentUser.id.toString()).orderBy('timestamp', 'desc').get(); const listEl = document.getElementById('withdrawal-history-list'); listEl.innerHTML = ''; if (querySnapshot.empty) { listEl.innerHTML = '<p>No withdrawal history.</p>'; return; } querySnapshot.forEach(doc => { const data = doc.data(); const item = document.createElement('div'); item.className = 'history-item'; item.innerHTML = `<div class="history-info"><strong>${data.amount} ${data.method.toUpperCase()}</strong> to ${data.address}<br><small>Status: ${data.status}</small></div>`; listEl.appendChild(item); }); }
+        function updateProfileTab() { document.getElementById('profile-userid').innerText = userData.id; document.getElementById('profile-coins').innerText = Math.floor(userData.coins); document.getElementById('profile-exchanged').innerText = (userData.exchangedTotal || 0).toFixed(4); document.getElementById('profile-referrals').innerText = userData.referrals?.length || 0; document.getElementById('profile-level').innerText = userData.level; }
+        window.convertCoins = async function() { const amount = parseInt(document.getElementById('convert-amount').value); if (isNaN(amount) || amount <= 0) { tg.showAlert("Enter a valid coin amount."); return; } if (amount > (userData.coins || 0)) { tg.showAlert("You do not have enough coins."); return; } const rate = globalSettings.conversionRate || 1000; const converted = amount / rate; await syncUserData({ coins: (userData.coins || 0) - amount, exchangedTotal: (userData.exchangedTotal || 0) + converted }); tg.showAlert(`Converted ${amount} coins into ${converted.toFixed(4)} units.`); updateUI(); };
+        window.requestWithdrawal = async function() { const amount = parseFloat(document.getElementById('withdrawal-amount').value); const method = document.getElementById('withdrawal-method').value; const address = document.getElementById('withdrawal-address').value.trim(); if (isNaN(amount) || amount <= 0 || !address) { tg.showAlert("Please fill all withdrawal fields correctly."); return; } const userExchanged = (userData.exchangedTotal || 0); if (amount > userExchanged) { tg.showAlert("Insufficient exchanged balance."); return; } await db.collection('withdrawals').add({ userId: currentUser.id.toString(), amount, method, address, status: 'pending', timestamp: firebase.firestore.FieldValue.serverTimestamp() }); await syncUserData({ exchangedTotal: userExchanged - amount }); tg.showAlert("Withdrawal request submitted!"); loadWithdrawalHistory(); };
+        function loadReferralData() { const linkInput = document.getElementById('referral-link'); linkInput.value = `https://t.me/Finisher_farming_bot?start=${currentUser.id}`; const displayEl = document.getElementById('referral-history-list'); displayEl.innerHTML = `<p>You have referred ${userData.referrals?.length || 0} users.</p>`; }
+        window.copyReferralLink = async function() { const linkInput = document.getElementById('referral-link'); try { await navigator.clipboard.writeText(linkInput.value); tg.showAlert('Referral link copied!'); } catch (err) { linkInput.select(); document.execCommand('copy'); tg.showAlert('Referral link copied!'); } };
+
+        // --- ADMIN PANEL LOGIC (EXPANDED) --- //
+        window.handleAdminLogin = function() {
+            const email = document.getElementById('admin-email').value;
+            const pass = document.getElementById('admin-password').value;
+            if (email === 'admin@gmail.com' && pass === 'admin123') {
+                document.getElementById('admin-login-screen').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+                loadAdminData();
+            } else {
+                document.getElementById('admin-login-error').innerText = "Invalid credentials.";
+            }
+        }
+        async function loadAdminData() {
+            // Load Settings
+            const settings = (await db.collection('settings').doc('global').get()).data() || {};
+            document.getElementById('setting-farm-rate').value = settings.farmRate || 100;
+            document.getElementById('setting-conversion-rate').value = settings.conversionRate || 1000;
+            document.getElementById('setting-ad-reward').value = settings.adReward || 50;
+            
+            // Load Withdrawals
+            const wSnapshot = await db.collection('withdrawals').where('status', '==', 'pending').get();
+            const wTableBody = document.querySelector('#withdrawal-requests-table tbody');
+            wTableBody.innerHTML = '';
+            wSnapshot.forEach(doc => {
+                const data = doc.data();
+                const row = wTableBody.insertRow();
+                row.innerHTML = `<td>${data.userId}</td><td>${data.amount}</td><td>${data.method}</td><td>${data.address}</td><td>${data.status}</td><td><button onclick="updateWithdrawalStatus('${doc.id}', 'approved')">Approve</button><button onclick="updateWithdrawalStatus('${doc.id}', 'rejected')" style="background:var(--danger-color)">Reject</button></td>`;
+            });
+
+            // Load Tasks and Dashboard Stats
+            loadAdminTasks();
+            loadAdminDashboardStats();
+        }
+        async function loadAdminDashboardStats() {
+            const usersSnapshot = await db.collection('users').get();
+            const withdrawalsSnapshot = await db.collection('withdrawals').where('status', '==', 'pending').get();
+            let totalCoins = 0;
+            usersSnapshot.forEach(doc => { totalCoins += doc.data().coins || 0; });
+            document.getElementById('stats-total-users').innerText = usersSnapshot.size;
+            document.getElementById('stats-total-coins').innerText = Math.floor(totalCoins);
+            document.getElementById('stats-pending-withdrawals').innerText = withdrawalsSnapshot.size;
+        }
+        async function loadAdminTasks() {
+            const tasksSnapshot = await db.collection('tasks').get();
+            const tableBody = document.querySelector('#tasks-table tbody');
+            tableBody.innerHTML = '';
+            tasksSnapshot.forEach(doc => {
+                const task = { id: doc.id, ...doc.data() };
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td>${task.name}</td>
+                    <td>${task.reward}</td>
+                    <td>${task.type}</td>
+                    <td>
+                        <button onclick='editAdminTask("${task.id}", ${JSON.stringify(task)})'>Edit</button>
+                        <button onclick='deleteAdminTask("${task.id}")' style="background:var(--danger-color)">Delete</button>
+                    </td>
+                `;
+            });
+        }
+        window.editAdminTask = function(id, taskData) {
+            document.getElementById('task-id-input').value = id;
+            document.getElementById('task-name-input').value = taskData.name;
+            document.getElementById('task-reward-input').value = taskData.reward;
+            document.getElementById('task-type-input').value = taskData.type;
+            document.getElementById('task-link-input').value = taskData.link;
+            document.getElementById('task-key-input').value = taskData.key || '';
+            document.getElementById('task-type-input').dispatchEvent(new Event('change')); // Trigger visibility check for key
+            window.scrollTo(0, 0); // Scroll to top to see the form
+        };
+        window.deleteAdminTask = async function(id) {
+            if (confirm("Are you sure you want to delete this task?")) {
+                await db.collection('tasks').doc(id).delete();
+                alert("Task deleted.");
+                loadAdminTasks();
+            }
+        };
+        window.saveAdminTask = async function() {
+            const taskId = document.getElementById('task-id-input').value;
+            const taskData = {
+                name: document.getElementById('task-name-input').value,
+                reward: parseInt(document.getElementById('task-reward-input').value),
+                type: document.getElementById('task-type-input').value,
+                link: document.getElementById('task-link-input').value,
+                key: document.getElementById('task-key-input').value
+            };
+            if (!taskData.name || !taskData.reward || !taskData.link) {
+                alert("Please fill Name, Reward, and Link fields.");
+                return;
+            }
+            if (taskId) {
+                await db.collection('tasks').doc(taskId).update(taskData);
+                alert("Task updated!");
+            } else {
+                await db.collection('tasks').add(taskData);
+                alert("Task added!");
+            }
+            document.getElementById('task-id-input').value = ''; // Reset form
+            document.querySelector('#admin-dashboard form')?.reset(); // A more robust way to find and reset form might be needed
+            loadAdminTasks();
+        };
+        window.saveAdminSettings = async function() {
+            const settings = {
+                farmRate: parseInt(document.getElementById('setting-farm-rate').value),
+                conversionRate: parseInt(document.getElementById('setting-conversion-rate').value),
+                adReward: parseInt(document.getElementById('setting-ad-reward').value)
+            };
+            await db.collection('settings').doc('global').set(settings, { merge: true });
+            alert("Settings saved!");
+        };
+        window.updateWithdrawalStatus = async function(docId, status) {
+            const reason = prompt(`Enter reason for ${status} (optional):`);
+            await db.collection('withdrawals').doc(docId).update({ status: status, adminNote: reason || '' });
+            alert(`Withdrawal ${status}. User will be notified (requires backend bot).`);
+            loadAdminData();
+        };
+        window.sendBroadcast = function() {
+            alert("Broadcast feature requires a backend bot to send messages to all users.");
+        }
+
+        // --- START THE APP --- //
+        initializeApp();
+    });
+</script>
+    <script src='//libtl.com/sdk.js' data-zone='9934705' data-sdk='show_9934705'></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
