@@ -429,36 +429,46 @@
         }
 
         async function handleReferral(referrerId, newUserId) {
-            if (referrerId === newUserId) {
-                console.log("User tried to refer themselves.");
-                return;
-            }
-            const referrerRef = db.collection('users').doc(referrerId);
-            const referralReward = 500; // 500 coins per referral
+    if (referrerId === newUserId) {
+        console.log("User tried to refer themselves.");
+        return;
+    }
+    
+    const referrerRef = db.collection('users').doc(referrerId);
+    const referralReward = 500; // 500 coins per referral
 
-            // Use a transaction to safely update the referrer's data
-            try {
-                await db.runTransaction(async (transaction) => {
-                    const referrerDoc = await transaction.get(referrerRef);
-                    if (!referrerDoc.exists) {
-                        throw "Referrer not found!";
-                    }
-                    const referrerData = referrerDoc.data();
-                    const newCoins = (referrerData.coins || 0) + referralReward;
-                    const newReferrals = [...(referrerData.referrals || []), newUserId];
-
-                    transaction.update(referrerRef, {
-                        coins: newCoins,
-                        referrals: newReferrals
-                    });
-                });
-                console.log(`Awarded ${referralReward} coins to referrer ${referrerId}`);
-                tg.showAlert(`Welcome! You were referred and your friend has been rewarded.`);
-            } catch (e) {
-                console.error("Referral transaction failed: ", e);
-            }
+    try {
+        // Check if referrer exists
+        const referrerDoc = await referrerRef.get();
+        if (!referrerDoc.exists) {
+            console.log("Referrer not found!");
+            return;
         }
 
+        // Check if this user was already referred by the same referrer
+        const referrerData = referrerDoc.data();
+        const existingReferrals = referrerData.referrals || [];
+        
+        if (existingReferrals.includes(newUserId)) {
+            console.log("User was already referred by this referrer.");
+            return;
+        }
+
+        // Update referrer's data
+        const newCoins = (referrerData.coins || 0) + referralReward;
+        const newReferrals = [...existingReferrals, newUserId];
+
+        await referrerRef.update({
+            coins: newCoins,
+            referrals: newReferrals
+        });
+        
+        console.log(`Awarded ${referralReward} coins to referrer ${referrerId}`);
+        tg.showAlert(`Welcome! You were referred and your friend has been rewarded.`);
+    } catch (e) {
+        console.error("Referral transaction failed: ", e);
+    }
+}
         function updateUI() {
             if (!userData) return;
             document.getElementById('coin-balance-container').innerText = `💰 ${Math.floor(userData.coins)}`;
