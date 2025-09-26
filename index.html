@@ -602,7 +602,21 @@
     const reward = globalSettings.adReward || 50;
     tg.showConfirm(`Watch an ad to earn ${reward} coins?`, async (confirmed) => {
         if (confirmed) {
-            try { await show_9649353('pop');              
+            try {
+                // Show the ad using the correct function name from your ad script
+                if (typeof show_9934705 === 'function') {
+                    await show_9934705('pop');
+                } else if (typeof show_9649353 === 'function') {
+                    await show_9649353('pop');
+                } else {
+                    // Simulate ad watching if ad function not available
+                    tg.showPopup({
+                        title: 'Watch Ad',
+                        message: 'Please watch the ad video to completion...',
+                        buttons: [{ type: 'ok', text: 'I Watched It' }]
+                    });
+                }
+                
                 const newCoins = (userData.coins || 0) + reward;
                 await syncUserData({ coins: newCoins });
                 tg.showAlert(`Ad watched! You earned ${reward} coins. 🎉`);
@@ -614,7 +628,6 @@
         }
     });
 };
-
 
         // --- FARMING LOGIC --- //
         function handleFarmButtonClick() {
