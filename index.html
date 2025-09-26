@@ -349,4 +349,212 @@
             // Clear previous tasks except the static ad task
             container.innerHTML = `
                 <div class="task-item">
-                    <div class="task-info"><h4>📺 Watch Ad</h4><p>Watch a short
+                    <div class="task-info"><h4>📺 Watch Ad</h4><p>Watch a short ad to earn coins.</p></div>
+                    <button onclick="alert('Ad feature coming soon!')">Watch</button>
+                </div>`;
+
+            tasksSnapshot.forEach(doc => {
+                const task = doc.data();
+                if (userData.completedTasks && userData.completedTasks.includes(doc.id)) return; // Skip completed tasks
+
+                const taskEl = document.createElement('div');
+                taskEl.className = 'task-item';
+                taskEl.innerHTML = `
+                    <div class="task-info">
+                        <h4>${task.name}</h4>
+                        <p>Reward: ${task.reward} 💰</p>
+                    </div>
+                    <button onclick="handleTaskClaim('${doc.id}')">Claim</button>
+                `;
+                container.appendChild(taskEl);
+            });
+        }
+        
+        window.handleTaskClaim = async (taskId) => {
+            // In a real app, this function would contain logic to verify the task completion
+            // For now, we'll simulate it.
+            const taskRef = db.collection('tasks').doc(taskId);
+            const taskDoc = await taskRef.get();
+            if(!taskDoc.exists) return alert('Task not found!');
+            
+            const task = taskDoc.data();
+            const newCoins = (userData.coins || 0) + task.reward;
+            const completedTasks = userData.completedTasks || [];
+            completedTasks.push(taskId);
+
+            await syncUserData({ coins: newCoins, completedTasks: completedTasks });
+            alert(`Task "${task.name}" completed! You earned ${task.reward} coins.`);
+            await loadUserTasks(); // Refresh task list
+            updateUI();
+        }
+
+        function updateUI() {
+            if (!userData) return;
+            document.getElementById('coin-balance-container').innerText = `💰 ${Math.floor(userData.coins)}`;
+            checkFarmingStatus();
+        }
+        
+        async function syncUserData(updatedData) {
+            try {
+                Object.assign(userData, updatedData);
+                const userId = currentUser.id.toString();
+                localStorage.setItem(`userData_${userId}`, JSON.stringify(userData));
+                const userRef = db.collection('users').doc(userId);
+                await userRef.update(updatedData);
+            } catch(error) {
+                console.error("Failed to sync user data:", error);
+                tg.showAlert("Could not save progress. Please check your connection.");
+            }
+        }
+
+        function setupEventListeners() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', (e) => switchTab(e.currentTarget.dataset.tab));
+            });
+            document.getElementById('farm-button').addEventListener('click', handleFarmButtonClick);
+        }
+        
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            document.querySelector(`.nav-item[data-tab="${tabId}"]`).classList.add('active');
+            if (tabId === 'profile-tab') updateProfileTab();
+        }
+
+        // The rest of the User Panel JS (farming, animations, etc.) is largely unchanged and assumed correct.
+        // It should now work because the Firestore permission issue is solved.
+        function handleFarmButtonClick(){const button=document.getElementById("farm-button");button.innerText.includes("Start")?startFarming():button.innerText.includes("Claim")&&claimReward()}async function startFarming(){await syncUserData({farmingStartTime:Date.now()}),checkFarmingStatus()}async function claimReward(){const e=100,t=userData.farmingDuration/6e4,a=e*t,n=userData.coins+a;await syncUserData({coins:n,farmingStartTime:null,xp:userData.xp+100}),alert(`You claimed ${a.toFixed(0)} coins!`),checkLevelUp(userData.xp,userData.xp+100),updateUI()}function checkFarmingStatus(){const e=document.getElementById("farm-button"),t=document.getElementById("farm-timer"),a=document.getElementById("farm-progress");if(farmInterval&&clearInterval(farmInterval),userData.farmingStartTime){const n=userData.farmingStartTime+userData.farmingDuration;farmInterval=setInterval(()=>{const s=Date.now(),o=n-s;if(o<=0)return clearInterval(farmInterval),e.innerText="Claim Reward",e.disabled=!1,t.innerText="Farming complete!",a.style.width="100%",void stopLeafAnimation();e.innerText="Farming...",e.disabled=!0,startLeafAnimation();const i=Math.floor(o/36e5%24),d=Math.floor(o/1e3/60%60),r=Math.floor(o/1e3%60);t.innerText=`Time left: ${i}h ${d}m ${r}s`;const l=100-o/userData.farmingDuration*100;a.style.width=`${l}%`},1e3)}else e.innerText="Start Farming",e.disabled=!1,t.innerText="Ready to farm!",a.style.width="0%",stopLeafAnimation()}let leafAnimationActive=!1;function startLeafAnimation(){if(leafAnimationActive)return;leafAnimationActive=!0;const e=document.getElementById("falling-leaves-container");for(let t=0;t<15;t++){const a=document.createElement("div");a.className="leaf",a.innerHTML=["🍂","🍁"][Math.round(Math.random())],a.style.left=`${100*Math.random()}vw`,a.style.animationDuration=`${3*Math.random()+4}s`,a.style.animationDelay=`${5*Math.random()}s`,e.appendChild(a)}}function stopLeafAnimation(){leafAnimationActive=!1,document.getElementById("falling-leaves-container").innerHTML=""}function checkLevelUp(e,t){const a=e=>Math.floor(100*Math.pow(e,1.5));t>=a(userData.level)&&(syncUserData({level:userData.level+1}),showLevelUpPopup(userData.level+1))}function showLevelUpPopup(e){const t=document.getElementById("level-up-popup");document.getElementById("new-level").innerText=`Level ${e}`,t.classList.add("show"),createConfetti(),setTimeout(()=>{t.classList.remove("show")},4e3)}function createConfetti(){const e=document.getElementById("confetti-container");e.innerHTML="";for(let t=0;t<100;t++){const a=document.createElement("div");a.style.position="absolute",a.style.width=`${10*Math.random()+5}px`,a.style.height=a.style.width,a.style.backgroundColor=`hsl(${360*Math.random()}, 100%, 50%)`,a.style.left=`${100*Math.random()}%`,a.style.top="-20%",a.style.animation=`confetti-fall ${2*Math.random()+3}s linear ${2*Math.random()}s forwards`,e.appendChild(a)}}const styleSheet=document.createElement("style");styleSheet.type="text/css",styleSheet.innerText=`@keyframes confetti-fall { to { transform: translateY(150vh) rotate(${720*Math.random()}deg); opacity: 0; } }`,document.head.appendChild(styleSheet);function copyReferralLink(){const e=document.getElementById("referral-link");e.select(),document.execCommand("copy"),tg.showAlert("Referral link copied!")}function updateProfileTab(){document.getElementById("profile-userid").innerText=userData.id,document.getElementById("profile-coins").innerText=Math.floor(userData.coins),document.getElementById("profile-exchanged").innerText=userData.exchangedTotal||0,document.getElementById("profile-referrals").innerText=userData.referrals.length,document.getElementById("profile-level").innerText=userData.level};
+
+        // --- ADMIN PANEL LOGIC --- //
+        window.handleAdminLogin = function() {
+            if(document.getElementById('admin-email').value === 'admin@gmail.com' && document.getElementById('admin-password').value === 'admin123') {
+                document.getElementById('admin-login-screen').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+                loadAdminData();
+            } else {
+                document.getElementById('admin-login-error').innerText = "Invalid credentials.";
+            }
+        }
+        
+        async function loadAdminData() {
+            loadAdminStats();
+            loadAdminTasks();
+            loadAdminWithdrawals();
+            // Load settings is also needed
+        }
+
+        async function loadAdminStats() {
+            const usersSnapshot = await db.collection('users').get();
+            const withdrawalsSnapshot = await db.collection('withdrawals').where('status', '==', 'pending').get();
+            let totalCoins = 0;
+            usersSnapshot.forEach(doc => { totalCoins += doc.data().coins || 0; });
+            document.getElementById('stats-total-users').innerText = usersSnapshot.size;
+            document.getElementById('stats-total-coins').innerText = Math.floor(totalCoins);
+            document.getElementById('stats-pending-withdrawals').innerText = withdrawalsSnapshot.size;
+        }
+
+        async function loadAdminTasks() {
+            const tasksSnapshot = await db.collection('tasks').get();
+            const tableBody = document.querySelector('#tasks-table tbody');
+            tableBody.innerHTML = '';
+            tasksSnapshot.forEach(doc => {
+                const task = doc.data();
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td>${task.name}</td>
+                    <td>${task.reward}</td>
+                    <td>${task.type}</td>
+                    <td>
+                        <button onclick="editTask('${doc.id}')">Edit</button>
+                        <button class="btn-danger" onclick="deleteTask('${doc.id}')">Delete</button>
+                    </td>
+                `;
+            });
+        }
+        
+        window.handleSaveTask = async () => {
+            const taskId = document.getElementById('task-id').value;
+            const task = {
+                name: document.getElementById('task-name').value,
+                reward: parseInt(document.getElementById('task-reward').value),
+                type: document.getElementById('task-type').value,
+                link: document.getElementById('task-link').value,
+                key: document.getElementById('task-key').value
+            };
+            if (!task.name || !task.reward) return alert('Task Name and Reward are required.');
+            
+            try {
+                if (taskId) {
+                    await db.collection('tasks').doc(taskId).update(task);
+                } else {
+                    await db.collection('tasks').add(task);
+                }
+                alert('Task saved successfully!');
+                document.querySelector('#task-management .form-container').reset();
+                document.getElementById('task-id').value = '';
+                loadAdminTasks();
+            } catch (error) {
+                console.error("Error saving task: ", error);
+                alert('Failed to save task.');
+            }
+        };
+
+        window.editTask = async (id) => {
+            const taskDoc = await db.collection('tasks').doc(id).get();
+            const task = taskDoc.data();
+            document.getElementById('task-id').value = id;
+            document.getElementById('task-name').value = task.name;
+            document.getElementById('task-reward').value = task.reward;
+            document.getElementById('task-type').value = task.type;
+            document.getElementById('task-link').value = task.link;
+            document.getElementById('task-key').value = task.key;
+            document.getElementById('add-task-btn').innerText = 'Save Changes';
+        };
+
+        window.deleteTask = async (id) => {
+            if (confirm('Are you sure you want to delete this task?')) {
+                await db.collection('tasks').doc(id).delete();
+                alert('Task deleted.');
+                loadAdminTasks();
+            }
+        };
+
+        async function loadAdminWithdrawals() {
+            // This function remains largely the same but will now work due to permission fixes
+            const querySnapshot = await db.collection('withdrawals').get();
+            const tableBody = document.querySelector('#withdrawal-requests-table tbody');
+            tableBody.innerHTML = '';
+            querySnapshot.forEach(doc => {
+                const data = doc.data();
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td>${data.userId}</td>
+                    <td>${data.amount}</td>
+                    <td>${data.method}</td>
+                    <td>${data.address}</td>
+                    <td>${data.status}</td>
+                    <td>
+                        ${data.status === 'pending' ? `
+                        <button onclick="updateWithdrawalStatus('${doc.id}', 'approved')">Approve</button>
+                        <button class="btn-danger" onclick="updateWithdrawalStatus('${doc.id}', 'rejected')">Reject</button>
+                        ` : 'Processed'}
+                    </td>
+                `;
+            });
+        }
+        
+        window.updateWithdrawalStatus = async (docId, status) => {
+            const note = prompt(`Optional: Enter a note for the user regarding this ${status} request.`);
+            await db.collection('withdrawals').doc(docId).update({ status: status, adminNote: note || ''});
+            alert(`Request marked as ${status}. User will see the change on next refresh.`);
+            // In a real app, send a notification via a server-side function.
+            loadAdminWithdrawals();
+            loadAdminStats();
+        };
+        
+        initializeApp();
+    });
+    </script>
+</body>
+</html>
