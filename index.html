@@ -360,6 +360,9 @@
         const db = firebase.firestore();
         const tg = window.Telegram.WebApp;
 
+function generateDeviceFingerprint() {
+    return btoa(navigator.userAgent + navigator.platform + screen.width + screen.height);
+}
         // --- Global Variables --- //
         let currentUser = null;
         let userData = null;
@@ -438,27 +441,39 @@
         return;
     }
     
-    const referrerRef = db.collection('users').doc(referrerId);
-    const referralReward = 500; // 500 coins per referral
-
+    // ✅ DEVICE LIMIT CHECK ADD KARO
+    const deviceSig = generateDeviceFingerprint();
+    const deviceRef = db.collection('devices').doc(deviceSig);
+    
     try {
-        // Check if referrer exists
+        // Device record check karo
+        const deviceDoc = await deviceRef.get();
+        const deviceData = deviceDoc.exists ? deviceDoc.data() : { count: 0, blocked: false };
+        
+        // Agar device blocked ya limit cross kar chuki hai
+        if (deviceData.blocked || deviceData.count >= 3) {
+            console.log("Referral ignored - device blocked/limit reached");
+            return;
+        }
+        
+        // Referrer exists check
+        const referrerRef = db.collection('users').doc(referrerId);
         const referrerDoc = await referrerRef.get();
         if (!referrerDoc.exists) {
             console.log("Referrer not found!");
             return;
         }
 
-        // Check if this user was already referred by the same referrer
+        // Duplicate referral check
         const referrerData = referrerDoc.data();
         const existingReferrals = referrerData.referrals || [];
-        
         if (existingReferrals.includes(newUserId)) {
             console.log("User was already referred by this referrer.");
             return;
         }
 
-        // Update referrer's data
+        // ✅ REFERRAL AWARD KARO
+        const referralReward = 500;
         const newCoins = (referrerData.coins || 0) + referralReward;
         const newReferrals = [...existingReferrals, newUserId];
 
@@ -467,8 +482,15 @@
             referrals: newReferrals
         });
         
+        // ✅ DEVICE COUNT UPDATE KARO
+        await deviceRef.set({
+            count: deviceData.count + 1,
+            blocked: (deviceData.count + 1) >= 3, // 3rd referral pe auto-block
+            lastUsed: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        
         console.log(`Awarded ${referralReward} coins to referrer ${referrerId}`);
-        tg.showAlert(`Welcome! You were referred and your friend has been rewarded.`);
+        
     } catch (e) {
         console.error("Referral transaction failed: ", e);
     }
@@ -854,6 +876,14 @@ window.requestWithdrawal = async function() {
         const keyContainer = document.getElementById('task-key-container');
         keyContainer.classList.toggle('hidden', e.target.value !== 'youtube_video');
     });
+
+    // ✅ DEVICE STATS ADD KARO (optional)
+    const devicesSnapshot = await db.collection('devices').get();
+    let blockedDevices = 0;
+    devicesSnapshot.forEach(doc => {
+        if (doc.data().blocked) blockedDevices++;
+    });
+   
             // Load Settings
             const settings = (await db.collection('settings').doc('global').get()).data() || {};
             document.getElementById('setting-farm-rate').value = settings.farmRate || 100;
