@@ -15,7 +15,7 @@
             --bg-color: #121212;
             --primary-surface: #1e1e1e;
             --secondary-surface: #2a2a2a;
-            --primary-accent: #f0b90b;
+            --primary-accent: #0a84ff; /* Changed from yellow to blue */
             --secondary-accent: #4caf50;
             --primary-text: #ffffff;
             --secondary-text: #b0b0b0;
@@ -54,9 +54,14 @@
             padding: 10px 15px; background-color: var(--primary-surface);
             border-bottom: 1px solid var(--secondary-surface);
         }
+        .balance-container {
+             text-align: left;
+        }
+        .coin-balance { font-size: 1.2em; font-weight: bold; }
+        #farming-rate-display { font-size: 0.8em; color: var(--secondary-text); }
         .profile-info { display: flex; align-items: center; gap: 10px; }
         .profile-pic { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-        .coin-balance { font-size: 1.2em; font-weight: bold; }
+
         /* --- Main Content --- */
         .main-content {
             flex-grow: 1; overflow-y: auto; padding: 15px; position: relative;
@@ -81,7 +86,7 @@
         }
         .progress-bar {
             width: 0%; height: 10px; background-color: var(--secondary-accent);
-            border-radius: 8px; transition: width 1s linear;
+            border-radius: 8px; transition: width 1s linear; /* This creates the fill animation */
         }
         #farm-timer { font-size: 1.1em; color: var(--secondary-text); }
         #farm-button {
@@ -93,15 +98,7 @@
             background-color: var(--secondary-surface); color: var(--secondary-text); cursor: not-allowed;
         }
         #farm-button:active { transform: scale(0.95); }
-        /* --- Falling Leaves Animation --- */
-        #falling-leaves-container {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            overflow: hidden; pointer-events: none; z-index: -1;
-        }
-        .leaf {
-            position: absolute; top: -10%; font-size: 1.5em; animation: fall linear infinite;
-        }
-        @keyframes fall { to { transform: translateY(105vh) rotate(360deg); } }
+
         /* --- Level Up Popup --- */
         #level-up-popup {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.5);
@@ -124,7 +121,7 @@
         }
         .task-info, .history-info { flex-grow: 1; }
         .task-item button, .form-container button, .admin-section button {
-            padding: 8px 15px; background: var(--primary-accent); color: var(--bg-color);
+            padding: 8px 15px; background: var(--primary-accent); color: var(--primary-text);
             border: none; border-radius: 8px; cursor: pointer; font-weight: bold;
         }
         .task-item button:disabled { background: var(--secondary-surface); color: var(--secondary-text); }
@@ -190,7 +187,10 @@
     <div id="loader">Loading... 💰</div>
     <div id="app-container" class="hidden">
         <header class="header">
-            <div id="coin-balance-container" class="coin-balance">💰 0</div>
+            <div class="balance-container">
+                 <div id="coin-balance-container" class="coin-balance">💰 0</div>
+                 <small id="farming-rate-display">...</small>
+            </div>
             <div class="profile-info">
                 <span id="user-name">User</span>
                 <img id="user-pic" class="profile-pic" src="https://t.me/i/userpic/320/1.jpg" alt="P">
@@ -198,7 +198,6 @@
         </header>
         <main class="main-content">
             <div id="farming-tab" class="tab-content">
-                 <div id="falling-leaves-container"></div>
                 <h2>CRYPTO FARMING</h2>
                 <div id="logo-container">
                     <img src="https://i.ibb.co/GfSXrc6X/1758858256731.png" alt="Crypto Farm Logo" class="farm-logo">
@@ -235,11 +234,11 @@
                     <button onclick="convertCoins()">Convert</button>
                     <h4 style="margin-top: 20px;">Request Withdrawal</h4>
                     <select id="withdrawal-method">
-                        <option value="upi">UPI</option>
-                        <option value="usdt">USDT (TRC20)</option>
+                        <option value="solana">Solana Address</option>
+                        <option value="dm_coin">DM Coin</option>
                     </select>
-                    <input type="text" id="withdrawal-address" placeholder="Enter UPI ID or USDT Address">
-                    <input type="number" id="withdrawal-amount" placeholder="Enter INR/USDT amount">
+                    <input type="text" id="withdrawal-address" placeholder="Enter Solana Address">
+                    <input type="number" id="withdrawal-amount" placeholder="Enter SOL/DM amount">
                     <button onclick="requestWithdrawal()">Request</button>
                 </div>
                 <h3>Withdrawal History</h3>
@@ -252,7 +251,7 @@
                 <div class="task-list">
                     <div class="task-item"><span>User ID</span> <strong id="profile-userid">...</strong></div>
                     <div class="task-item"><span>Total Coins</span> <strong id="profile-coins">...</strong></div>
-                    <div class="task-item"><span>Total Exchanged (INR/USDT)</span> <strong id="profile-exchanged">...</strong></div>
+                    <div class="task-item"><span>Total Exchanged (Value)</span> <strong id="profile-exchanged">...</strong></div>
                     <div class="task-item"><span>Referrals</span> <strong id="profile-referrals">...</strong></div>
                     <div class="task-item"><span>Current Level</span> <strong id="profile-level">...</strong></div>
                 </div>
@@ -318,7 +317,8 @@
             <div class="admin-section">
                 <h3>Global Settings</h3>
                 <label>Farming Rate (coins/min):</label><input type="number" id="setting-farm-rate">
-                <label>Conversion Rate (Coins per 1 INR/USDT):</label><input type="number" id="setting-conversion-rate">
+                <label>SOL Conversion Rate (Coins per 1 SOL):</label><input type="number" id="setting-sol-rate">
+                <label>DM Coin Conversion Rate (Coins per 1 DM):</label><input type="number" id="setting-dm-rate">
                 <label>Watch Ad Reward:</label><input type="number" id="setting-ad-reward">
                 <br><br>
                 <button onclick="saveAdminSettings()">Save Settings</button>
@@ -342,13 +342,13 @@
     document.addEventListener('DOMContentLoaded', () => {
         // --- Firebase Configuration --- //
         const firebaseConfig = {
-  apiKey: "AIzaSyBWhjcgCmp5A6V5uCSSB-j8yMKqRYZuHIY",
-  authDomain: "mining-bot-6131b.firebaseapp.com",
-  projectId: "mining-bot-6131b",
-  storageBucket: "mining-bot-6131b.appspot.com",
-  messagingSenderId: "614776449697",
-  appId: "1:614776449697:web:a13c41c86b4aa16b2adee0"
-};
+            apiKey: "AIzaSyBWhjcgCmp5A6V5uCSSB-j8yMKqRYZuHIY",
+            authDomain: "mining-bot-6131b.firebaseapp.com",
+            projectId: "mining-bot-6131b",
+            storageBucket: "mining-bot-6131b.appspot.com",
+            messagingSenderId: "614776449697",
+            appId: "1:614776449697:web:a13c41c86b4aa16b2adee0"
+        };
         // --- Firebase Initialization --- //
         try {
             firebase.initializeApp(firebaseConfig);
@@ -360,16 +360,13 @@
         const db = firebase.firestore();
         const tg = window.Telegram.WebApp;
 
-function generateDeviceFingerprint() {
-    return btoa(navigator.userAgent + navigator.platform + screen.width + screen.height);
-}
         // --- Global Variables --- //
         let currentUser = null;
         let userData = null;
         let farmInterval = null;
         let globalSettings = {};
 
-            async function initializeApp() {
+        async function initializeApp() {
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 tg.ready();
                 tg.expand();
@@ -383,6 +380,7 @@ function generateDeviceFingerprint() {
             document.getElementById('loader').classList.add('hidden');
         }
 
+        
         // --- USER PANEL LOGIC --- //
         async function initUserPanel() {
             document.getElementById('user-name').innerText = currentUser.first_name;
@@ -398,7 +396,10 @@ function generateDeviceFingerprint() {
             const doc = await db.collection('settings').doc('global').get();
             if (doc.exists) {
                 globalSettings = doc.data();
-                document.getElementById('conversion-rate').innerText = `Rate: ${globalSettings.conversionRate || 1000} 💰 = 1 INR/USDT`;
+                const solRate = globalSettings.solRate || 10000;
+                const dmRate = globalSettings.dmRate || 500;
+                document.getElementById('conversion-rate').innerText = `Rates: ${solRate}💰/SOL | ${dmRate}💰/DM`;
+                document.getElementById('farming-rate-display').innerText = `${globalSettings.farmRate || '...'} 💰/min`;
             }
         }
 
@@ -431,70 +432,48 @@ function generateDeviceFingerprint() {
                     await handleReferral(tg.initDataUnsafe.start_param, userId);
                 }
             }
-             localStorage.setItem(`userData_${userId}`, JSON.stringify(userData));
+            localStorage.setItem(`userData_${userId}`, JSON.stringify(userData));
             updateUI();
         }
 
-        async function handleReferral(referrerId, newUserId) {
-    if (referrerId === newUserId) {
-        console.log("User tried to refer themselves.");
-        return;
-    }
-    
-    // ✅ DEVICE LIMIT CHECK ADD KARO
-    const deviceSig = generateDeviceFingerprint();
-    const deviceRef = db.collection('devices').doc(deviceSig);
-    
-    try {
-        // Device record check karo
-        const deviceDoc = await deviceRef.get();
-        const deviceData = deviceDoc.exists ? deviceDoc.data() : { count: 0, blocked: false };
-        
-        // Agar device blocked ya limit cross kar chuki hai
-        if (deviceData.blocked || deviceData.count >= 3) {
-            console.log("Referral ignored - device blocked/limit reached");
-            return;
+       async function handleReferral(referrerId, newUserId) {
+            if (referrerId === newUserId) {
+                console.log("User tried to refer themselves.");
+                return;
+            }
+
+            const referrerRef = db.collection('users').doc(referrerId);
+            const transaction = db.runTransaction(async (t) => {
+                const referrerDoc = await t.get(referrerRef);
+                if (!referrerDoc.exists) {
+                    throw "Referrer not found!";
+                }
+
+                const referrerData = referrerDoc.data();
+                const existingReferrals = referrerData.referrals || [];
+                if (existingReferrals.includes(newUserId)) {
+                    console.log("User was already referred by this referrer.");
+                    return; // No need to throw an error, just stop.
+                }
+
+                const referralReward = 500;
+                const newCoins = (referrerData.coins || 0) + referralReward;
+                const newReferrals = [...existingReferrals, newUserId];
+
+                t.update(referrerRef, {
+                    coins: newCoins,
+                    referrals: newReferrals
+                });
+            });
+
+            try {
+                await transaction;
+                console.log(`Awarded 500 coins to referrer ${referrerId}`);
+            } catch (e) {
+                console.error("Referral transaction failed: ", e);
+            }
         }
         
-        // Referrer exists check
-        const referrerRef = db.collection('users').doc(referrerId);
-        const referrerDoc = await referrerRef.get();
-        if (!referrerDoc.exists) {
-            console.log("Referrer not found!");
-            return;
-        }
-
-        // Duplicate referral check
-        const referrerData = referrerDoc.data();
-        const existingReferrals = referrerData.referrals || [];
-        if (existingReferrals.includes(newUserId)) {
-            console.log("User was already referred by this referrer.");
-            return;
-        }
-
-        // ✅ REFERRAL AWARD KARO
-        const referralReward = 500;
-        const newCoins = (referrerData.coins || 0) + referralReward;
-        const newReferrals = [...existingReferrals, newUserId];
-
-        await referrerRef.update({
-            coins: newCoins,
-            referrals: newReferrals
-        });
-        
-        // ✅ DEVICE COUNT UPDATE KARO
-        await deviceRef.set({
-            count: deviceData.count + 1,
-            blocked: (deviceData.count + 1) >= 3, // 3rd referral pe auto-block
-            lastUsed: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        
-        console.log(`Awarded ${referralReward} coins to referrer ${referrerId}`);
-        
-    } catch (e) {
-        console.error("Referral transaction failed: ", e);
-    }
-}
         function updateUI() {
             if (!userData) return;
             document.getElementById('coin-balance-container').innerText = `💰 ${Math.floor(userData.coins)}`;
@@ -519,13 +498,24 @@ function generateDeviceFingerprint() {
                 item.addEventListener('click', (e) => switchTab(e.currentTarget.dataset.tab));
             });
             document.getElementById('farm-button').addEventListener('click', handleFarmButtonClick);
+            
             document.getElementById('task-type-input')?.addEventListener('change', (e) => {
-    const keyContainer = document.getElementById('task-key-container');
-    if (keyContainer) {
-        keyContainer.classList.toggle('hidden', e.target.value !== 'youtube_video');
-    }
-});
-}
+                const keyContainer = document.getElementById('task-key-container');
+                if (keyContainer) {
+                    keyContainer.classList.toggle('hidden', e.target.value !== 'youtube_video');
+                }
+            });
+
+            document.getElementById('withdrawal-method').addEventListener('change', (e) => {
+                const addressInput = document.getElementById('withdrawal-address');
+                if (e.target.value === 'solana') {
+                    addressInput.placeholder = 'Enter Solana Address';
+                } else {
+                    addressInput.placeholder = 'Enter DM Coin Address';
+                }
+            });
+        }
+
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
@@ -587,14 +577,11 @@ function generateDeviceFingerprint() {
 
             switch (task.type) {
                 case 'youtube_video':
-                    // 1. First, redirect the user to the video
                     tg.showAlert("You will be redirected to YouTube. Watch the video to find the secret key, then return to the app.");
                     tg.openLink(task.link);
                     
-                    // 2. After they return, prompt for the key. The timeout gives them time to switch apps.
                     setTimeout(() => {
                         const key = prompt("Please enter the secret key from the video you just watched.");
-                        // We create an async function inside to use 'await'
                         (async () => {
                             if (key && key.trim().toLowerCase() === task.key.toLowerCase()) {
                                 await grantTaskReward(task.id, task.reward);
@@ -604,14 +591,12 @@ function generateDeviceFingerprint() {
                                 button.innerText = 'Go';
                             }
                         })();
-                    }, 2000); // Wait 2 seconds before showing the prompt
+                    }, 2000);
                     break;
 
                 case 'join_channel':
                 case 'join_group':
                     tg.openLink(task.link);
-                    // IMPORTANT: True verification MUST happen on a server using Telegram's getChatMember API.
-                    // This is a client-side simulation for demo purposes.
                     const verified = confirm("Please join the channel/group, then press OK to verify and claim your reward.");
                     if (verified) {
                          await grantTaskReward(task.id, task.reward);
@@ -647,35 +632,21 @@ function generateDeviceFingerprint() {
         }
 
         window.watchAd = function() {
-    const reward = globalSettings.adReward || 50;
-    tg.showConfirm(`Watch an ad to earn ${reward} coins?`, async (confirmed) => {
-        if (confirmed) {
-            try {
-                // Show the ad using the correct function name from your ad script
-                if (typeof show_9934705 === 'function') {
-                    await show_9934705('pop');
-                } else if (typeof show_9649353 === 'function') {
-                    await show_9649353('pop');
-                } else {
-                    // Simulate ad watching if ad function not available
+            const reward = globalSettings.adReward || 50;
+            tg.showConfirm(`Watch an ad to earn ${reward} coins?`, async (confirmed) => {
+                if (confirmed) {
+                    // Simulate ad watching for simplicity
                     tg.showPopup({
                         title: 'Watch Ad',
                         message: 'Please watch the ad video to completion...',
                         buttons: [{ type: 'ok', text: 'I Watched It' }]
                     });
+                    const newCoins = (userData.coins || 0) + reward;
+                    await syncUserData({ coins: newCoins });
+                    tg.showAlert(`Ad watched! You earned ${reward} coins. 🎉`);
                 }
-                
-                const newCoins = (userData.coins || 0) + reward;
-                await syncUserData({ coins: newCoins });
-                tg.showAlert(`Ad watched! You earned ${reward} coins. 🎉`);
-            } catch (e) {
-                // If ad failed or user closed it early
-                console.error('Ad failed or not completed:', e);
-                tg.showAlert('Ad could not be completed. No reward given.');
-            }
-        }
-    });
-};
+            });
+        };
 
         // --- FARMING LOGIC --- //
         function handleFarmButtonClick() {
@@ -721,12 +692,10 @@ function generateDeviceFingerprint() {
                         button.disabled = false;
                         timerEl.innerText = 'Farming complete!';
                         progressEl.style.width = '100%';
-                        stopLeafAnimation();
                         return;
                     }
                     button.innerText = 'Farming...';
                     button.disabled = true;
-                    startLeafAnimation();
                     const hours = Math.floor((timeLeft / (1000 * 60 * 60)) % 24);
                     const minutes = Math.floor((timeLeft / 1000 / 60) % 60);
                     const seconds = Math.floor((timeLeft / 1000) % 60);
@@ -739,112 +708,89 @@ function generateDeviceFingerprint() {
                 button.disabled = false;
                 timerEl.innerText = 'Ready to farm!';
                 progressEl.style.width = '0%';
-                stopLeafAnimation();
             }
         }
+        
         // --- WITHDRAWAL HISTORY FUNCTIONS --- //
-async function loadWithdrawalHistory() { 
-    try {
-        console.log("Loading withdrawal history for user:", currentUser.id.toString());
-        
-        const querySnapshot = await db.collection('withdrawals')
-            .where('userId', '==', currentUser.id.toString())
-            .get();
-        
-        const listEl = document.getElementById('withdrawal-history-list');
-        listEl.innerHTML = '';
-        
-        console.log("Found", querySnapshot.size, "withdrawals");
-        
-        if (querySnapshot.empty) { 
-            listEl.innerHTML = '<p>No withdrawal history found.</p>'; 
-            return; 
-        } 
-        
-        querySnapshot.forEach(doc => { 
-            const data = doc.data();
-            console.log("Withdrawal data:", data);
+        async function loadWithdrawalHistory() { 
+            try {
+                const querySnapshot = await db.collection('withdrawals')
+                    .where('userId', '==', currentUser.id.toString())
+                    .get();
+                
+                const listEl = document.getElementById('withdrawal-history-list');
+                listEl.innerHTML = '';
+                
+                if (querySnapshot.empty) { 
+                    listEl.innerHTML = '<p>No withdrawal history found.</p>'; 
+                    return; 
+                } 
+                
+                querySnapshot.forEach(doc => { 
+                    const data = doc.data();
+                    let dateString = data.timestamp?.toDate ? data.timestamp.toDate().toLocaleDateString() : 'Unknown date';
+                    const item = document.createElement('div');
+                    item.className = 'history-item';
+                    item.innerHTML = `
+                        <div class="history-info">
+                            <strong>${data.amount || 0} ${(data.method || 'unknown').toUpperCase()}</strong><br>
+                            <small>To: ${data.address || 'N/A'}</small><br>
+                            <small>Date: ${dateString} | Status: <span style="color: ${data.status === 'approved' ? 'green' : data.status === 'rejected' ? 'red' : 'orange'}">${data.status || 'pending'}</span></small>
+                            ${data.adminNote ? `<br><small>Note: ${data.adminNote}</small>` : ''}
+                        </div>
+                    `;
+                    listEl.appendChild(item);
+                });
+            } catch (error) {
+                console.error("Error loading withdrawal history:", error);
+                document.getElementById('withdrawal-history-list').innerHTML = '<p>Error loading history.</p>';
+            }
+        }
+
+        window.requestWithdrawal = async function() { 
+            const amount = parseFloat(document.getElementById('withdrawal-amount').value);
+            const method = document.getElementById('withdrawal-method').value;
+            const address = document.getElementById('withdrawal-address').value.trim();
             
-            // Format timestamp properly
-            let dateString = 'Unknown date';
-            if (data.timestamp) {
-                if (data.timestamp.toDate) {
-                    dateString = data.timestamp.toDate().toLocaleDateString();
-                } else if (data.timestamp instanceof Date) {
-                    dateString = data.timestamp.toLocaleDateString();
-                }
+            if (isNaN(amount) || amount <= 0 || !address) {
+                tg.showAlert("Please fill all withdrawal fields correctly.");
+                return;
             }
             
-            const item = document.createElement('div');
-            item.className = 'history-item';
-            item.innerHTML = `
-                <div class="history-info">
-                    <strong>${data.amount || 0} ${(data.method || 'unknown').toUpperCase()}</strong><br>
-                    <small>To: ${data.address || 'N/A'}</small><br>
-                    <small>Date: ${dateString} | Status: <span style="color: ${data.status === 'approved' ? 'green' : data.status === 'rejected' ? 'red' : 'orange'}">${data.status || 'pending'}</span></small>
-                    ${data.adminNote ? `<br><small>Note: ${data.adminNote}</small>` : ''}
-                </div>
-            `;
-            listEl.appendChild(item);
-        });
-    } catch (error) {
-        console.error("Error loading withdrawal history:", error);
-        document.getElementById('withdrawal-history-list').innerHTML = '<p>Error loading withdrawal history. Please try again.</p>';
-    }
-}
-
-window.requestWithdrawal = async function() { 
-    const amount = parseFloat(document.getElementById('withdrawal-amount').value);
-    const method = document.getElementById('withdrawal-method').value;
-    const address = document.getElementById('withdrawal-address').value.trim();
-    
-    if (isNaN(amount) || amount <= 0 || !address) {
-        tg.showAlert("Please fill all withdrawal fields correctly.");
-        return;
-    }
-    
-    const userExchanged = (userData.exchangedTotal || 0);
-    if (amount > userExchanged) {
-        tg.showAlert(`Insufficient exchanged balance. You have ${userExchanged.toFixed(4)} available.`);
-        return;
-    }
-    
-    try {
-        // Create withdrawal request
-        const withdrawalData = {
-            userId: currentUser.id.toString(),
-            userName: currentUser.first_name || 'Unknown',
-            amount: amount,
-            method: method,
-            address: address,
-            status: 'pending',
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            const userExchanged = (userData.exchangedTotal || 0);
+            if (amount > userExchanged) {
+                tg.showAlert(`Insufficient exchanged balance. You have ${userExchanged.toFixed(4)} available.`);
+                return;
+            }
+            
+            try {
+                const withdrawalData = {
+                    userId: currentUser.id.toString(),
+                    userName: currentUser.first_name || 'Unknown',
+                    amount: amount,
+                    method: method,
+                    address: address,
+                    status: 'pending',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await db.collection('withdrawals').add(withdrawalData);
+                
+                const newExchangedTotal = userExchanged - amount;
+                await syncUserData({ exchangedTotal: newExchangedTotal });
+                
+                tg.showAlert("Withdrawal request submitted successfully!");
+                document.getElementById('withdrawal-amount').value = '';
+                document.getElementById('withdrawal-address').value = '';
+                loadWithdrawalHistory();
+                
+            } catch (error) {
+                console.error("Error submitting withdrawal:", error);
+                tg.showAlert("Error submitting withdrawal request.");
+            }
         };
-        
-        await db.collection('withdrawals').add(withdrawalData);
-        
-        // Update user's exchanged total
-        const newExchangedTotal = userExchanged - amount;
-        await syncUserData({ exchangedTotal: newExchangedTotal });
-        
-        tg.showAlert("Withdrawal request submitted successfully!");
-        
-        // Clear form
-        document.getElementById('withdrawal-amount').value = '';
-        document.getElementById('withdrawal-address').value = '';
-        
-        // Reload history
-        loadWithdrawalHistory();
-        
-    } catch (error) {
-        console.error("Error submitting withdrawal:", error);
-        tg.showAlert("Error submitting withdrawal request. Please try again.");
-    }
-};
+
         // --- ANIMATIONS & OTHER TABS --- //
-        let leafAnimationActive = false;
-        function startLeafAnimation() { if (leafAnimationActive) return; leafAnimationActive = true; const container = document.getElementById('falling-leaves-container'); for (let i = 0; i < 15; i++) { const leaf = document.createElement('div'); leaf.className = 'leaf'; leaf.innerHTML = ['🍂', '🍁'][Math.round(Math.random())]; leaf.style.left = `${Math.random() * 100}vw`; leaf.style.animationDuration = `${Math.random() * 3 + 4}s`; leaf.style.animationDelay = `${Math.random() * 5}s`; container.appendChild(leaf); } }
-        function stopLeafAnimation() { leafAnimationActive = false; document.getElementById('falling-leaves-container').innerHTML = ''; }
         function checkLevelUp(oldXp, newXp) { const levelThreshold = (level) => Math.floor(100 * Math.pow(level, 1.5)); const currentLevelThreshold = levelThreshold(userData.level); if (newXp >= currentLevelThreshold) { const newLevel = userData.level + 1; syncUserData({ level: newLevel }); showLevelUpPopup(newLevel); } }
         function showLevelUpPopup(level) { const popup = document.getElementById('level-up-popup'); document.getElementById('new-level').innerText = `Level ${level}`; popup.classList.add('show'); createConfetti(); setTimeout(() => popup.classList.remove('show'), 4000); }
         function createConfetti() { const container = document.getElementById('confetti-container'); container.innerHTML = ''; for (let i = 0; i < 100; i++) { const confetti = document.createElement('div'); confetti.style.position = 'absolute'; confetti.style.width = `${Math.random() * 10 + 5}px`; confetti.style.height = confetti.style.width; confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`; confetti.style.left = `${Math.random() * 100}%`; confetti.style.top = `${-20}%`; confetti.style.animation = `confetti-fall ${Math.random() * 2 + 3}s linear ${Math.random() * 2}s forwards`; container.appendChild(confetti); } }
@@ -852,9 +798,35 @@ window.requestWithdrawal = async function() {
 
         function updateProfileTab() { document.getElementById('profile-userid').innerText = userData.id; document.getElementById('profile-coins').innerText = Math.floor(userData.coins); document.getElementById('profile-exchanged').innerText = (userData.exchangedTotal || 0).toFixed(4); document.getElementById('profile-referrals').innerText = userData.referrals?.length || 0; document.getElementById('profile-level').innerText = userData.level; }
 
-        window.convertCoins = async function() { const amount = parseInt(document.getElementById('convert-amount').value); if (isNaN(amount) || amount <= 0) { tg.showAlert("Enter a valid coin amount."); return; } if (amount > (userData.coins || 0)) { tg.showAlert("You do not have enough coins."); return; } const rate = globalSettings.conversionRate || 1000; const converted = amount / rate; await syncUserData({ coins: (userData.coins || 0) - amount, exchangedTotal: (userData.exchangedTotal || 0) + converted }); tg.showAlert(`Converted ${amount} coins into ${converted.toFixed(4)} units.`); updateUI(); };
+        window.convertCoins = async function() { 
+            const amount = parseInt(document.getElementById('convert-amount').value); 
+            if (isNaN(amount) || amount <= 0) { tg.showAlert("Enter a valid coin amount."); return; } 
+            if (amount > (userData.coins || 0)) { tg.showAlert("You do not have enough coins."); return; } 
+            
+            // Note: This uses a single primary rate for conversion to a general 'value'.
+            // The admin sees the withdrawal method (SOL/DM) and can apply the specific rate.
+            const rate = globalSettings.solRate || 10000;
+            const converted = amount / rate; 
+            
+            await syncUserData({ 
+                coins: (userData.coins || 0) - amount, 
+                exchangedTotal: (userData.exchangedTotal || 0) + converted 
+            }); 
+            tg.showAlert(`Converted ${amount} coins into ${converted.toFixed(4)} value units.`); 
+            updateUI(); 
+        };
 
-        function loadReferralData() { const linkInput = document.getElementById('referral-link'); linkInput.value = `https://t.me/mining_tech_bot?start=${currentUser.id}`; const displayEl = document.getElementById('referral-history-list'); const referralCount = userData.referrals?.length || 0; if (referralCount === 0) { displayEl.innerHTML = `<p>No referrals yet. Share your link to earn 500 coins per referral!</p>`; } else { displayEl.innerHTML = `<p>You have referred <strong>${referralCount} users</strong> and earned <strong>${referralCount * 500} coins</strong>!</p><div style="margin-top: 10px;"><strong>Referral IDs:</strong><br>${userData.referrals.map(id => `• ${id}`).join('<br>')}</div>`; } }
+        function loadReferralData() { 
+            const linkInput = document.getElementById('referral-link'); 
+            linkInput.value = `https://t.me/Mining_techi_bot?start=${currentUser.id}`; // IMPORTANT: Change YOUR_BOT_NAME_HERE
+            const displayEl = document.getElementById('referral-history-list'); 
+            const referralCount = userData.referrals?.length || 0; 
+            if (referralCount === 0) { 
+                displayEl.innerHTML = `<p>No referrals yet. Share your link to earn 500 coins per referral!</p>`; 
+            } else { 
+                displayEl.innerHTML = `<p>You have referred <strong>${referralCount} users</strong> and earned <strong>${referralCount * 500} coins</strong>!</p><div style="margin-top: 10px;"><strong>Referred User IDs:</strong><br>${userData.referrals.map(id => `• ${id}`).join('<br>')}</div>`; 
+            } 
+        }
 
         window.copyReferralLink = async function() { const linkInput = document.getElementById('referral-link'); try { await navigator.clipboard.writeText(linkInput.value); tg.showAlert('Referral link copied!'); } catch (err) { linkInput.select(); document.execCommand('copy'); tg.showAlert('Referral link copied!'); } };
     
@@ -871,23 +843,11 @@ window.requestWithdrawal = async function() {
             }
         }
         async function loadAdminData() {
-    // Bind the event listener for the task type dropdown
-    document.getElementById('task-type-input').addEventListener('change', (e) => {
-        const keyContainer = document.getElementById('task-key-container');
-        keyContainer.classList.toggle('hidden', e.target.value !== 'youtube_video');
-    });
-
-    // ✅ DEVICE STATS ADD KARO (optional)
-    const devicesSnapshot = await db.collection('devices').get();
-    let blockedDevices = 0;
-    devicesSnapshot.forEach(doc => {
-        if (doc.data().blocked) blockedDevices++;
-    });
-   
             // Load Settings
             const settings = (await db.collection('settings').doc('global').get()).data() || {};
             document.getElementById('setting-farm-rate').value = settings.farmRate || 100;
-            document.getElementById('setting-conversion-rate').value = settings.conversionRate || 1000;
+            document.getElementById('setting-sol-rate').value = settings.solRate || 10000;
+            document.getElementById('setting-dm-rate').value = settings.dmRate || 500;
             document.getElementById('setting-ad-reward').value = settings.adReward || 50;
             
             // Load Withdrawals
@@ -900,7 +860,6 @@ window.requestWithdrawal = async function() {
                 row.innerHTML = `<td>${data.userId}</td><td>${data.amount}</td><td>${data.method}</td><td>${data.address}</td><td>${data.status}</td><td><button onclick="updateWithdrawalStatus('${doc.id}', 'approved')">Approve</button><button onclick="updateWithdrawalStatus('${doc.id}', 'rejected')" style="background:var(--danger-color)">Reject</button></td>`;
             });
 
-            // Load Tasks and Dashboard Stats
             loadAdminTasks();
             loadAdminDashboardStats();
         }
@@ -938,8 +897,8 @@ window.requestWithdrawal = async function() {
             document.getElementById('task-type-input').value = taskData.type;
             document.getElementById('task-link-input').value = taskData.link;
             document.getElementById('task-key-input').value = taskData.key || '';
-            document.getElementById('task-type-input').dispatchEvent(new Event('change')); // Trigger visibility check for key
-            window.scrollTo(0, 0); // Scroll to top to see the form
+            document.getElementById('task-type-input').dispatchEvent(new Event('change'));
+            window.scrollTo(0, 0);
         };
         window.deleteAdminTask = async function(id) {
             if (confirm("Are you sure you want to delete this task?")) {
@@ -948,31 +907,26 @@ window.requestWithdrawal = async function() {
                 loadAdminTasks();
             }
         };
-                window.saveAdminTask = async function() {
+        window.saveAdminTask = async function() {
             const taskId = document.getElementById('task-id-input').value;
             const taskData = {
                 name: document.getElementById('task-name-input').value,
                 reward: parseInt(document.getElementById('task-reward-input').value),
                 type: document.getElementById('task-type-input').value,
                 link: document.getElementById('task-link-input').value,
-                key: document.getElementById('task-key-input').value.trim() // key ko trim kar dein
+                key: document.getElementById('task-key-input').value.trim()
             };
             
             if (!taskData.name || !taskData.reward || !taskData.link) {
                 alert("Please fill Name, Reward, and Link fields.");
                 return;
             }
-
-            // YEH NAYA LOGIC HAI
-            // Agar task type YouTube hai, to check karo ki key khali to nahi hai
             if (taskData.type === 'youtube_video' && !taskData.key) {
                 alert("For YouTube tasks, the secret key is required.");
-                return; // function ko yahin rok do
+                return;
             }
-
-            // Agar task type YouTube nahi hai, to key ko save mat karo
             if (taskData.type !== 'youtube_video') {
-                delete taskData.key; // taskData object se key ko हटा do
+                delete taskData.key;
             }
             
             try {
@@ -985,24 +939,23 @@ window.requestWithdrawal = async function() {
                 }
             } catch (error) {
                 console.error("Error saving task: ", error);
-                alert("Could not save the task. See console for details.");
+                alert("Could not save the task.");
             }
             
-            // Form ko reset karo
             document.getElementById('task-id-input').value = '';
             document.getElementById('task-name-input').value = '';
             document.getElementById('task-reward-input').value = '';
             document.getElementById('task-link-input').value = '';
             document.getElementById('task-key-input').value = '';
             document.getElementById('task-key-container').classList.add('hidden');
-            
             loadAdminTasks();
         };
 
         window.saveAdminSettings = async function() {
             const settings = {
                 farmRate: parseInt(document.getElementById('setting-farm-rate').value),
-                conversionRate: parseInt(document.getElementById('setting-conversion-rate').value),
+                solRate: parseInt(document.getElementById('setting-sol-rate').value),
+                dmRate: parseInt(document.getElementById('setting-dm-rate').value),
                 adReward: parseInt(document.getElementById('setting-ad-reward').value)
             };
             await db.collection('settings').doc('global').set(settings, { merge: true });
@@ -1011,7 +964,7 @@ window.requestWithdrawal = async function() {
         window.updateWithdrawalStatus = async function(docId, status) {
             const reason = prompt(`Enter reason for ${status} (optional):`);
             await db.collection('withdrawals').doc(docId).update({ status: status, adminNote: reason || '' });
-            alert(`Withdrawal ${status}. User will be notified (requires backend bot).`);
+            alert(`Withdrawal ${status}.`);
             loadAdminData();
         };
         window.sendBroadcast = function() {
@@ -1022,19 +975,5 @@ window.requestWithdrawal = async function() {
         initializeApp();
     });
 </script>
-    <script src='https://libtl.com/sdk.js' data-zone='9934705' data-sdk='show_9934705'></script> 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-  
