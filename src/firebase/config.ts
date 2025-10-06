@@ -2,12 +2,12 @@ import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBWhjcgCmp5A6V5uCSSB-j8yMKqRYZuHIY",
-  authDomain: "mining-bot-6131b.firebaseapp.com",
-  projectId: "mining-bot-6131b",
-  storageBucket: "mining-bot-6131b.firebasestorage.app",
-  messagingSenderId: "614776449697",
-  appId: "1:614776449697:web:a13c41c86b4aa16b2adee0"
+  apiKey: "AIzaSyD-EiTLr-bDDDKgR5tvzguyNfdlKDO8Rw8",
+  authDomain: "tap-and-earn-d3583.firebaseapp.com",
+  projectId: "tap-and-earn-d3583",
+  storageBucket: "tap-and-earn-d3583.firebasestorage.app",
+  messagingSenderId: "759083332180",
+  appId: "1:759083332180:web:165eb0bf070956fb0033c1"
 };
 
 // Initialize Firebase
