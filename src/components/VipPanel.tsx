@@ -2,31 +2,33 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Crown, Star, TrendingUp, Users, CreditCard, Gift, Zap } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
-import { cn, isVipActive, getVipTimeRemaining } from '../utils';
+import { cn } from '../utils';
 
 const VipPanel: React.FC = () => {
-  const { user } = useAppStore();
+  const { user, setActiveOverlayTab } = useAppStore();
 
   if (!user) return null;
 
-  const tierConfig = TIER_CONFIGS[user.tier];
-  const isVip = user.tier !== 'free';
-  const vipActive = isVipActive(user.vipExpiry);
-  const timeRemaining = getVipTimeRemaining(user.vipExpiry);
+  const tierConfig = TIER_CONFIGS[user.vip_tier];
+  const isVip = user.vip_tier !== 'free';
+  const vipActive = user.vip_expiry && user.vip_expiry > Date.now();
+  const vipTimeLeft = user.vip_expiry ? Math.max(0, user.vip_expiry - Date.now()) : 0;
+  const vipDaysLeft = Math.ceil(vipTimeLeft / (24 * 60 * 60 * 1000));
+  const vipHoursLeft = Math.ceil(vipTimeLeft / (60 * 60 * 1000));
 
   const benefits = [
     {
       icon: <TrendingUp className="w-5 h-5" />,
       title: 'Farming Speed',
-      description: `${tierConfig.farmingMultiplier}× faster coin generation`,
-      value: `${tierConfig.farmingMultiplier}×`,
+      description: `${user.multiplier}× faster coin generation`,
+      value: `${user.multiplier}×`,
       color: 'text-green-400'
     },
     {
       icon: <CreditCard className="w-5 h-5" />,
       title: 'Daily Withdrawals',
-      description: `Up to ${tierConfig.dailyWithdrawals} withdrawals per day`,
-      value: tierConfig.dailyWithdrawals.toString(),
+      description: `Up to ${user.withdraw_limit} withdrawals per day`,
+      value: user.withdraw_limit.toString(),
       color: 'text-blue-400'
     },
     {
@@ -39,16 +41,16 @@ const VipPanel: React.FC = () => {
     {
       icon: <Users className="w-5 h-5" />,
       title: 'Referral Bonus',
-      description: `${tierConfig.referralMultiplier}× referral rewards`,
-      value: `${tierConfig.referralMultiplier}×`,
+      description: `${user.referral_boost}× referral rewards`,
+      value: `${user.referral_boost}×`,
       color: 'text-yellow-400'
     }
   ];
 
   const tierComparison = [
-    { tier: 'free', name: 'Free', current: user.tier === 'free' },
-    { tier: 'bronze', name: 'Bronze VIP', current: user.tier === 'bronze' },
-    { tier: 'diamond', name: 'Diamond VIP', current: user.tier === 'diamond' }
+    { tier: 'free', name: 'Free', current: user.vip_tier === 'free' },
+    { tier: 'bronze', name: 'Bronze VIP', current: user.vip_tier === 'bronze' },
+    { tier: 'diamond', name: 'Diamond VIP', current: user.vip_tier === 'diamond' }
   ];
 
   return (
@@ -106,9 +108,9 @@ const VipPanel: React.FC = () => {
                 )}>
                   VIP Status: {vipActive ? 'Active' : 'Expired'}
                 </div>
-                {vipActive && timeRemaining && (
+                {vipActive && (
                   <div className="text-sm text-gray-400">
-                    {timeRemaining} remaining
+                    {vipDaysLeft > 1 ? `${vipDaysLeft} days` : `${vipHoursLeft} hours`} remaining
                   </div>
                 )}
               </div>
@@ -254,7 +256,7 @@ const VipPanel: React.FC = () => {
             Unlock premium benefits and boost your earnings!
           </p>
           <motion.button
-            onClick={() => {/* Navigate to shop */}}
+            onClick={() => setActiveOverlayTab('shop')}
             className="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-primary-600 hover:to-secondary-600 transition-all duration-300 tap-effect neon-glow"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

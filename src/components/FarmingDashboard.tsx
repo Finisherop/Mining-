@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, TrendingUp, Zap, Clock } from 'lucide-react';
+import { Play, Pause, TrendingUp, Zap, Clock, Crown, Sparkles, Star, Timer } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
 import { cn, formatNumber, triggerCoinBurst, playSound, calculateFarmingEarnings } from '../utils';
 
@@ -51,27 +51,49 @@ const FarmingDashboard: React.FC = () => {
 
   if (!user) return null;
 
-  const tierConfig = TIER_CONFIGS[user.tier];
-  const isVip = user.tier !== 'free';
-  const farmingRate = user.farmingRate * tierConfig.farmingMultiplier;
+  const tierConfig = TIER_CONFIGS[user.vip_tier];
+  const isVip = user.vip_tier !== 'free' && user.vip_expiry && user.vip_expiry > Date.now();
+  const farmingRate = user.farmingRate * (user.multiplier || 1);
+  const vipTimeLeft = user.vip_expiry ? Math.max(0, user.vip_expiry - Date.now()) : 0;
+  const vipHoursLeft = Math.ceil(vipTimeLeft / (60 * 60 * 1000));
+  const vipDaysLeft = Math.ceil(vipTimeLeft / (24 * 60 * 60 * 1000));
 
   return (
     <div className="glass-panel p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-1">Farming Dashboard</h2>
-          <p className="text-gray-400 text-sm">
-            {isVip ? `VIP active — +${tierConfig.farmingMultiplier}× farming` : 'Start farming to earn coins'}
-          </p>
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg">
+            <TrendingUp className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-1">Live Farming Counter</h2>
+            <p className="text-gray-400 text-sm">
+              {isVip ? `VIP active — ${user.multiplier}× farming speed` : 'Start farming to earn coins'}
+            </p>
+          </div>
         </div>
+        
+        {/* VIP Status & Timer */}
         {isVip && (
           <motion.div
-            animate={{ rotate: [0, 5, -5, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="text-2xl"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-right"
           >
-            👑
+            <div className="flex items-center space-x-2 mb-1">
+              <motion.div
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <Crown className="w-5 h-5 text-yellow-400" />
+              </motion.div>
+              <span className="text-yellow-400 font-bold">{tierConfig.name}</span>
+            </div>
+            <div className="flex items-center space-x-1 text-xs text-gray-400">
+              <Timer className="w-3 h-3" />
+              <span>VIP • {vipDaysLeft > 1 ? `${vipDaysLeft}d` : `${vipHoursLeft}h`} left</span>
+            </div>
           </motion.div>
         )}
       </div>
@@ -110,8 +132,9 @@ const FarmingDashboard: React.FC = () => {
             {farmingRate}
           </div>
           {isVip && (
-            <div className="text-xs text-yellow-400 mt-1">
-              {tierConfig.farmingMultiplier}× VIP Boost
+            <div className="text-xs text-yellow-400 mt-1 flex items-center justify-center space-x-1">
+              <Sparkles className="w-3 h-3" />
+              <span>{user.multiplier}× VIP Boost</span>
             </div>
           )}
         </motion.div>
@@ -236,14 +259,57 @@ const FarmingDashboard: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center justify-center space-x-2 text-xs"
             >
-              <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="w-2 h-2 bg-yellow-400 rounded-full"
+              />
               <span className="text-yellow-400 font-medium">
-                VIP Boost Active: {tierConfig.farmingMultiplier}× Speed
+                VIP Boost Active: {user.multiplier}× Speed
               </span>
+              <Crown className="w-3 h-3 text-yellow-400" />
             </motion.div>
           )}
         </div>
       </div>
+
+      {/* Active Perks Display */}
+      {isVip && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg p-4"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center space-x-2">
+              <Crown className="w-5 h-5 text-yellow-400" />
+              <span className="text-lg font-bold text-yellow-400">Active Perks</span>
+            </div>
+            <div className="text-xs text-gray-400">
+              Expires in {vipDaysLeft > 1 ? `${vipDaysLeft} days` : `${vipHoursLeft} hours`}
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex items-center space-x-2">
+              <Zap className="w-4 h-4 text-primary-400" />
+              <span className="text-sm text-white">{user.multiplier}× Farming Speed</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="w-4 h-4 text-green-400" />
+              <span className="text-sm text-white">{user.withdraw_limit} Withdrawals/day</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Star className="w-4 h-4 text-yellow-400" />
+              <span className="text-sm text-white">{user.referral_boost}× Referral Bonus</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Sparkles className="w-4 h-4 text-purple-400" />
+              <span className="text-sm text-white">{tierConfig.badge} Badge</span>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Progress Bar */}
       {farmingSession?.active && (
@@ -271,6 +337,29 @@ const FarmingDashboard: React.FC = () => {
           </div>
         </motion.div>
       )}
+
+      {/* Streak Display */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg p-4"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="text-2xl">🔥</div>
+            <div>
+              <div className="text-lg font-bold text-white">{user.claimStreak} Day Streak</div>
+              <div className="text-sm text-gray-400">Keep claiming daily rewards!</div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-blue-400 font-medium">Next Reward</div>
+            <div className="text-xs text-gray-400">
+              {user.claimedDays.length < 7 ? `Day ${user.claimedDays.length + 1}` : 'All claimed!'}
+            </div>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 };

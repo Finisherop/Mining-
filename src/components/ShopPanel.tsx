@@ -1,14 +1,99 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, Star, Crown, Zap, Clock, Check, Loader2 } from 'lucide-react';
+import { ShoppingBag, Star, Crown, Zap, Clock, Check, Loader2, Lock, Sparkles } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
 import { cn, triggerConfetti, triggerStarBurst, playSound } from '../utils';
+import { purchaseVIPTier, showPaymentAlert, showPaymentConfirm, paymentHaptic } from '../utils/telegramPayments';
+import toast from 'react-hot-toast';
 
 const ShopPanel: React.FC = () => {
-  const { user, shopItems, purchaseItem, upgradeTier, isLoading } = useAppStore();
+  const { user, shopItems, purchaseItem, upgradeTier, isLoading, setUser } = useAppStore();
   const [purchasingItem, setPurchasingItem] = useState<string | null>(null);
+  const [purchaseProgress, setPurchaseProgress] = useState<string>('');
 
-  const handlePurchase = async (itemId: string, event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleVIPPurchase = async (tier: 'bronze' | 'diamond', starCost: number, event: React.MouseEvent<HTMLButtonElement>) => {
+    if (!user || purchasingItem) return;
+
+    const tierConfig = TIER_CONFIGS[tier];
+    
+    showPaymentConfirm(
+      `Purchase ${tierConfig.name} for ${starCost} ⭐?\n\nFeatures:\n${tierConfig.features.join('\n')}`,
+      async () => {
+        setPurchasingItem(tier);
+        setPurchaseProgress('Preparing payment...');
+        paymentHaptic('medium');
+
+        try {
+          await purchaseVIPTier(
+            user.id,
+            tier,
+            starCost,
+            // Success callback
+            (purchasedTier) => {
+              const vipExpiry = Date.now() + (tierConfig.duration * 24 * 60 * 60 * 1000);
+              
+              const updatedUser = {
+                ...user,
+                vip_tier: purchasedTier,
+                vip_expiry: vipExpiry,
+                multiplier: tierConfig.farmingMultiplier,
+                withdraw_limit: tierConfig.dailyWithdrawals,
+                referral_boost: tierConfig.referralMultiplier,
+                tier: purchasedTier, // Update legacy tier field too
+                badges: [
+                  ...user.badges,
+                  {
+                    type: tierConfig.badge,
+                    name: `${tierConfig.name} Member`,
+                    description: `Upgraded to ${tierConfig.name}`,
+                    icon: tier === 'bronze' ? '🥉' : '💎',
+                    color: tierConfig.color,
+                    unlockedAt: new Date()
+                  }
+                ]
+              };
+
+              setUser(updatedUser);
+              
+              // Celebration effects
+              setTimeout(() => {
+                triggerConfetti({ x: 0.5, y: 0.3 });
+                playSound('success');
+                paymentHaptic('heavy');
+              }, 500);
+
+              toast.success('🎉 VIP Activated! Welcome to premium!', { duration: 5000 });
+              showPaymentAlert(`Congratulations! You are now a ${tierConfig.name} member!`, 'success');
+            },
+            // Error callback
+            (error) => {
+              console.error('VIP purchase failed:', error);
+              toast.error(`Purchase failed: ${error}`);
+              showPaymentAlert(`Purchase failed: ${error}`, 'error');
+              paymentHaptic('heavy');
+            },
+            // Progress callback
+            (stage) => {
+              setPurchaseProgress(stage);
+            }
+          );
+        } catch (error) {
+          console.error('Purchase error:', error);
+          toast.error('Purchase failed. Please try again.');
+          paymentHaptic('heavy');
+        } finally {
+          setPurchasingItem(null);
+          setPurchaseProgress('');
+        }
+      },
+      () => {
+        // Cancel callback
+        paymentHaptic('light');
+      }
+    );
+  };
+
+  const handleBoostPurchase = async (itemId: string, event: React.MouseEvent<HTMLButtonElement>) => {
     if (!user || purchasingItem || isLoading) return;
     
     const item = shopItems.find(i => i.id === itemId);
@@ -21,20 +106,8 @@ const ShopPanel: React.FC = () => {
     triggerStarBurst(event.currentTarget);
 
     try {
-      if (item.type === 'tier_upgrade') {
-        const tier = itemId.includes('bronze') ? 'bronze' : 'diamond';
-        const success = await upgradeTier(tier);
-        
-        if (success) {
-          // Trigger celebration
-          setTimeout(() => {
-            triggerConfetti({ x: 0.5, y: 0.3 });
-            playSound('success');
-          }, 1000);
-        }
-      } else {
-        await purchaseItem(itemId);
-      }
+      await purchaseItem(itemId);
+      playSound('success');
     } catch (error) {
       playSound('error');
     } finally {
@@ -79,9 +152,10 @@ const ShopPanel: React.FC = () => {
           {tierUpgrades.map((item) => {
             const tier = item.id.includes('bronze') ? 'bronze' : 'diamond';
             const tierConfig = TIER_CONFIGS[tier];
-            const isOwned = user.tier === tier || (tier === 'bronze' && user.tier === 'diamond');
-            const canAfford = user.stars >= item.starCost;
-            const isPurchasing = purchasingItem === item.id;
+            const isOwned = user.vip_tier === tier || (tier === 'bronze' && user.vip_tier === 'diamond');
+            const isExpired = user.vip_expiry && user.vip_expiry < Date.now();
+            const canPurchase = !isOwned || isExpired;
+            const isPurchasing = purchasingItem === tier;
             
             return (
               <motion.div
@@ -90,13 +164,13 @@ const ShopPanel: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
                   "relative overflow-hidden rounded-xl border-2 transition-all duration-300",
-                  isOwned 
+                  isOwned && !isExpired
                     ? "bg-green-500/10 border-green-500/40"
-                    : canAfford
+                    : canPurchase
                     ? "bg-gradient-to-r from-primary-500/10 to-secondary-500/10 border-primary-500/40 hover:border-primary-500/60"
                     : "bg-gray-800/50 border-gray-700/40"
                 )}
-                whileHover={!isOwned && canAfford ? { scale: 1.02 } : {}}
+                whileHover={canPurchase ? { scale: 1.02 } : {}}
               >
                 {/* Background Pattern */}
                 <div className="absolute inset-0 opacity-5">
@@ -118,13 +192,23 @@ const ShopPanel: React.FC = () => {
                       </div>
                     </div>
                     
-                    {isOwned && (
+                    {isOwned && !isExpired && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         className="bg-green-500 text-white p-2 rounded-full"
                       >
                         <Check className="w-4 h-4" />
+                      </motion.div>
+                    )}
+                    
+                    {isExpired && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="bg-orange-500 text-white p-2 rounded-full"
+                      >
+                        <Clock className="w-4 h-4" />
                       </motion.div>
                     )}
                   </div>
@@ -141,19 +225,19 @@ const ShopPanel: React.FC = () => {
                   
                   {/* Purchase Button */}
                   <motion.button
-                    onClick={(e) => handlePurchase(item.id, e)}
-                    disabled={isOwned || !canAfford || isPurchasing}
+                    onClick={(e) => handleVIPPurchase(tier, item.starCost, e)}
+                    disabled={!canPurchase || isPurchasing}
                     className={cn(
                       "w-full py-3 px-4 rounded-lg font-semibold transition-all duration-300",
                       "flex items-center justify-center space-x-2",
-                      isOwned
+                      isOwned && !isExpired
                         ? "bg-green-500/20 text-green-400 cursor-not-allowed"
-                        : canAfford
+                        : canPurchase
                         ? "bg-gradient-to-r from-primary-500 to-secondary-500 text-white hover:from-primary-600 hover:to-secondary-600 tap-effect neon-glow"
                         : "bg-gray-700 text-gray-400 cursor-not-allowed"
                     )}
-                    whileHover={!isOwned && canAfford ? { scale: 1.02 } : {}}
-                    whileTap={!isOwned && canAfford ? { scale: 0.98 } : {}}
+                    whileHover={canPurchase ? { scale: 1.02 } : {}}
+                    whileTap={canPurchase ? { scale: 0.98 } : {}}
                   >
                     <AnimatePresence mode="wait">
                       {isPurchasing ? (
@@ -162,12 +246,17 @@ const ShopPanel: React.FC = () => {
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
-                          className="flex items-center space-x-2"
+                          className="flex flex-col items-center space-y-1"
                         >
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Unlocking VIP...</span>
+                          <div className="flex items-center space-x-2">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Processing...</span>
+                          </div>
+                          {purchaseProgress && (
+                            <span className="text-xs text-gray-300">{purchaseProgress}</span>
+                          )}
                         </motion.div>
-                      ) : isOwned ? (
+                      ) : isOwned && !isExpired ? (
                         <motion.div
                           key="owned"
                           initial={{ opacity: 0 }}
@@ -175,7 +264,17 @@ const ShopPanel: React.FC = () => {
                           className="flex items-center space-x-2"
                         >
                           <Check className="w-4 h-4" />
-                          <span>Owned</span>
+                          <span>Active</span>
+                        </motion.div>
+                      ) : isExpired ? (
+                        <motion.div
+                          key="expired"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="flex items-center space-x-2"
+                        >
+                          <Crown className="w-4 h-4" />
+                          <span>Renew - {item.starCost} ⭐</span>
                         </motion.div>
                       ) : (
                         <motion.div
@@ -192,8 +291,8 @@ const ShopPanel: React.FC = () => {
                   </motion.button>
                 </div>
                 
-                {/* Glow Effect for Affordable Items */}
-                {!isOwned && canAfford && (
+                {/* Glow Effect for Purchasable Items */}
+                {canPurchase && (
                   <motion.div
                     className="absolute inset-0 rounded-xl opacity-20"
                     animate={{
@@ -204,6 +303,21 @@ const ShopPanel: React.FC = () => {
                       ]
                     }}
                     transition={{ duration: 3, repeat: Infinity }}
+                  />
+                )}
+                
+                {/* VIP Active Glow */}
+                {isOwned && !isExpired && (
+                  <motion.div
+                    className="absolute inset-0 rounded-xl opacity-20"
+                    animate={{
+                      boxShadow: [
+                        '0 0 15px rgba(34, 197, 94, 0.3)',
+                        '0 0 25px rgba(34, 197, 94, 0.5)',
+                        '0 0 15px rgba(34, 197, 94, 0.3)'
+                      ]
+                    }}
+                    transition={{ duration: 4, repeat: Infinity }}
                   />
                 )}
               </motion.div>
@@ -253,7 +367,7 @@ const ShopPanel: React.FC = () => {
                   </div>
                   
                   <motion.button
-                    onClick={(e) => handlePurchase(item.id, e)}
+                    onClick={(e) => handleBoostPurchase(item.id, e)}
                     disabled={!canAfford || isPurchasing}
                     className={cn(
                       "px-4 py-2 rounded-lg font-medium transition-all duration-300",
@@ -281,18 +395,19 @@ const ShopPanel: React.FC = () => {
         </div>
       )}
 
-      {/* Purchase Tips */}
+      {/* Payment Info */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg p-4"
       >
-        <h5 className="font-semibold text-blue-400 mb-2">💡 Pro Tips</h5>
+        <h5 className="font-semibold text-blue-400 mb-2">⭐ Telegram Stars Payment</h5>
         <ul className="text-sm text-gray-300 space-y-1">
-          <li>• VIP upgrades are permanent and stack with boosts</li>
-          <li>• Higher tiers unlock better daily rewards</li>
-          <li>• Boosts are perfect for farming sessions</li>
-          <li>• Earn stars through daily rewards and special events</li>
+          <li>• Secure payment via Telegram Stars (openInvoice)</li>
+          <li>• VIP benefits activate instantly after payment</li>
+          <li>• Lock Buy buttons during unlock to avoid double spending (5s)</li>
+          <li>• Animated VIP unlock + confetti + toast notification</li>
+          <li>• Auto-update Firebase user record with VIP details</li>
         </ul>
       </motion.div>
     </div>

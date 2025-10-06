@@ -154,7 +154,7 @@ const BottomFooterTabs: React.FC = () => {
         </div>
         
         {/* VIP Status Indicator */}
-        {user && user.tier !== 'free' && (
+        {user && user.vip_tier !== 'free' && user.vip_expiry && user.vip_expiry > Date.now() && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -166,11 +166,9 @@ const BottomFooterTabs: React.FC = () => {
               <span className="text-green-400 font-medium">
                 VIP Active
               </span>
-              {user.vipExpiry && (
-                <span className="text-gray-400">
-                  • {Math.ceil((user.vipExpiry.getTime() - Date.now()) / (1000 * 60 * 60 * 24))}d left
-                </span>
-              )}
+              <span className="text-gray-400">
+                • {Math.ceil((user.vip_expiry - Date.now()) / (1000 * 60 * 60 * 24))}d left
+              </span>
             </div>
           </motion.div>
         )}
