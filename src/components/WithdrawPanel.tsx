@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CreditCard, Clock, CheckCircle, XCircle, AlertCircle, Wallet } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
 import { cn, formatCurrency, playSound } from '../utils';
+import VipUpgradeButton from './VipUpgradeButton';
 
 const WithdrawPanel: React.FC = () => {
   const { user, withdrawalRequests, requestWithdrawal } = useAppStore();
@@ -415,6 +416,9 @@ const WithdrawPanel: React.FC = () => {
           </motion.button>
         </motion.div>
       )}
+
+      {/* VIP Upgrade Button - Only in withdraw section */}
+      {user?.tier === 'free' && <VipUpgradeButton />}
     </div>
   );
 };

@@ -12,7 +12,6 @@ import TasksPanel from './TasksPanel';
 import ReferralPanel from './ReferralPanel';
 import ProfilePanel from './ProfilePanel';
 import WithdrawPanel from './WithdrawPanel';
-import VipUpgradeButton from './VipUpgradeButton';
 
 const Layout: React.FC = () => {
   const { activeTab, activeOverlayTab } = useAppStore();
@@ -122,9 +121,6 @@ const Layout: React.FC = () => {
 
       {/* Bottom Footer Tabs */}
       <BottomFooterTabs />
-      
-      {/* VIP Upgrade Button - Only show on withdraw tab for free users */}
-      {activeTab === 'withdraw' && <VipUpgradeButton />}
     </div>
   );
 };

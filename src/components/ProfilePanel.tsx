@@ -497,27 +497,6 @@ const ProfilePanel: React.FC = () => {
         </div>
       )}
 
-      {/* Upgrade CTA for Free Users */}
-      {!isVip && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-primary-500/10 to-secondary-500/10 border border-primary-500/40 rounded-lg p-6 text-center"
-        >
-          <div className="text-4xl mb-3">🚀</div>
-          <h4 className="text-lg font-bold text-white mb-2">Upgrade to VIP</h4>
-          <p className="text-sm text-gray-400 mb-4">
-            Unlock premium badges, boost your farming, and earn more rewards!
-          </p>
-          <motion.button
-            className="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-primary-600 hover:to-secondary-600 transition-all duration-300 tap-effect neon-glow"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            View VIP Plans
-          </motion.button>
-        </motion.div>
-      )}
     </div>
   );
 };
