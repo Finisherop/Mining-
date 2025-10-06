@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CreditCard, DollarSign, Clock, CheckCircle, XCircle, AlertCircle, Wallet } from 'lucide-react';
+import { CreditCard, Clock, CheckCircle, XCircle, AlertCircle, Wallet } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
-import { cn, formatCurrency, formatNumber, playSound } from '../utils';
+import { cn, formatCurrency, playSound } from '../utils';
 
 const WithdrawPanel: React.FC = () => {
   const { user, withdrawalRequests, requestWithdrawal } = useAppStore();

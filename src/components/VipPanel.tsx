@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Crown, Star, TrendingUp, Users, CreditCard, Clock, Gift, Zap } from 'lucide-react';
+import { Crown, Star, TrendingUp, Users, CreditCard, Gift, Zap } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
-import { cn, formatTimeRemaining, isVipActive, getVipTimeRemaining } from '../utils';
+import { cn, isVipActive, getVipTimeRemaining } from '../utils';
 
 const VipPanel: React.FC = () => {
   const { user } = useAppStore();

@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { User, Crown, Calendar, TrendingUp, Award, Star, Clock, Gift } from 'lucide-react';
+import { User, Crown, TrendingUp, Award, Star, Clock, Gift } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
-import { cn, formatNumber, formatCurrency, getVipTimeRemaining, isVipActive } from '../utils';
+import { cn, formatNumber, getVipTimeRemaining, isVipActive } from '../utils';
 
 const ProfilePanel: React.FC = () => {
   const { user } = useAppStore();

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import Layout from './components/Layout';
 import { useToast, ToastContainer } from './hooks/useToast';
 import { useAppStore } from './store';
