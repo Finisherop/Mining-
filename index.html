@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>DM COIN FARMING</title>
+    <title>Farming Booster App</title>
     <link rel="icon" href="https://ibb.co.com/yvLVD3j" type="image/jpeg">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
@@ -12,15 +12,18 @@
     <style>
         /* --- Global Styles & Dark Theme --- */
         :root {
-            --bg-color: #121212;
-            --primary-surface: #1e1e1e;
-            --secondary-surface: #2a2a2a;
-            --primary-accent: #0a84ff; /* Changed from yellow to blue */
+            --bg-color: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #2d1b69 100%);
+            --primary-surface: rgba(30, 30, 30, 0.9);
+            --secondary-surface: rgba(42, 42, 42, 0.8);
+            --primary-accent: #00d4ff;
             --secondary-accent: #4caf50;
             --primary-text: #ffffff;
             --secondary-text: #b0b0b0;
             --danger-color: #f44336;
             --font-family: 'Helvetica Neue', Arial, sans-serif;
+            --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --gradient-success: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
 * {
   -webkit-tap-highlight-color: transparent;
@@ -28,7 +31,7 @@
 
         body {
             font-family: var(--font-family);
-            background-color: var(--bg-color);
+            background: var(--bg-color);
             color: var(--primary-text);
             margin: 0;
             padding: 0;
@@ -36,6 +39,25 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://i.ibb.co/j9WqyNWT/IMG-20250925-233648-989.jpg') center/cover;
+            opacity: 0.1;
+            z-index: -1;
+            animation: bgFloat 20s ease-in-out infinite;
+        }
+        
+        @keyframes bgFloat {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.05) rotate(1deg); }
         }
         .hidden { display: none !important; }
         /* --- Loader --- */
@@ -51,13 +73,27 @@
         /* --- Header --- */
         .header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 10px 15px; background-color: var(--primary-surface);
+            padding: 15px 20px; background: var(--primary-surface);
             border-bottom: 1px solid var(--secondary-surface);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0, 212, 255, 0.1);
         }
         .balance-container {
              text-align: left;
         }
-        .coin-balance { font-size: 1.2em; font-weight: bold; }
+        .coin-balance { 
+            font-size: 1.3em; font-weight: bold; 
+            background: var(--gradient-success);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: coinGlow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes coinGlow {
+            0% { filter: brightness(1); }
+            100% { filter: brightness(1.2); }
+        }
         #farming-rate-display { font-size: 0.8em; color: var(--secondary-text); }
         .profile-info { display: flex; align-items: center; gap: 10px; }
         .profile-pic { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
@@ -73,31 +109,182 @@
         }
         /* --- Farming Tab --- */
         #farming-tab {
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center; height: 100%; gap: 20px;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            text-align: center; height: 100%; gap: 15px; padding: 10px;
         }
         #logo-container { position: relative; }
         .farm-logo {
-            width: 150px; height: 150px; border-radius: 50%;
-            border: 5px solid var(--primary-accent); box-shadow: 0 0 20px var(--primary-accent);
+            width: 120px; height: 120px; border-radius: 50%;
+            border: 4px solid var(--primary-accent); box-shadow: 0 0 15px var(--primary-accent);
+            background: url('https://i.ibb.co/j9WqyNWT/IMG-20250925-233648-989.jpg') center/cover;
         }
         .progress-bar-container {
             width: 80%; background-color: var(--secondary-surface); border-radius: 10px; padding: 3px;
         }
         .progress-bar {
             width: 0%; height: 10px; background-color: var(--secondary-accent);
-            border-radius: 8px; transition: width 1s linear; /* This creates the fill animation */
+            border-radius: 8px; transition: width 1s linear;
         }
         #farm-timer { font-size: 1.1em; color: var(--secondary-text); }
         #farm-button {
-            padding: 15px 40px; font-size: 1.2em; font-weight: bold; border: none;
-            border-radius: 12px; background-color: var(--primary-accent);
-            color: var(--bg-color); cursor: pointer; transition: transform 0.2s;
+            padding: 15px 35px; font-size: 1.2em; font-weight: bold; border: none;
+            border-radius: 25px; background: var(--gradient-primary);
+            color: white; cursor: pointer; 
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        #farm-button:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        #farm-button:hover:before {
+            left: 100%;
+        }
+        #farm-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 212, 255, 0.4);
         }
         #farm-button:disabled {
-            background-color: var(--secondary-surface); color: var(--secondary-text); cursor: not-allowed;
+            background: var(--secondary-surface); 
+            color: var(--secondary-text); 
+            cursor: not-allowed;
+            box-shadow: none;
         }
         #farm-button:active { transform: scale(0.95); }
+        
+        /* Booster Display */
+        .booster-display {
+            background: var(--gradient-secondary); 
+            padding: 15px; border-radius: 15px;
+            margin: 10px 0; border: 2px solid transparent;
+            text-align: center; font-weight: bold;
+            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+            animation: boosterPulse 2s ease-in-out infinite;
+        }
+        .booster-display.active { 
+            border-color: var(--primary-accent);
+            animation: boosterActive 1s ease-in-out infinite alternate;
+        }
+        
+        @keyframes boosterPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        @keyframes boosterActive {
+            0% { box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3); }
+            100% { box-shadow: 0 6px 25px rgba(240, 147, 251, 0.6); }
+        }
+        
+        /* Daily Claim Calendar */
+        .daily-claim-section {
+            width: 100%; max-width: 300px; margin: 10px 0;
+        }
+        .claim-calendar {
+            display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;
+            margin-top: 10px;
+        }
+        .claim-day {
+            aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+            background: var(--secondary-surface); border-radius: 8px; font-size: 0.8em;
+            border: 2px solid transparent; cursor: pointer; transition: all 0.2s;
+        }
+        .claim-day.claimed { background: var(--secondary-accent); color: var(--bg-color); }
+        .claim-day.today { border-color: var(--primary-accent); }
+        .claim-day.available { background: var(--primary-accent); color: var(--bg-color); animation: pulse 2s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .daily-claim-button {
+            background: var(--gradient-success) !important;
+            color: white !important;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            animation: claimPulse 2s ease-in-out infinite;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        @keyframes claimPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3); }
+            50% { transform: scale(1.05); box-shadow: 0 6px 25px rgba(76, 175, 80, 0.5); }
+        }
+        
+        /* --- Booster Shop --- */
+        .booster-grid {
+            display: grid; grid-template-columns: 1fr; gap: 15px; padding: 10px;
+        }
+        .booster-card {
+            background: var(--primary-surface); border-radius: 12px; padding: 20px;
+            border: 2px solid var(--secondary-surface); transition: all 0.3s;
+            position: relative; overflow: hidden;
+        }
+        .booster-card:hover { border-color: var(--primary-accent); transform: translateY(-2px); }
+        .booster-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px;
+        }
+        .booster-multiplier {
+            font-size: 1.5em; font-weight: bold; color: var(--primary-accent);
+        }
+        .booster-duration {
+            font-size: 0.9em; color: var(--secondary-text);
+        }
+        .booster-buttons {
+            display: flex; gap: 10px; margin-top: 15px;
+        }
+        .booster-btn {
+            flex: 1; padding: 12px; border: none; border-radius: 8px;
+            font-weight: bold; cursor: pointer; transition: all 0.2s;
+        }
+        .booster-btn.stars {
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            color: var(--bg-color);
+        }
+        .booster-btn.upi {
+            background: linear-gradient(45deg, #4CAF50, #2E7D32);
+            color: white;
+        }
+        .booster-btn:hover { transform: scale(1.05); }
+        .booster-btn:active { transform: scale(0.95); }
+        
+        /* UPI Payment Popup */
+        .upi-popup {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: var(--primary-surface); padding: 30px; border-radius: 15px;
+            border: 2px solid var(--primary-accent); z-index: 1000; width: 90%; max-width: 400px;
+            display: none;
+        }
+        .upi-popup.show { display: block; }
+        .upi-popup h3 { margin-top: 0; color: var(--primary-accent); }
+        .upi-popup input {
+            width: calc(100% - 20px); padding: 10px; margin: 10px 0;
+            border: 1px solid var(--secondary-surface); border-radius: 8px;
+            background: var(--bg-color); color: var(--primary-text);
+        }
+        .upi-popup .popup-buttons {
+            display: flex; gap: 10px; margin-top: 20px;
+        }
+        .upi-popup button {
+            flex: 1; padding: 12px; border: none; border-radius: 8px;
+            font-weight: bold; cursor: pointer;
+        }
+        .popup-submit { background: var(--secondary-accent); color: white; }
+        .popup-cancel { background: var(--danger-color); color: white; }
 
         /* --- Level Up Popup --- */
         #level-up-popup {
@@ -132,14 +319,28 @@
         }
         /* --- Navigation Bar --- */
         .nav-bar {
-            display: flex; justify-content: space-around; background-color: var(--primary-surface);
+            display: flex; justify-content: space-around; 
+            background: var(--primary-surface);
             padding: 10px 0; border-top: 1px solid var(--secondary-surface);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 -2px 20px rgba(0, 212, 255, 0.1);
         }
         .nav-item {
-            cursor: pointer; padding: 5px 15px; opacity: 0.7;
-            transition: opacity 0.2s, transform 0.2s; text-align: center;
+            cursor: pointer; padding: 8px 12px; opacity: 0.7;
+            transition: all 0.3s ease; text-align: center;
+            border-radius: 12px; position: relative;
         }
-        .nav-item.active { opacity: 1; transform: scale(1.1); color: var(--primary-accent); }
+        .nav-item:hover {
+            opacity: 0.9;
+            background: rgba(0, 212, 255, 0.1);
+        }
+        .nav-item.active { 
+            opacity: 1; 
+            transform: translateY(-2px); 
+            color: var(--primary-accent);
+            background: var(--gradient-primary);
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        }
         /* --- Admin Panel --- */
         #admin-panel {
             padding: 20px; background: #1c1c1e; color: #f5f5f7; height: 100vh; overflow-y: auto;
@@ -198,15 +399,40 @@
         </header>
         <main class="main-content">
             <div id="farming-tab" class="tab-content">
-                <h2>DM COIN FARMING</h2>
-                <div id="logo-container">
-                    <img src="https://i.ibb.co/04PQkwb/IMG-3086.png" alt="Crypto Farm Logo" class="farm-logo">
+                <h2>🌾 FARMING BOOSTER</h2>
+                
+                <!-- Active Booster Display -->
+                <div id="active-booster-display" class="booster-display hidden">
+                    <div>🚀 <span id="booster-multiplier-text">2.0X</span> Boost Active</div>
+                    <div id="booster-timer">10h 30m left</div>
                 </div>
+                
+                <div id="logo-container">
+                    <div class="farm-logo"></div>
+                </div>
+                
+                <!-- Daily Claim Calendar -->
+                <div class="daily-claim-section">
+                    <h4>📅 Daily Claim Calendar</h4>
+                    <div class="claim-calendar" id="claim-calendar">
+                        <!-- Calendar days will be generated by JavaScript -->
+                    </div>
+                    <button id="daily-claim-btn" class="hidden daily-claim-button" onclick="handleDailyClaim()">
+                        🎁 Claim Daily Reward!
+                    </button>
+                </div>
+                
                 <div class="progress-bar-container">
                     <div class="progress-bar" id="farm-progress"></div>
                 </div>
                 <span id="farm-timer">Ready to farm!</span>
                 <button id="farm-button">Start Farming</button>
+            </div>
+            <div id="shop-tab" class="tab-content hidden">
+                <h2>🛍️ Booster Shop</h2>
+                <div id="booster-list" class="booster-grid">
+                    <p>Loading boosters...</p>
+                </div>
             </div>
             <div id="tasks-tab" class="tab-content hidden">
                 <h2>Complete Tasks for Rewards</h2>
@@ -225,21 +451,18 @@
                     <p>No referrals yet.</p>
                 </div>
             </div>
-            <div id="exchange-tab" class="tab-content hidden">
-                <h2>Exchange & Withdraw</h2>
+            <div id="withdrawal-tab" class="tab-content hidden">
+                <h2>💸 Withdrawal</h2>
                 <div class="form-container">
-                    <h4>Convert Coins</h4>
+                    <h4>Convert Coins to INR</h4>
                     <p id="conversion-rate">Loading rate...</p>
                     <input type="number" id="convert-amount" placeholder="Enter coin amount">
-                    <button onclick="convertCoins()">Convert</button>
-                    <h4 style="margin-top: 20px;">Request Withdrawal</h4>
-                    <select id="withdrawal-method">
-                        <option value="solana">Solana Address</option>
-                        <option value="dm_coin">DM Coin</option>
-                    </select>
-                    <input type="text" id="withdrawal-address" placeholder="Enter Solana Address">
-                    <input type="number" id="withdrawal-amount" placeholder="Enter SOL/DM amount">
-                    <button onclick="requestWithdrawal()">Request</button>
+                    <button onclick="convertCoins()">Convert to INR</button>
+                    <h4 style="margin-top: 20px;">Request UPI Withdrawal</h4>
+                    <input type="number" id="withdrawal-amount" placeholder="Enter INR amount">
+                    <input type="text" id="withdrawal-upi" placeholder="Enter UPI ID">
+                    <input type="text" id="withdrawal-name" placeholder="Enter Full Name">
+                    <button onclick="requestWithdrawal()">Request Withdrawal</button>
                 </div>
                 <h3>Withdrawal History</h3>
                  <div id="withdrawal-history-list" class="history-list">
@@ -251,7 +474,7 @@
                 <div class="task-list">
                     <div class="task-item"><span>User ID</span> <strong id="profile-userid">...</strong></div>
                     <div class="task-item"><span>Total Coins</span> <strong id="profile-coins">...</strong></div>
-                    <div class="task-item"><span>Total Exchanged (Value)</span> <strong id="profile-exchanged">...</strong></div>
+                    <div class="task-item"><span>Total Exchanged (INR)</span> <strong id="profile-exchanged">...</strong></div>
                     <div class="task-item"><span>Referrals</span> <strong id="profile-referrals">...</strong></div>
                     <div class="task-item"><span>Current Level</span> <strong id="profile-level">...</strong></div>
                 </div>
@@ -259,9 +482,10 @@
         </main>
         <nav class="nav-bar">
             <div class="nav-item active" data-tab="farming-tab">🏠<br>Farm</div>
+            <div class="nav-item" data-tab="shop-tab">🛍️<br>Shop</div>
             <div class="nav-item" data-tab="tasks-tab">📋<br>Tasks</div>
             <div class="nav-item" data-tab="referral-tab">👥<br>Refer</div>
-            <div class="nav-item" data-tab="exchange-tab">💸<br>Exchange</div>
+            <div class="nav-item" data-tab="withdrawal-tab">💸<br>Withdraw</div>
             <div class="nav-item" data-tab="profile-tab">👤<br>Profile</div>
         </nav>
         <div id="level-up-popup">
@@ -270,11 +494,27 @@
             <p>You've reached <strong id="new-level">Level X</strong>!</p>
             <p>🎉 Rewards Unlocked! 🎉</p>
         </div>
+        
+        <!-- UPI Payment Popup -->
+        <div id="upi-popup" class="upi-popup">
+            <h3>💳 UPI Payment</h3>
+            <p>Pay to Admin UPI ID:</p>
+            <div style="background: var(--secondary-surface); padding: 10px; border-radius: 8px; margin: 10px 0;">
+                <strong id="admin-upi-display">Loading...</strong>
+            </div>
+            <p>Amount: ₹<span id="upi-amount-display">0</span></p>
+            <p>After payment, enter your transaction ID (UTR):</p>
+            <input type="text" id="upi-transaction-id" placeholder="Enter Transaction ID/UTR">
+            <div class="popup-buttons">
+                <button class="popup-cancel" onclick="closeUPIPopup()">Cancel</button>
+                <button class="popup-submit" onclick="submitUPIPayment()">Submit</button>
+            </div>
+        </div>
     </div>
     <div id="admin-panel" class="hidden">
         <div id="admin-login-screen">
             <div class="login-box">
-                <h2>CRYPTO FARMING - Admin Login</h2>
+                <h2>FARMING BOOSTER - Admin Login</h2>
                 <input type="email" id="admin-email" placeholder="Email" value="admin@gmail.com">
                 <input type="password" id="admin-password" placeholder="Password" value="admin123">
                 <button onclick="handleAdminLogin()">Login</button>
@@ -315,18 +555,39 @@
                 </table>
             </div>
             <div class="admin-section">
+                <h3>Booster Management</h3>
+                <input type="hidden" id="booster-id-input">
+                <label>Multiplier (e.g., 2.0):</label><input type="number" step="0.1" id="booster-multiplier-input">
+                <label>Duration (minutes):</label><input type="number" id="booster-duration-input">
+                <label>Star Price:</label><input type="number" id="booster-star-price-input">
+                <label>UPI Price (INR):</label><input type="number" id="booster-upi-price-input">
+                <button onclick="saveBooster()" style="margin-top:15px;">Save Booster</button>
+                <h4 style="margin-top: 20px;">Existing Boosters</h4>
+                <table id="boosters-table" class="admin-table">
+                    <thead><tr><th>Multiplier</th><th>Duration</th><th>Star Price</th><th>UPI Price</th><th>Actions</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="admin-section">
+                <h3>UPI Payment Approvals</h3>
+                <table id="upi-pending-table" class="admin-table">
+                    <thead><tr><th>User</th><th>Booster</th><th>Amount</th><th>UTR</th><th>Actions</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="admin-section">
                 <h3>Global Settings</h3>
                 <label>Farming Rate (coins/min):</label><input type="number" id="setting-farm-rate">
-                <label>SOL Conversion Rate (Coins per 1 SOL):</label><input type="number" id="setting-sol-rate">
-                <label>DM Coin Conversion Rate (Coins per 1 DM):</label><input type="number" id="setting-dm-rate">
-                <label>Watch Ad Reward:</label><input type="number" id="setting-ad-reward">
+                <label>Daily Claim Reward:</label><input type="number" id="setting-daily-reward">
+                <label>INR Exchange Rate (Coins per 1 INR):</label><input type="number" id="setting-inr-rate">
+                <label>Admin UPI ID:</label><input type="text" id="setting-admin-upi">
                 <br><br>
                 <button onclick="saveAdminSettings()">Save Settings</button>
             </div>
             <div class="admin-section">
                 <h3>Withdrawal Requests</h3>
                 <table id="withdrawal-requests-table" class="admin-table">
-                    <thead><tr><th>User ID</th><th>Amount</th><th>Method</th><th>Address</th><th>Status</th><th>Actions</th></tr></thead>
+                    <thead><tr><th>User ID</th><th>Amount (INR)</th><th>UPI ID</th><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody></tbody>
                 </table>
             </div>
@@ -396,9 +657,8 @@
             const doc = await db.collection('settings').doc('global').get();
             if (doc.exists) {
                 globalSettings = doc.data();
-                const solRate = globalSettings.solRate || 10000;
-                const dmRate = globalSettings.dmRate || 500;
-                document.getElementById('conversion-rate').innerText = `Rates: ${solRate}💰/SOL | ${dmRate}💰/DM`;
+                const inrRate = globalSettings.inrRate || 1000;
+                document.getElementById('conversion-rate').innerText = `Rate: ${inrRate} 💰 = ₹1`;
                 document.getElementById('farming-rate-display').innerText = `${globalSettings.farmRate || '...'} 💰/min`;
             }
         }
@@ -424,7 +684,11 @@
                     farmingDuration: 24 * 60 * 60 * 1000,
                     referrals: [],
                     completedTasks: [],
-                    exchangedTotal: 0
+                    exchangedTotal: 0,
+                    dailyClaimStreak: 0,
+                    lastClaimDate: null,
+                    activeBooster: null,
+                    boosterEndTime: null
                 };
                 await userRef.set(userData);
                 // Check for referral on first-time user creation
@@ -478,6 +742,8 @@
             if (!userData) return;
             document.getElementById('coin-balance-container').innerText = `💰 ${Math.floor(userData.coins)}`;
             checkFarmingStatus();
+            updateBoosterDisplay();
+            updateDailyClaimCalendar();
         }
 
         async function syncUserData(updatedData) {
@@ -506,14 +772,7 @@
                 }
             });
 
-            document.getElementById('withdrawal-method').addEventListener('change', (e) => {
-                const addressInput = document.getElementById('withdrawal-address');
-                if (e.target.value === 'solana') {
-                    addressInput.placeholder = 'Enter Solana Address';
-                } else {
-                    addressInput.placeholder = 'Enter DM Coin Address';
-                }
-            });
+            // Removed withdrawal method listener as we now only support UPI
         }
 
         function switchTab(tabId) {
@@ -522,11 +781,252 @@
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
             document.querySelector(`.nav-item[data-tab="${tabId}"]`).classList.add('active');
 
+            if (tabId === 'shop-tab') loadBoosters();
             if (tabId === 'tasks-tab') loadTasks();
             if (tabId === 'referral-tab') loadReferralData();
-            if (tabId === 'exchange-tab') loadWithdrawalHistory();
+            if (tabId === 'withdrawal-tab') loadWithdrawalHistory();
             if (tabId === 'profile-tab') updateProfileTab();
         }
+
+        // --- BOOSTER FUNCTIONALITY --- //
+        async function loadBoosters() {
+            const boosterListEl = document.getElementById('booster-list');
+            boosterListEl.innerHTML = '<p>Loading boosters...</p>';
+
+            try {
+                const boostersSnapshot = await db.collection('boosters').get();
+                boosterListEl.innerHTML = '';
+
+                if (boostersSnapshot.empty) {
+                    boosterListEl.innerHTML = '<p>No boosters available.</p>';
+                    return;
+                }
+
+                boostersSnapshot.forEach(doc => {
+                    const booster = { id: doc.id, ...doc.data() };
+                    const boosterCard = document.createElement('div');
+                    boosterCard.className = 'booster-card';
+                    boosterCard.innerHTML = `
+                        <div class="booster-header">
+                            <div class="booster-multiplier">${booster.multiplier}X Boost</div>
+                            <div class="booster-duration">${Math.floor(booster.durationMinutes / 60)}h ${booster.durationMinutes % 60}m</div>
+                        </div>
+                        <div class="booster-buttons">
+                            <button class="booster-btn stars" onclick="handleStarPurchase('${booster.id}')">
+                                Buy with ${booster.starPrice} Stars ⭐️
+                            </button>
+                            <button class="booster-btn upi" onclick="handleUPIPurchase('${booster.id}')">
+                                Buy with ₹${booster.upiPriceINR} UPI
+                            </button>
+                        </div>
+                    `;
+                    boosterListEl.appendChild(boosterCard);
+                });
+            } catch (error) {
+                console.error("Error loading boosters:", error);
+                boosterListEl.innerHTML = '<p>Error loading boosters.</p>';
+            }
+        }
+
+        window.handleStarPurchase = function(boosterId) {
+            // Telegram Stars payment integration
+            tg.showAlert("Stars payment integration requires backend implementation for Telegram's openInvoice API.");
+        };
+
+        window.handleUPIPurchase = async function(boosterId) {
+            try {
+                const boosterDoc = await db.collection('boosters').doc(boosterId).get();
+                if (!boosterDoc.exists) {
+                    tg.showAlert("Booster not found!");
+                    return;
+                }
+
+                const booster = boosterDoc.data();
+                const adminUPI = globalSettings.adminUpiID || 'admin@upi';
+                
+                document.getElementById('admin-upi-display').innerText = adminUPI;
+                document.getElementById('upi-amount-display').innerText = booster.upiPriceINR;
+                document.getElementById('upi-popup').setAttribute('data-booster-id', boosterId);
+                document.getElementById('upi-popup').classList.add('show');
+            } catch (error) {
+                console.error("Error initiating UPI purchase:", error);
+                tg.showAlert("Error loading payment details.");
+            }
+        };
+
+        window.closeUPIPopup = function() {
+            document.getElementById('upi-popup').classList.remove('show');
+            document.getElementById('upi-transaction-id').value = '';
+        };
+
+        window.submitUPIPayment = async function() {
+            const utr = document.getElementById('upi-transaction-id').value.trim();
+            const boosterId = document.getElementById('upi-popup').getAttribute('data-booster-id');
+            
+            if (!utr) {
+                tg.showAlert("Please enter the transaction ID (UTR).");
+                return;
+            }
+
+            try {
+                const boosterDoc = await db.collection('boosters').doc(boosterId).get();
+                const booster = boosterDoc.data();
+
+                const pendingOrder = {
+                    userId: currentUser.id.toString(),
+                    userName: currentUser.first_name || 'Unknown',
+                    boosterId: boosterId,
+                    boosterName: `${booster.multiplier}X Boost (${Math.floor(booster.durationMinutes / 60)}h)`,
+                    amount: booster.upiPriceINR,
+                    utr: utr,
+                    status: 'pending',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                await db.collection('upi_pending_orders').add(pendingOrder);
+                tg.showAlert("Payment submitted for verification! You'll receive your booster once approved.");
+                closeUPIPopup();
+            } catch (error) {
+                console.error("Error submitting UPI payment:", error);
+                tg.showAlert("Error submitting payment. Please try again.");
+            }
+        };
+
+        async function activateBooster(boosterId) {
+            try {
+                const boosterDoc = await db.collection('boosters').doc(boosterId).get();
+                if (!boosterDoc.exists) return;
+
+                const booster = boosterDoc.data();
+                const endTime = Date.now() + (booster.durationMinutes * 60 * 1000);
+
+                await syncUserData({
+                    activeBooster: {
+                        multiplier: booster.multiplier,
+                        endTime: endTime
+                    },
+                    boosterEndTime: endTime
+                });
+
+                tg.showAlert(`${booster.multiplier}X Booster activated for ${Math.floor(booster.durationMinutes / 60)} hours!`);
+            } catch (error) {
+                console.error("Error activating booster:", error);
+            }
+        }
+
+        function updateBoosterDisplay() {
+            const boosterDisplay = document.getElementById('active-booster-display');
+            const multiplierText = document.getElementById('booster-multiplier-text');
+            const boosterTimer = document.getElementById('booster-timer');
+
+            if (userData.activeBooster && userData.boosterEndTime && Date.now() < userData.boosterEndTime) {
+                boosterDisplay.classList.remove('hidden');
+                boosterDisplay.classList.add('active');
+                multiplierText.innerText = `${userData.activeBooster.multiplier}X`;
+                
+                const timeLeft = userData.boosterEndTime - Date.now();
+                const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                boosterTimer.innerText = `${hours}h ${minutes}m left`;
+            } else {
+                boosterDisplay.classList.add('hidden');
+                if (userData.activeBooster) {
+                    // Booster expired, clear it
+                    syncUserData({ activeBooster: null, boosterEndTime: null });
+                }
+            }
+        }
+
+        // --- DAILY CLAIM CALENDAR --- //
+        function updateDailyClaimCalendar() {
+            const calendarEl = document.getElementById('claim-calendar');
+            const claimBtn = document.getElementById('daily-claim-btn');
+            
+            calendarEl.innerHTML = '';
+            const today = new Date();
+            const currentDay = today.getDate();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            
+            // Get last claim date
+            const lastClaim = userData.lastClaimDate ? new Date(userData.lastClaimDate) : null;
+            const canClaim = !lastClaim || 
+                (lastClaim.getDate() !== currentDay || 
+                 lastClaim.getMonth() !== currentMonth || 
+                 lastClaim.getFullYear() !== currentYear);
+
+            // Generate calendar for current month (simplified - just show 7 days)
+            for (let i = 0; i < 7; i++) {
+                const dayDate = new Date(currentYear, currentMonth, currentDay - 6 + i);
+                const dayEl = document.createElement('div');
+                dayEl.className = 'claim-day';
+                dayEl.innerText = dayDate.getDate();
+                
+                if (dayDate.getDate() === currentDay && dayDate.getMonth() === currentMonth) {
+                    dayEl.classList.add('today');
+                    if (canClaim) {
+                        dayEl.classList.add('available');
+                    }
+                }
+                
+                // Check if this day was claimed (simplified check)
+                if (lastClaim && dayDate <= lastClaim && dayDate.getDate() !== currentDay) {
+                    dayEl.classList.add('claimed');
+                }
+                
+                calendarEl.appendChild(dayEl);
+            }
+
+            if (canClaim) {
+                claimBtn.classList.remove('hidden');
+            } else {
+                claimBtn.classList.add('hidden');
+            }
+        }
+
+        window.handleDailyClaim = async function() {
+            const today = new Date();
+            const lastClaim = userData.lastClaimDate ? new Date(userData.lastClaimDate) : null;
+            
+            // Check if already claimed today
+            if (lastClaim && 
+                lastClaim.getDate() === today.getDate() && 
+                lastClaim.getMonth() === today.getMonth() && 
+                lastClaim.getFullYear() === today.getFullYear()) {
+                tg.showAlert("You've already claimed your daily reward today!");
+                return;
+            }
+
+            const dailyReward = globalSettings.dailyClaimReward || 100;
+            let streak = userData.dailyClaimStreak || 0;
+            
+            // Check if streak continues (claimed yesterday)
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            if (lastClaim && 
+                lastClaim.getDate() === yesterday.getDate() && 
+                lastClaim.getMonth() === yesterday.getMonth() && 
+                lastClaim.getFullYear() === yesterday.getFullYear()) {
+                streak += 1;
+            } else if (!lastClaim || 
+                       Math.abs(today - lastClaim) > 2 * 24 * 60 * 60 * 1000) {
+                // Reset streak if more than 1 day gap
+                streak = 1;
+            }
+
+            const bonusMultiplier = Math.min(1 + (streak - 1) * 0.1, 2.0); // Max 2x bonus
+            const totalReward = Math.floor(dailyReward * bonusMultiplier);
+
+            await syncUserData({
+                coins: (userData.coins || 0) + totalReward,
+                dailyClaimStreak: streak,
+                lastClaimDate: today.toISOString()
+            });
+
+            tg.showAlert(`Daily reward claimed! +${totalReward} coins (${streak} day streak)`);
+            updateUI();
+        };
 
         // --- TASK LOGIC (NEW & DYNAMIC) --- //
         async function loadTasks() {
@@ -666,11 +1166,25 @@
         async function claimReward() {
             const farmRate = globalSettings.farmRate || 100;
             const elapsedMinutes = userData.farmingDuration / (60 * 1000);
-            const coinsEarned = farmRate * elapsedMinutes;
+            
+            // Apply booster multiplier if active
+            let multiplier = 1;
+            if (userData.activeBooster && userData.boosterEndTime && Date.now() < userData.boosterEndTime) {
+                multiplier = userData.activeBooster.multiplier;
+            }
+            
+            const baseCoins = farmRate * elapsedMinutes;
+            const coinsEarned = baseCoins * multiplier;
             const newCoins = userData.coins + coinsEarned;
             const newXp = (userData.xp || 0) + 100;
+            
             await syncUserData({ coins: newCoins, farmingStartTime: null, xp: newXp });
-            tg.showAlert(`You claimed ${coinsEarned.toFixed(0)} coins!`);
+            
+            const message = multiplier > 1 ? 
+                `You claimed ${coinsEarned.toFixed(0)} coins! (${multiplier}X boost applied)` :
+                `You claimed ${coinsEarned.toFixed(0)} coins!`;
+            tg.showAlert(message);
+            
             checkLevelUp(userData.xp, newXp);
             updateUI();
         }
@@ -733,8 +1247,9 @@
                     item.className = 'history-item';
                     item.innerHTML = `
                         <div class="history-info">
-                            <strong>${data.amount || 0} ${(data.method || 'unknown').toUpperCase()}</strong><br>
-                            <small>To: ${data.address || 'N/A'}</small><br>
+                            <strong>₹${data.amount || 0} UPI Withdrawal</strong><br>
+                            <small>To: ${data.upiId || data.address || 'N/A'}</small><br>
+                            <small>Name: ${data.recipientName || data.userName || 'N/A'}</small><br>
                             <small>Date: ${dateString} | Status: <span style="color: ${data.status === 'approved' ? 'green' : data.status === 'rejected' ? 'red' : 'orange'}">${data.status || 'pending'}</span></small>
                             ${data.adminNote ? `<br><small>Note: ${data.adminNote}</small>` : ''}
                         </div>
@@ -749,17 +1264,17 @@
 
         window.requestWithdrawal = async function() { 
             const amount = parseFloat(document.getElementById('withdrawal-amount').value);
-            const method = document.getElementById('withdrawal-method').value;
-            const address = document.getElementById('withdrawal-address').value.trim();
+            const upiId = document.getElementById('withdrawal-upi').value.trim();
+            const name = document.getElementById('withdrawal-name').value.trim();
             
-            if (isNaN(amount) || amount <= 0 || !address) {
+            if (isNaN(amount) || amount <= 0 || !upiId || !name) {
                 tg.showAlert("Please fill all withdrawal fields correctly.");
                 return;
             }
             
             const userExchanged = (userData.exchangedTotal || 0);
             if (amount > userExchanged) {
-                tg.showAlert(`Insufficient exchanged balance. You have ${userExchanged.toFixed(4)} available.`);
+                tg.showAlert(`Insufficient exchanged balance. You have ₹${userExchanged.toFixed(2)} available.`);
                 return;
             }
             
@@ -768,8 +1283,8 @@
                     userId: currentUser.id.toString(),
                     userName: currentUser.first_name || 'Unknown',
                     amount: amount,
-                    method: method,
-                    address: address,
+                    upiId: upiId,
+                    recipientName: name,
                     status: 'pending',
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 };
@@ -779,9 +1294,10 @@
                 const newExchangedTotal = userExchanged - amount;
                 await syncUserData({ exchangedTotal: newExchangedTotal });
                 
-                tg.showAlert("Withdrawal request submitted successfully!");
+                tg.showAlert("UPI withdrawal request submitted successfully!");
                 document.getElementById('withdrawal-amount').value = '';
-                document.getElementById('withdrawal-address').value = '';
+                document.getElementById('withdrawal-upi').value = '';
+                document.getElementById('withdrawal-name').value = '';
                 loadWithdrawalHistory();
                 
             } catch (error) {
@@ -796,29 +1312,27 @@
         function createConfetti() { const container = document.getElementById('confetti-container'); container.innerHTML = ''; for (let i = 0; i < 100; i++) { const confetti = document.createElement('div'); confetti.style.position = 'absolute'; confetti.style.width = `${Math.random() * 10 + 5}px`; confetti.style.height = confetti.style.width; confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`; confetti.style.left = `${Math.random() * 100}%`; confetti.style.top = `${-20}%`; confetti.style.animation = `confetti-fall ${Math.random() * 2 + 3}s linear ${Math.random() * 2}s forwards`; container.appendChild(confetti); } }
         const styleSheet = document.createElement("style"); styleSheet.type = "text/css"; styleSheet.innerText = `@keyframes confetti-fall { to { transform: translateY(150vh) rotate(${Math.random() * 720}deg); opacity: 0; } }`; document.head.appendChild(styleSheet);
 
-        function updateProfileTab() { document.getElementById('profile-userid').innerText = userData.id; document.getElementById('profile-coins').innerText = Math.floor(userData.coins); document.getElementById('profile-exchanged').innerText = (userData.exchangedTotal || 0).toFixed(4); document.getElementById('profile-referrals').innerText = userData.referrals?.length || 0; document.getElementById('profile-level').innerText = userData.level; }
+        function updateProfileTab() { document.getElementById('profile-userid').innerText = userData.id; document.getElementById('profile-coins').innerText = Math.floor(userData.coins); document.getElementById('profile-exchanged').innerText = `₹${(userData.exchangedTotal || 0).toFixed(2)}`; document.getElementById('profile-referrals').innerText = userData.referrals?.length || 0; document.getElementById('profile-level').innerText = userData.level; }
 
         window.convertCoins = async function() { 
             const amount = parseInt(document.getElementById('convert-amount').value); 
             if (isNaN(amount) || amount <= 0) { tg.showAlert("Enter a valid coin amount."); return; } 
             if (amount > (userData.coins || 0)) { tg.showAlert("You do not have enough coins."); return; } 
             
-            // Note: This uses a single primary rate for conversion to a general 'value'.
-            // The admin sees the withdrawal method (SOL/DM) and can apply the specific rate.
-            const rate = globalSettings.solRate || 10000;
+            const rate = globalSettings.inrRate || 1000; // Coins per 1 INR
             const converted = amount / rate; 
             
             await syncUserData({ 
                 coins: (userData.coins || 0) - amount, 
                 exchangedTotal: (userData.exchangedTotal || 0) + converted 
             }); 
-            tg.showAlert(`Converted ${amount} coins into ${converted.toFixed(4)} value units.`); 
+            tg.showAlert(`Converted ${amount} coins into ₹${converted.toFixed(2)}.`); 
             updateUI(); 
         };
 
         function loadReferralData() { 
             const linkInput = document.getElementById('referral-link'); 
-            linkInput.value = `https://t.me/@dmcoinfarming_bot?start=${currentUser.id}`; // IMPORTANT: Change YOUR_BOT_NAME_HERE
+            linkInput.value = `https://t.me/@farmingbooster_bot?start=${currentUser.id}`; // Update with your actual bot username
             const displayEl = document.getElementById('referral-history-list'); 
             const referralCount = userData.referrals?.length || 0; 
             if (referralCount === 0) { 
@@ -846,21 +1360,23 @@
             // Load Settings
             const settings = (await db.collection('settings').doc('global').get()).data() || {};
             document.getElementById('setting-farm-rate').value = settings.farmRate || 100;
-            document.getElementById('setting-sol-rate').value = settings.solRate || 10000;
-            document.getElementById('setting-dm-rate').value = settings.dmRate || 500;
-            document.getElementById('setting-ad-reward').value = settings.adReward || 50;
+            document.getElementById('setting-daily-reward').value = settings.dailyClaimReward || 100;
+            document.getElementById('setting-inr-rate').value = settings.inrRate || 1000;
+            document.getElementById('setting-admin-upi').value = settings.adminUpiID || '';
             
-            // Load Withdrawals
+            // Load Withdrawals (UPI only)
             const wSnapshot = await db.collection('withdrawals').where('status', '==', 'pending').get();
             const wTableBody = document.querySelector('#withdrawal-requests-table tbody');
             wTableBody.innerHTML = '';
             wSnapshot.forEach(doc => {
                 const data = doc.data();
                 const row = wTableBody.insertRow();
-                row.innerHTML = `<td>${data.userId}</td><td>${data.amount}</td><td>${data.method}</td><td>${data.address}</td><td>${data.status}</td><td><button onclick="updateWithdrawalStatus('${doc.id}', 'approved')">Approve</button><button onclick="updateWithdrawalStatus('${doc.id}', 'rejected')" style="background:var(--danger-color)">Reject</button></td>`;
+                row.innerHTML = `<td>${data.userId}</td><td>₹${data.amount}</td><td>${data.upiId || data.address}</td><td>${data.recipientName || data.userName}</td><td>${data.status}</td><td><button onclick="updateWithdrawalStatus('${doc.id}', 'approved')">Approve</button><button onclick="updateWithdrawalStatus('${doc.id}', 'rejected')" style="background:var(--danger-color)">Reject</button></td>`;
             });
 
             loadAdminTasks();
+            loadAdminBoosters();
+            loadUPIPendingOrders();
             loadAdminDashboardStats();
         }
         async function loadAdminDashboardStats() {
@@ -951,12 +1467,143 @@
             loadAdminTasks();
         };
 
+        async function loadAdminBoosters() {
+            const boostersSnapshot = await db.collection('boosters').get();
+            const tableBody = document.querySelector('#boosters-table tbody');
+            tableBody.innerHTML = '';
+            boostersSnapshot.forEach(doc => {
+                const booster = { id: doc.id, ...doc.data() };
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td>${booster.multiplier}X</td>
+                    <td>${booster.durationMinutes}min</td>
+                    <td>${booster.starPrice}</td>
+                    <td>₹${booster.upiPriceINR}</td>
+                    <td>
+                        <button onclick='editBooster("${booster.id}", ${JSON.stringify(booster)})'>Edit</button>
+                        <button onclick='deleteBooster("${booster.id}")' style="background:var(--danger-color)">Delete</button>
+                    </td>
+                `;
+            });
+        }
+
+        async function loadUPIPendingOrders() {
+            const ordersSnapshot = await db.collection('upi_pending_orders').where('status', '==', 'pending').get();
+            const tableBody = document.querySelector('#upi-pending-table tbody');
+            tableBody.innerHTML = '';
+            ordersSnapshot.forEach(doc => {
+                const order = doc.data();
+                const row = tableBody.insertRow();
+                row.innerHTML = `
+                    <td>${order.userName} (${order.userId})</td>
+                    <td>${order.boosterName}</td>
+                    <td>₹${order.amount}</td>
+                    <td>${order.utr}</td>
+                    <td>
+                        <button onclick="approveUPIOrder('${doc.id}', '${order.boosterId}', '${order.userId}')">Approve</button>
+                        <button onclick="rejectUPIOrder('${doc.id}')" style="background:var(--danger-color)">Reject</button>
+                    </td>
+                `;
+            });
+        }
+
+        window.editBooster = function(id, boosterData) {
+            document.getElementById('booster-id-input').value = id;
+            document.getElementById('booster-multiplier-input').value = boosterData.multiplier;
+            document.getElementById('booster-duration-input').value = boosterData.durationMinutes;
+            document.getElementById('booster-star-price-input').value = boosterData.starPrice;
+            document.getElementById('booster-upi-price-input').value = boosterData.upiPriceINR;
+            window.scrollTo(0, 0);
+        };
+
+        window.deleteBooster = async function(id) {
+            if (confirm("Are you sure you want to delete this booster?")) {
+                await db.collection('boosters').doc(id).delete();
+                alert("Booster deleted.");
+                loadAdminBoosters();
+            }
+        };
+
+        window.saveBooster = async function() {
+            const boosterId = document.getElementById('booster-id-input').value;
+            const boosterData = {
+                multiplier: parseFloat(document.getElementById('booster-multiplier-input').value),
+                durationMinutes: parseInt(document.getElementById('booster-duration-input').value),
+                starPrice: parseInt(document.getElementById('booster-star-price-input').value),
+                upiPriceINR: parseInt(document.getElementById('booster-upi-price-input').value)
+            };
+            
+            if (!boosterData.multiplier || !boosterData.durationMinutes || !boosterData.starPrice || !boosterData.upiPriceINR) {
+                alert("Please fill all booster fields.");
+                return;
+            }
+            
+            try {
+                if (boosterId) {
+                    await db.collection('boosters').doc(boosterId).update(boosterData);
+                    alert("Booster updated!");
+                } else {
+                    await db.collection('boosters').add(boosterData);
+                    alert("Booster added!");
+                }
+            } catch (error) {
+                console.error("Error saving booster: ", error);
+                alert("Could not save the booster.");
+            }
+            
+            document.getElementById('booster-id-input').value = '';
+            document.getElementById('booster-multiplier-input').value = '';
+            document.getElementById('booster-duration-input').value = '';
+            document.getElementById('booster-star-price-input').value = '';
+            document.getElementById('booster-upi-price-input').value = '';
+            loadAdminBoosters();
+        };
+
+        window.approveUPIOrder = async function(orderId, boosterId, userId) {
+            try {
+                // Update order status
+                await db.collection('upi_pending_orders').doc(orderId).update({ status: 'approved' });
+                
+                // Activate booster for user
+                const boosterDoc = await db.collection('boosters').doc(boosterId).get();
+                if (boosterDoc.exists) {
+                    const booster = boosterDoc.data();
+                    const endTime = Date.now() + (booster.durationMinutes * 60 * 1000);
+                    
+                    await db.collection('users').doc(userId).update({
+                        activeBooster: {
+                            multiplier: booster.multiplier,
+                            endTime: endTime
+                        },
+                        boosterEndTime: endTime
+                    });
+                }
+                
+                alert("UPI payment approved and booster activated!");
+                loadUPIPendingOrders();
+            } catch (error) {
+                console.error("Error approving UPI order:", error);
+                alert("Error approving payment.");
+            }
+        };
+
+        window.rejectUPIOrder = async function(orderId) {
+            try {
+                await db.collection('upi_pending_orders').doc(orderId).update({ status: 'rejected' });
+                alert("UPI payment rejected.");
+                loadUPIPendingOrders();
+            } catch (error) {
+                console.error("Error rejecting UPI order:", error);
+                alert("Error rejecting payment.");
+            }
+        };
+
         window.saveAdminSettings = async function() {
             const settings = {
                 farmRate: parseInt(document.getElementById('setting-farm-rate').value),
-                solRate: parseInt(document.getElementById('setting-sol-rate').value),
-                dmRate: parseInt(document.getElementById('setting-dm-rate').value),
-                adReward: parseInt(document.getElementById('setting-ad-reward').value)
+                dailyClaimReward: parseInt(document.getElementById('setting-daily-reward').value),
+                inrRate: parseInt(document.getElementById('setting-inr-rate').value),
+                adminUpiID: document.getElementById('setting-admin-upi').value.trim()
             };
             await db.collection('settings').doc('global').set(settings, { merge: true });
             alert("Settings saved!");
