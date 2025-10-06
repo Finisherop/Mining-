@@ -22,13 +22,14 @@ const ReferralPanel: React.FC = () => {
   const handleShare = () => {
     if (!user) return;
     
-    const shareText = `Join me on this amazing bot and start earning! Use my referral code: ${user.referralCode}`;
+    const referralLink = user.referralCode;
+    const shareText = `🚀 Join me on Mining Tech Bot and start earning coins!\n\n💰 Tap this link to get started:\n${referralLink}\n\n🎁 You'll get bonus coins when you join!`;
     
     if (navigator.share) {
       navigator.share({
-        title: 'Join My Bot',
+        title: 'Join Mining Tech Bot',
         text: shareText,
-        url: window.location.origin
+        url: referralLink
       });
     } else {
       copyToClipboard(shareText);

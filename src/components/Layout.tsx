@@ -123,8 +123,8 @@ const Layout: React.FC = () => {
       {/* Bottom Footer Tabs */}
       <BottomFooterTabs />
       
-      {/* VIP Upgrade Button */}
-      <VipUpgradeButton />
+      {/* VIP Upgrade Button - Only show on withdraw tab for free users */}
+      {activeTab === 'withdraw' && <VipUpgradeButton />}
     </div>
   );
 };

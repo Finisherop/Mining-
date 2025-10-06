@@ -6,6 +6,7 @@ import { cn, formatNumber, getVipTimeRemaining, isVipActive } from '../utils';
 import { getTelegramWebAppData, getTelegramUserPhoto } from '../services/telegram';
 import { TelegramUser } from '../types/telegram';
 import { getCachedProfilePhoto, setCachedProfilePhoto, isCacheExpired } from '../utils/telegramProfileCache';
+import { createOrUpdateUser } from '../firebase/hooks';
 
 const ProfilePanel: React.FC = () => {
   const { user, setUser } = useAppStore();
@@ -41,6 +42,14 @@ const ProfilePanel: React.FC = () => {
               lastActive: Date.now()
             };
             setUser(updatedUser);
+            
+            // Save to Firebase
+            try {
+              await createOrUpdateUser(telegramData.user.id.toString(), updatedUser);
+              console.log('✅ Profile data synced to Firebase');
+            } catch (error) {
+              console.error('❌ Error syncing profile to Firebase:', error);
+            }
           }
           
           // Check cache first, then fetch if needed
@@ -57,6 +66,13 @@ const ProfilePanel: React.FC = () => {
                 lastActive: Date.now()
               };
               setUser(updatedUser);
+              
+              // Save to Firebase
+              try {
+                await createOrUpdateUser(user.userId, updatedUser);
+              } catch (error) {
+                console.error('❌ Error syncing cached photo to Firebase:', error);
+              }
             }
           } else {
             console.log('📸 Fetching fresh profile photo...');
@@ -78,6 +94,14 @@ const ProfilePanel: React.FC = () => {
                 lastActive: Date.now()
               };
               setUser(updatedUser);
+              
+              // Save to Firebase
+              try {
+                await createOrUpdateUser(user.userId, updatedUser);
+                console.log('✅ Profile photo synced to Firebase');
+              } catch (error) {
+                console.error('❌ Error syncing photo to Firebase:', error);
+              }
             } catch (error) {
               console.error('❌ Error fetching profile photo:', error);
               // Cache the failure to avoid repeated attempts
@@ -119,6 +143,14 @@ const ProfilePanel: React.FC = () => {
           lastActive: Date.now()
         };
         setUser(updatedUser);
+        
+        // Save to Firebase
+        try {
+          await createOrUpdateUser(user.userId, updatedUser);
+          console.log('✅ Manual refresh synced to Firebase');
+        } catch (error) {
+          console.error('❌ Error syncing manual refresh to Firebase:', error);
+        }
       } catch (error) {
         console.error('❌ Error refreshing profile photo:', error);
         setCachedProfilePhoto(telegramData.user.id, null);

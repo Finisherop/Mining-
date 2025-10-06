@@ -42,6 +42,7 @@ export const useFirebaseUser = (userId: string | null) => {
   return { user, loading, error };
 };
 
+
 // Custom hook for all users (admin panel)
 export const useFirebaseUsers = () => {
   const [users, setUsers] = useState<Record<string, User>>({});
@@ -76,7 +77,7 @@ export const useFirebaseUsers = () => {
 };
 
 // Function to create or update user
-export const createOrUpdateUser = async (userId: string, userData: Partial<User>): Promise<void> => {
+export const createOrUpdateUser = async (userId: string, userData: Partial<User>): Promise<boolean> => {
   try {
     const userRef = ref(database, `users/${userId}`);
     const snapshot = await get(userRef);
@@ -121,9 +122,10 @@ export const createOrUpdateUser = async (userId: string, userData: Partial<User>
     }
     
     await set(userRef, finalUserData);
+    return true;
   } catch (error) {
     console.error('Error creating/updating user:', error);
-    throw error;
+    return false;
   }
 };
 
