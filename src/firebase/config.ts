@@ -2,13 +2,12 @@ import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 
 const firebaseConfig = {
-  apiKey: "your-api-key-here",
-  authDomain: "your-project.firebaseapp.com",
-  databaseURL: "https://your-project-default-rtdb.firebaseio.com/",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "your-app-id"
+  apiKey: "AIzaSyBWhjcgCmp5A6V5uCSSB-j8yMKqRYZuHIY",
+  authDomain: "mining-bot-6131b.firebaseapp.com",
+  projectId: "mining-bot-6131b",
+  storageBucket: "mining-bot-6131b.firebasestorage.app",
+  messagingSenderId: "614776449697",
+  appId: "1:614776449697:web:a13c41c86b4aa16b2adee0"
 };
 
 // Initialize Firebase
