@@ -18,7 +18,7 @@ export const useTaskProgress = (userId: string) => {
 
     const progressRef = ref(database, `taskProgress/${userId}`);
     
-    const unsubscribe = onValue(progressRef, (snapshot) => {
+    const unsubscribe = onValue(progressRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
       try {
         if (snapshot.exists()) {
           setProgress(snapshot.val());
@@ -31,7 +31,7 @@ export const useTaskProgress = (userId: string) => {
       } finally {
         setLoading(false);
       }
-    }, (err) => {
+    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
       setError(err.message);
       setLoading(false);
     });

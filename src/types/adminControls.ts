@@ -61,10 +61,48 @@ export interface AdminSettings {
   };
 }
 
+// ERROR FIX: Add missing SystemSettings interface and fix AdminAction union type
+export interface SystemSettings {
+  farmingRates: { free: number; bronze: number; diamond: number };
+  farmingMultipliers: { free: number; bronze: number; diamond: number };
+  taskRewards: {
+    daily: number;
+    weekly: number;
+    youtube: number;
+    telegram: number;
+    website: number;
+    ads: number;
+  };
+  conversionRates: {
+    coinsToINR: number;
+    starsToINR: number;
+  };
+  withdrawalLimits: {
+    free: { min: number; max: number; daily: number };
+    bronze: { min: number; max: number; daily: number };
+    diamond: { min: number; max: number; daily: number };
+  };
+  vipPricing: {
+    bronze: { stars: number; inr: number; duration: number };
+    diamond: { stars: number; inr: number; duration: number };
+  };
+  referralRewards: { free: number; bronze: number; diamond: number };
+  adsSettings: {
+    dailyLimit: number;
+    rewardPerAd: number;
+    adDuration: number;
+    vipUnlimited: boolean;
+  };
+  maintenanceMode: boolean;
+  registrationOpen: boolean;
+  lastUpdated: number;
+  updatedBy: string;
+}
+
 export interface AdminAction {
   id: string;
   adminId: string;
-  action: 'approve_vip' | 'reject_vip' | 'approve_withdrawal' | 'reject_withdrawal' | 'update_settings' | 'ban_user' | 'unban_user';
+  action: 'approve_vip' | 'reject_vip' | 'approve_withdrawal' | 'reject_withdrawal' | 'update_settings' | 'ban_user' | 'unban_user' | 'settings_update'; // <-- fix union type to include 'settings_update'
   targetId: string; // user ID or request ID
   details: Record<string, any>;
   timestamp: number;

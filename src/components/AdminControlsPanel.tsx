@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+// ERROR FIX: lucide-react import - install dependency first
 import { 
-  Settings, 
+  Settings, // ERROR: TS6133 'Settings' is declared but never read - currently unused, do not delete
   TrendingUp, 
   Clock, 
   DollarSign, 
@@ -12,6 +13,7 @@ import {
   Star
 } from 'lucide-react';
 import { cn, playSound } from '../utils';
+// ERROR: TS6133 'cn' is declared but never read - currently unused, do not delete
 import toast from 'react-hot-toast';
 
 interface AdminControlsConfig {

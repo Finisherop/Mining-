@@ -16,8 +16,8 @@
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false, // <-- ERROR FIX: Allow unused variables as requested (keep as comments, don't delete)
+    "noUnusedParameters": false, // <-- ERROR FIX: Allow unused parameters as requested
     "noFallthroughCasesInSwitch": true,
 
     /* Path mapping */

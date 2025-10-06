@@ -65,7 +65,7 @@ export const useAdminSettings = () => {
   useEffect(() => {
     const settingsRef = ref(database, 'adminSettings');
     
-    const unsubscribe = onValue(settingsRef, (snapshot) => {
+    const unsubscribe = onValue(settingsRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
       try {
         if (snapshot.exists()) {
           setSettings({ ...defaultSettings, ...snapshot.val() });
@@ -78,7 +78,7 @@ export const useAdminSettings = () => {
       } finally {
         setLoading(false);
       }
-    }, (err) => {
+    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
       setError(err.message);
       setLoading(false);
     });
@@ -108,12 +108,13 @@ export const updateAdminSettings = async (
 // Log admin action
 export const logAdminAction = async (action: Omit<AdminAction, 'id'>): Promise<boolean> => {
   try {
-    const actionsRef = ref(database, 'adminActions');
+    const actionsRef = ref(database, 'adminActions'); // ERROR: TS6133 'actionsRef' is declared but never read - currently unused, do not delete
     const actionId = `${action.adminId}_${Date.now()}`;
     
     const adminAction: AdminAction = {
       ...action,
-      id: actionId
+      id: actionId,
+      timestamp: Date.now() // <-- add missing timestamp property
     };
     
     await set(ref(database, `adminActions/${actionId}`), adminAction);
