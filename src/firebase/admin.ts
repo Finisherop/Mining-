@@ -1,4 +1,4 @@
-import { ref, get, set, push, remove, onValue, off, query, orderByChild, equalTo } from 'firebase/database';
+import { ref, get, set, push, onValue, off, query, orderByChild, equalTo } from 'firebase/database';
 import { database } from './config';
 import { User, AdminConfig, AdminLog, BroadcastMessage, TelegramPayment } from '../types';
 
@@ -159,7 +159,7 @@ export const getAdminLogs = async (limit: number = 100): Promise<AdminLog[]> => 
 
     const logs = snapshot.val();
     return Object.entries(logs)
-      .map(([id, log]) => ({ id, ...(log as Omit<AdminLog, 'id'>) }))
+      .map(([logId, log]) => ({ id: logId, ...(log as Omit<AdminLog, 'id'>) }))
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, limit);
   } catch (error) {

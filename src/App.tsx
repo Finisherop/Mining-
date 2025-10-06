@@ -19,7 +19,6 @@ function App() {
 
   // Firebase hooks
   const { user: firebaseUser, loading: firebaseLoading } = useFirebaseUser(userId);
-  const { users: allUsers, loading: usersLoading } = useFirebaseUsers();
 
   // Initialize app
   useEffect(() => {
@@ -44,6 +43,7 @@ function App() {
             } else {
               // Create new user
               const newUser: User = {
+                id: userId,
                 userId,
                 username: telegramUser.username || telegramUser.first_name || 'User',
                 stars: 0,
@@ -56,7 +56,6 @@ function App() {
                 createdAt: Date.now(),
                 vipExpiry: null,
                 // New fields for premium system
-                id: userId,
                 coins: 0,
                 tier: 'free',
                 dailyWithdrawals: 0,
@@ -107,10 +106,6 @@ function App() {
     }
   }, [firebaseUser, isAdmin]);
 
-  const handleUserUpdate = (updatedUser: User) => {
-    setCurrentUser(updatedUser);
-    saveUserToStorage(updatedUser);
-  };
 
   if (loading || (isTelegramUser() && firebaseLoading)) {
     return (

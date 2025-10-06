@@ -1,5 +1,6 @@
 export interface User {
   id: string;
+  userId: string; // Keep both for compatibility
   username: string;
   coins: number;
   stars: number;
@@ -16,6 +17,12 @@ export interface User {
   claimedDays: number[]; // Array of claimed days (1-7)
   badges: Badge[];
   createdAt: Date;
+  lastActive: number; // Add missing field
+  totalEarnings: number; // Add missing field
+  isVIP: boolean; // Add missing field
+  earningMultiplier: number; // Add missing field
+  boosts: number; // Add missing field
+  referralCount: number; // Add missing field
   // New VIP fields
   vip_tier: UserTier;
   vip_expiry: number | null;
@@ -169,7 +176,7 @@ export interface GlobalSettings {
 
 export interface AdminLog {
   id: string;
-  type: 'purchase' | 'withdrawal' | 'claim' | 'referral' | 'admin_action';
+  type: 'purchase' | 'withdrawal' | 'claim' | 'referral' | 'admin_action' | 'vip_upgrade' | 'ban_user' | 'reset_streak';
   userId: string;
   username: string;
   action: string;
