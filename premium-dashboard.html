@@ -1,0 +1,2068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Premium Farming Bot Dashboard</title>
+    <link rel="icon" href="https://i.ibb.co/j9WqyNWT/IMG-20250925-233648-989.jpg" type="image/jpeg">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <style>
+        /* === PREMIUM THEME VARIABLES === */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0b0f1a 0%, #1b1330 50%, #2d1b69 100%);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --neon-cyan: #00f5ff;
+            --neon-pink: #ff0080;
+            --neon-purple: #8a2be2;
+            --neon-gold: #ffd700;
+            --text-primary: #ffffff;
+            --text-secondary: #b8c5d6;
+            --text-muted: #6b7280;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --shadow-glow: 0 0 20px rgba(0, 245, 255, 0.3);
+            --shadow-pink-glow: 0 0 20px rgba(255, 0, 128, 0.3);
+            --shadow-gold-glow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* === ANIMATED BACKGROUND === */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 245, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 0, 128, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(138, 43, 226, 0.1) 0%, transparent 50%);
+            animation: backgroundFloat 20s ease-in-out infinite;
+            z-index: -1;
+        }
+
+        @keyframes backgroundFloat {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.05) rotate(1deg); }
+        }
+
+        /* === GLASS PANEL BASE === */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        /* === TOP OVERLAY TABS === */
+        .top-overlay {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            gap: 12px;
+            padding: 8px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .overlay-tab {
+            padding: 12px 24px;
+            border-radius: 25px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            font-size: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .overlay-tab::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .overlay-tab:hover::before {
+            left: 100%;
+        }
+
+        .overlay-tab:hover {
+            transform: scale(1.05);
+            border-color: var(--neon-cyan);
+            color: var(--text-primary);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .overlay-tab.active {
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink));
+            color: white;
+            transform: scale(1.05);
+            box-shadow: var(--shadow-pink-glow);
+        }
+
+        .overlay-tab:active {
+            transform: scale(1.02);
+        }
+
+        /* === MAIN LAYOUT === */
+        .main-container {
+            display: flex;
+            height: 100vh;
+            padding: 100px 20px 100px 20px;
+            gap: 20px;
+        }
+
+        .left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        /* === FARMING DASHBOARD === */
+        .farming-dashboard {
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .farming-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .coin-display {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--neon-gold), var(--neon-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: coinPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes coinPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .vip-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, var(--neon-purple), var(--neon-pink));
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            animation: vipGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes vipGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(138, 43, 226, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(138, 43, 226, 0.8); }
+        }
+
+        .farming-progress {
+            margin: 24px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-pink));
+            border-radius: 4px;
+            transition: width 1s ease;
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: progressShimmer 2s infinite;
+        }
+
+        @keyframes progressShimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .farm-button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .farm-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-pink-glow);
+        }
+
+        .farm-button:active {
+            transform: scale(0.98);
+        }
+
+        .farm-button:disabled {
+            background: rgba(255, 255, 255, 0.1);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* === DAILY CLAIM CALENDAR === */
+        .daily-claim-section {
+            padding: 24px;
+        }
+
+        .claim-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .streak-counter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, var(--neon-gold), var(--warning-color));
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            position: relative;
+        }
+
+        .calendar-day:hover {
+            transform: scale(1.05);
+            border-color: var(--neon-cyan);
+        }
+
+        .calendar-day.claimed {
+            background: linear-gradient(135deg, var(--success-color), var(--neon-cyan));
+            border-color: var(--success-color);
+        }
+
+        .calendar-day.today {
+            border-color: var(--neon-pink);
+            box-shadow: 0 0 15px rgba(255, 0, 128, 0.5);
+        }
+
+        .calendar-day.available {
+            background: linear-gradient(135deg, var(--neon-gold), var(--warning-color));
+            animation: dayPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes dayPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .claim-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--neon-gold), var(--warning-color));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .claim-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-gold-glow);
+        }
+
+        /* === SHOP CONTENT === */
+        .shop-content {
+            padding: 24px;
+        }
+
+        .tier-grid {
+            display: grid;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .tier-card {
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tier-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .tier-card:hover::before {
+            left: 100%;
+        }
+
+        .tier-card.free {
+            background: linear-gradient(135deg, rgba(107, 114, 128, 0.2), rgba(75, 85, 99, 0.2));
+            border-color: #6b7280;
+        }
+
+        .tier-card.bronze {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.2));
+            border-color: var(--warning-color);
+        }
+
+        .tier-card.diamond {
+            background: linear-gradient(135deg, rgba(0, 245, 255, 0.2), rgba(255, 0, 128, 0.2));
+            border-color: var(--neon-cyan);
+        }
+
+        .tier-card:hover {
+            transform: scale(1.03);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .tier-card.active {
+            border-color: var(--neon-pink);
+            box-shadow: var(--shadow-pink-glow);
+        }
+
+        .tier-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .tier-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .tier-badge.free {
+            background: #6b7280;
+            color: white;
+        }
+
+        .tier-badge.bronze {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .tier-badge.diamond {
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink));
+            color: white;
+        }
+
+        .tier-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--neon-gold);
+        }
+
+        .tier-features {
+            list-style: none;
+            margin-bottom: 16px;
+        }
+
+        .tier-features li {
+            padding: 4px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .tier-features li::before {
+            content: '✓';
+            color: var(--success-color);
+            font-weight: bold;
+        }
+
+        .upgrade-button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upgrade-button.free {
+            background: #6b7280;
+            color: white;
+        }
+
+        .upgrade-button.bronze {
+            background: linear-gradient(135deg, var(--warning-color), #d97706);
+            color: white;
+        }
+
+        .upgrade-button.diamond {
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink));
+            color: white;
+        }
+
+        .upgrade-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .upgrade-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* === FOOTER TABS === */
+        .footer-tabs {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--glass-border);
+            padding: 12px 0;
+            z-index: 1000;
+        }
+
+        .footer-tab {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            margin: 0 4px;
+        }
+
+        .footer-tab:hover {
+            transform: scale(1.05);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .footer-tab.active {
+            color: var(--neon-cyan);
+            background: rgba(0, 245, 255, 0.1);
+            box-shadow: 0 0 15px rgba(0, 245, 255, 0.3);
+        }
+
+        .footer-tab-icon {
+            font-size: 20px;
+        }
+
+        .footer-tab-label {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* === TOAST NOTIFICATIONS === */
+        .toast {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            padding: 16px 20px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-weight: 600;
+            z-index: 2000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.success {
+            border-color: var(--success-color);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .toast.warning {
+            border-color: var(--warning-color);
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+        }
+
+        /* === CONFETTI ANIMATION === */
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1500;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: var(--neon-gold);
+            animation: confettiFall 3s linear forwards;
+        }
+
+        @keyframes confettiFall {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* === RESPONSIVE DESIGN === */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+                padding: 100px 10px 100px 10px;
+            }
+
+            .top-overlay {
+                top: 10px;
+                padding: 6px;
+                gap: 8px;
+            }
+
+            .overlay-tab {
+                padding: 8px 16px;
+                font-size: 12px;
+            }
+
+            .coin-display {
+                font-size: 2rem;
+            }
+
+            .tier-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* === LOADING STATES === */
+        .loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--neon-cyan);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* === UTILITY CLASSES === */
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .text-gradient {
+            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="glass-panel" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 40px; text-align: center; z-index: 3000;">
+        <div class="spinner" style="margin-bottom: 20px;"></div>
+        <h3>Loading Premium Dashboard...</h3>
+    </div>
+
+    <!-- Top Overlay Tabs -->
+    <div class="top-overlay">
+        <div class="overlay-tab active" data-tab="shop">
+            <span>🛍️ Shop</span>
+        </div>
+        <div class="overlay-tab" data-tab="vip">
+            <span>💎 VIP</span>
+        </div>
+        <div class="overlay-tab" data-tab="events">
+            <span>🎉 Events</span>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Left Panel -->
+        <div class="left-panel">
+            <!-- Farming Content (Default) -->
+            <div id="farming-content">
+                <!-- Farming Dashboard -->
+                <div class="farming-dashboard glass-panel">
+                    <div class="farming-header">
+                        <div>
+                            <div class="coin-display" id="coin-display">0</div>
+                            <div style="font-size: 14px; color: var(--text-secondary);" id="farming-rate">Base Rate: 100/min</div>
+                        </div>
+                        <div class="vip-status hidden" id="vip-status">
+                            <span>💎</span>
+                            <span id="vip-timer">VIP • 6h 12m</span>
+                        </div>
+                    </div>
+                    
+                    <div class="farming-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill" style="width: 0%;"></div>
+                        </div>
+                        <div style="margin-top: 8px; font-size: 14px; color: var(--text-secondary);" id="farm-timer">Ready to farm!</div>
+                    </div>
+                    
+                    <button class="farm-button" id="farm-button" onclick="handleFarmAction()">
+                        Start Farming
+                    </button>
+                </div>
+
+                <!-- Daily Claim Calendar -->
+                <div class="daily-claim-section glass-panel">
+                    <div class="claim-header">
+                        <h3>📅 Daily Claims</h3>
+                        <div class="streak-counter">
+                            <span>🔥</span>
+                            <span id="streak-count">0 day streak</span>
+                        </div>
+                    </div>
+                    
+                    <div class="calendar-grid" id="calendar-grid">
+                        <!-- Calendar days will be generated by JavaScript -->
+                    </div>
+                    
+                    <button class="claim-button hidden" id="claim-button" onclick="handleDailyClaim()">
+                        🎁 Claim Daily Reward
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tasks Content -->
+            <div id="tasks-content" class="hidden">
+                <div class="glass-panel" style="padding: 24px;">
+                    <h2 class="text-gradient" style="margin-bottom: 24px;">📋 Available Tasks</h2>
+                    
+                    <div id="tasks-list">
+                        <!-- Tasks will be loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Referral Content -->
+            <div id="referral-content" class="hidden">
+                <div class="glass-panel" style="padding: 24px;">
+                    <h2 class="text-gradient" style="margin-bottom: 24px;">👥 Referral Program</h2>
+                    
+                    <div style="margin-bottom: 24px;">
+                        <label style="display: block; margin-bottom: 8px; color: var(--text-secondary);">Your Referral Link:</label>
+                        <div style="display: flex; gap: 12px;">
+                            <input type="text" id="referral-link" readonly style="flex: 1; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text-primary);">
+                            <button onclick="copyReferralLink()" style="padding: 12px 20px; background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink)); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">
+                                📋 Copy
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel" style="padding: 20px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 16px;">📊 Your Stats</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 24px; font-weight: 700; color: var(--neon-cyan);" id="referral-count">0</div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">Total Referrals</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 24px; font-weight: 700; color: var(--neon-gold);" id="referral-earnings">0</div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">Coins Earned</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel" style="padding: 20px;">
+                        <h3 style="margin-bottom: 16px;">💰 Referral Rewards</h3>
+                        <div id="referral-rewards">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <span>Base Reward:</span>
+                                <span style="color: var(--neon-gold); font-weight: 600;">500 💰</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                                <span>VIP Multiplier:</span>
+                                <span style="color: var(--neon-pink); font-weight: 600;" id="referral-multiplier">1.0×</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Content -->
+            <div id="profile-content" class="hidden">
+                <div class="glass-panel" style="padding: 24px;">
+                    <h2 class="text-gradient" style="margin-bottom: 24px;">👤 Profile</h2>
+                    
+                    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 24px; padding: 20px; background: rgba(255,255,255,0.03); border-radius: 12px;">
+                        <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink)); display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                            👤
+                        </div>
+                        <div>
+                            <h3 id="profile-name">Loading...</h3>
+                            <div style="color: var(--text-secondary); font-size: 14px;" id="profile-id">ID: ...</div>
+                            <div id="profile-badge" style="display: inline-block; padding: 4px 12px; background: var(--warning-color); border-radius: 12px; font-size: 12px; font-weight: 600; margin-top: 8px;">
+                                Bronze Badge
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                        <div class="glass-panel" style="padding: 16px; text-align: center;">
+                            <div style="font-size: 24px; font-weight: 700; color: var(--neon-gold);" id="profile-coins">0</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">Total Coins</div>
+                        </div>
+                        <div class="glass-panel" style="padding: 16px; text-align: center;">
+                            <div style="font-size: 24px; font-weight: 700; color: var(--neon-cyan);" id="profile-level">1</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">Level</div>
+                        </div>
+                        <div class="glass-panel" style="padding: 16px; text-align: center;">
+                            <div style="font-size: 24px; font-weight: 700; color: var(--neon-pink);" id="profile-exchanged">₹0</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">Exchanged</div>
+                        </div>
+                        <div class="glass-panel" style="padding: 16px; text-align: center;">
+                            <div style="font-size: 24px; font-weight: 700; color: var(--success-color);" id="profile-streak">0</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">Daily Streak</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Withdraw Content -->
+            <div id="withdraw-content" class="hidden">
+                <div class="glass-panel" style="padding: 24px;">
+                    <h2 class="text-gradient" style="margin-bottom: 24px;">💸 Withdraw Funds</h2>
+                    
+                    <div class="glass-panel" style="padding: 20px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 16px;">💰 Convert Coins to INR</h3>
+                        <div style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span>Exchange Rate:</span>
+                                <span style="color: var(--neon-gold); font-weight: 600;" id="exchange-rate">1000 💰 = ₹1</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Available Balance:</span>
+                                <span style="color: var(--neon-cyan); font-weight: 600;" id="available-balance">₹0</span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 12px;">
+                            <input type="number" id="convert-amount" placeholder="Enter coin amount" style="flex: 1; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text-primary);">
+                            <button onclick="convertCoins()" style="padding: 12px 20px; background: linear-gradient(135deg, var(--neon-gold), var(--warning-color)); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">
+                                Convert
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel" style="padding: 20px; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 16px;">🏦 Withdrawal Limits</h3>
+                        <div id="withdrawal-limits">
+                            <!-- Will be populated based on tier -->
+                        </div>
+                    </div>
+
+                    <div class="glass-panel" style="padding: 20px;">
+                        <h3 style="margin-bottom: 16px;">📤 Request Withdrawal</h3>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <input type="number" id="withdraw-amount" placeholder="Amount in INR" style="padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text-primary);">
+                            <input type="text" id="withdraw-upi" placeholder="UPI ID" style="padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text-primary);">
+                            <input type="text" id="withdraw-name" placeholder="Full Name" style="padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--text-primary);">
+                            <button onclick="requestWithdrawal()" style="padding: 12px; background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink)); border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">
+                                Request Withdrawal
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="right-panel">
+            <!-- Shop Content -->
+            <div id="shop-content" class="shop-content glass-panel">
+                <h2 class="text-gradient text-center" style="margin-bottom: 24px;">⭐ Premium Tiers</h2>
+                
+                <div class="tier-grid">
+                    <!-- Free Tier -->
+                    <div class="tier-card free" data-tier="free">
+                        <div class="tier-header">
+                            <div>
+                                <h3>Free</h3>
+                                <div class="tier-badge free">Bronze Badge</div>
+                            </div>
+                            <div class="tier-price">0 ⭐</div>
+                        </div>
+                        <ul class="tier-features">
+                            <li>1 withdrawal/day</li>
+                            <li>Min withdrawal: ₹200</li>
+                            <li>Standard farming rate</li>
+                            <li>Bronze badge</li>
+                        </ul>
+                        <button class="upgrade-button free" disabled>Current Plan</button>
+                    </div>
+
+                    <!-- Bronze Tier -->
+                    <div class="tier-card bronze" data-tier="bronze">
+                        <div class="tier-header">
+                            <div>
+                                <h3>Bronze VIP</h3>
+                                <div class="tier-badge bronze">Platinum Badge</div>
+                            </div>
+                            <div class="tier-price">75 ⭐</div>
+                        </div>
+                        <ul class="tier-features">
+                            <li>3 withdrawals/day</li>
+                            <li>Min withdrawal: ₹100</li>
+                            <li>2× farming speed</li>
+                            <li>VIP unlock</li>
+                            <li>Platinum badge</li>
+                        </ul>
+                        <button class="upgrade-button bronze" onclick="purchaseTier('bronze', 75)">
+                            Upgrade to Bronze
+                        </button>
+                    </div>
+
+                    <!-- Diamond Tier -->
+                    <div class="tier-card diamond" data-tier="diamond">
+                        <div class="tier-header">
+                            <div>
+                                <h3>Diamond VIP</h3>
+                                <div class="tier-badge diamond">Diamond Badge</div>
+                            </div>
+                            <div class="tier-price">150 ⭐</div>
+                        </div>
+                        <ul class="tier-features">
+                            <li>5 withdrawals/day</li>
+                            <li>Min withdrawal: ₹200</li>
+                            <li>2.5× farming speed</li>
+                            <li>1.5× referral rewards</li>
+                            <li>VIP unlock</li>
+                            <li>Diamond badge</li>
+                        </ul>
+                        <button class="upgrade-button diamond" onclick="purchaseTier('diamond', 150)">
+                            Upgrade to Diamond
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIP Content -->
+            <div id="vip-content" class="shop-content glass-panel hidden">
+                <h2 class="text-gradient text-center" style="margin-bottom: 24px;">💎 VIP Services</h2>
+                
+                <div class="glass-panel" style="padding: 20px; margin-bottom: 20px;">
+                    <h3 style="margin-bottom: 16px;">Active Perks</h3>
+                    <div id="active-perks">
+                        <p style="color: var(--text-muted);">No active VIP perks. Upgrade to unlock!</p>
+                    </div>
+                </div>
+
+                <div class="glass-panel" style="padding: 20px;">
+                    <h3 style="margin-bottom: 16px;">VIP Benefits Overview</h3>
+                    <ul style="list-style: none; gap: 8px; display: flex; flex-direction: column;">
+                        <li style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: var(--success-color);">✓</span>
+                            <span>Increased farming multipliers</span>
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: var(--success-color);">✓</span>
+                            <span>Higher daily withdrawal limits</span>
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: var(--success-color);">✓</span>
+                            <span>Enhanced referral bonuses</span>
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: var(--success-color);">✓</span>
+                            <span>Exclusive VIP badges</span>
+                        </li>
+                        <li style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: var(--success-color);">✓</span>
+                            <span>Priority support</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Events Content -->
+            <div id="events-content" class="shop-content glass-panel hidden">
+                <h2 class="text-gradient text-center" style="margin-bottom: 24px;">🎉 Limited Events</h2>
+                
+                <div class="glass-panel" style="padding: 20px; text-align: center;">
+                    <h3 style="margin-bottom: 16px;">🚀 Coming Soon</h3>
+                    <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                        Exciting limited-time events and special offers will appear here!
+                    </p>
+                    <div style="padding: 12px 24px; background: rgba(245, 158, 11, 0.1); border: 1px solid var(--warning-color); border-radius: 8px;">
+                        <span style="color: var(--warning-color);">⚡ Stay tuned for premium boosts and exclusive rewards!</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Tabs -->
+    <div class="footer-tabs">
+        <div class="footer-tab active" data-tab="farm">
+            <div class="footer-tab-icon">🌾</div>
+            <div class="footer-tab-label">Farm</div>
+        </div>
+        <div class="footer-tab" data-tab="tasks">
+            <div class="footer-tab-icon">📋</div>
+            <div class="footer-tab-label">Tasks</div>
+        </div>
+        <div class="footer-tab" data-tab="referral">
+            <div class="footer-tab-icon">👥</div>
+            <div class="footer-tab-label">Referral</div>
+        </div>
+        <div class="footer-tab" data-tab="profile">
+            <div class="footer-tab-icon">👤</div>
+            <div class="footer-tab-label">Profile</div>
+        </div>
+        <div class="footer-tab" data-tab="withdraw">
+            <div class="footer-tab-icon">💸</div>
+            <div class="footer-tab-label">Withdraw</div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Confetti Container -->
+    <div class="confetti-container" id="confetti-container"></div>
+
+    <script>
+        // === GLOBAL VARIABLES ===
+        let currentUser = null;
+        let userData = null;
+        let globalSettings = {};
+        let farmInterval = null;
+        let vipTimer = null;
+        let isUpgrading = false;
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBWhjcgCmp5A6V5uCSSB-j8yMKqRYZuHIY",
+            authDomain: "mining-bot-6131b.firebaseapp.com",
+            projectId: "mining-bot-6131b",
+            storageBucket: "mining-bot-6131b.appspot.com",
+            messagingSenderId: "614776449697",
+            appId: "1:614776449697:web:a13c41c86b4aa16b2adee0"
+        };
+
+        // Initialize Firebase
+        try {
+            firebase.initializeApp(firebaseConfig);
+        } catch (e) {
+            console.error("Firebase initialization failed:", e);
+            showToast("Firebase Config Missing!", "error");
+            return;
+        }
+
+        const db = firebase.firestore();
+        const tg = window.Telegram.WebApp;
+
+        // === SERVICE TIERS CONFIGURATION ===
+        const SERVICE_TIERS = {
+            free: {
+                name: "Free",
+                starCost: 0,
+                withdrawalsPerDay: 1,
+                minWithdrawal: 200,
+                farmingMultiplier: 1,
+                referralMultiplier: 1,
+                badge: "Bronze",
+                features: ["1 withdrawal/day", "Min withdrawal: ₹200", "Standard farming rate", "Bronze badge"]
+            },
+            bronze: {
+                name: "Bronze VIP",
+                starCost: 75,
+                withdrawalsPerDay: 3,
+                minWithdrawal: 100,
+                farmingMultiplier: 2,
+                referralMultiplier: 1,
+                badge: "Platinum",
+                features: ["3 withdrawals/day", "Min withdrawal: ₹100", "2× farming speed", "VIP unlock", "Platinum badge"]
+            },
+            diamond: {
+                name: "Diamond VIP",
+                starCost: 150,
+                withdrawalsPerDay: 5,
+                minWithdrawal: 200,
+                farmingMultiplier: 2.5,
+                referralMultiplier: 1.5,
+                badge: "Diamond",
+                features: ["5 withdrawals/day", "Min withdrawal: ₹200", "2.5× farming speed", "1.5× referral rewards", "VIP unlock", "Diamond badge"]
+            }
+        };
+
+        // === INITIALIZATION ===
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    tg.ready();
+                    tg.expand();
+                    currentUser = tg.initDataUnsafe.user;
+                    await initializeApp();
+                } else {
+                    // For testing without Telegram
+                    currentUser = { id: 'test123', first_name: 'Test User' };
+                    await initializeApp();
+                }
+            } catch (error) {
+                console.error("Initialization error:", error);
+                showToast("Failed to initialize app", "error");
+            } finally {
+                document.getElementById('loading-screen').style.display = 'none';
+            }
+        });
+
+        async function initializeApp() {
+            await loadGlobalSettings();
+            await loadUserData();
+            setupEventListeners();
+            updateUI();
+            generateDailyCalendar();
+            checkFarmingStatus();
+            updateVIPStatus();
+        }
+
+        // === DATA LOADING ===
+        async function loadGlobalSettings() {
+            try {
+                const doc = await db.collection('settings').doc('global').get();
+                if (doc.exists) {
+                    globalSettings = doc.data();
+                } else {
+                    globalSettings = {
+                        farmRate: 100,
+                        dailyClaimReward: 100,
+                        inrRate: 1000,
+                        adminUpiID: 'admin@upi'
+                    };
+                }
+            } catch (error) {
+                console.error("Error loading settings:", error);
+                globalSettings = { farmRate: 100, dailyClaimReward: 100, inrRate: 1000 };
+            }
+        }
+
+        async function loadUserData() {
+            try {
+                const userId = currentUser.id.toString();
+                const userRef = db.collection('users').doc(userId);
+                const doc = await userRef.get();
+
+                if (doc.exists) {
+                    userData = doc.data();
+                } else {
+                    userData = {
+                        id: userId,
+                        username: currentUser.username || 'N/A',
+                        firstName: currentUser.first_name,
+                        coins: 0,
+                        xp: 0,
+                        level: 1,
+                        farmingStartTime: null,
+                        farmingDuration: 24 * 60 * 60 * 1000,
+                        referrals: [],
+                        completedTasks: [],
+                        exchangedTotal: 0,
+                        dailyClaimStreak: 0,
+                        lastClaimDate: null,
+                        serviceTier: 'free',
+                        vipEndTime: null,
+                        withdrawalsToday: 0,
+                        lastWithdrawalDate: null
+                    };
+                    await userRef.set(userData);
+                }
+
+                localStorage.setItem(`userData_${userId}`, JSON.stringify(userData));
+            } catch (error) {
+                console.error("Error loading user data:", error);
+                showToast("Failed to load user data", "error");
+            }
+        }
+
+        async function syncUserData(updatedData) {
+            try {
+                Object.assign(userData, updatedData);
+                localStorage.setItem(`userData_${currentUser.id}`, JSON.stringify(userData));
+                const userRef = db.collection('users').doc(currentUser.id.toString());
+                await userRef.update(updatedData);
+                updateUI();
+            } catch (error) {
+                console.error("Error syncing data:", error);
+                showToast("Sync failed", "error");
+            }
+        }
+
+        // === EVENT LISTENERS ===
+        function setupEventListeners() {
+            // Top overlay tabs
+            document.querySelectorAll('.overlay-tab').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    const tabName = e.currentTarget.dataset.tab;
+                    switchOverlayTab(tabName);
+                });
+            });
+
+            // Footer tabs
+            document.querySelectorAll('.footer-tab').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    const tabName = e.currentTarget.dataset.tab;
+                    switchFooterTab(tabName);
+                });
+            });
+        }
+
+        function switchOverlayTab(tabName) {
+            // Update active tab
+            document.querySelectorAll('.overlay-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"].overlay-tab`).classList.add('active');
+
+            // Show corresponding content
+            document.getElementById('shop-content').classList.add('hidden');
+            document.getElementById('vip-content').classList.add('hidden');
+            document.getElementById('events-content').classList.add('hidden');
+
+            document.getElementById(`${tabName}-content`).classList.remove('hidden');
+
+            // Add tap animation
+            const activeTab = document.querySelector(`[data-tab="${tabName}"].overlay-tab`);
+            activeTab.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                activeTab.style.transform = '';
+            }, 150);
+        }
+
+        function switchFooterTab(tabName) {
+            // Update active tab
+            document.querySelectorAll('.footer-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"].footer-tab`).classList.add('active');
+
+            // Add micro-interaction
+            const activeTab = document.querySelector(`[data-tab="${tabName}"].footer-tab`);
+            activeTab.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                activeTab.style.transform = '';
+            }, 150);
+
+            // Handle tab-specific logic
+            switch(tabName) {
+                case 'farm':
+                    showFarmingContent();
+                    break;
+                case 'tasks':
+                    showTasksContent();
+                    break;
+                case 'referral':
+                    showReferralContent();
+                    break;
+                case 'profile':
+                    showProfileContent();
+                    break;
+                case 'withdraw':
+                    showWithdrawContent();
+                    break;
+            }
+        }
+
+        // === UI UPDATES ===
+        function updateUI() {
+            if (!userData) return;
+
+            // Update coin display
+            document.getElementById('coin-display').textContent = Math.floor(userData.coins || 0);
+
+            // Update farming rate display
+            const currentTier = SERVICE_TIERS[userData.serviceTier || 'free'];
+            const baseRate = globalSettings.farmRate || 100;
+            const multipliedRate = Math.floor(baseRate * currentTier.farmingMultiplier);
+            document.getElementById('farming-rate').textContent = `${currentTier.name} Rate: ${multipliedRate}/min`;
+
+            // Update tier cards
+            updateTierCards();
+        }
+
+        function updateTierCards() {
+            const currentTier = userData.serviceTier || 'free';
+            
+            document.querySelectorAll('.tier-card').forEach(card => {
+                const tier = card.dataset.tier;
+                const button = card.querySelector('.upgrade-button');
+                
+                if (tier === currentTier) {
+                    card.classList.add('active');
+                    button.textContent = 'Current Plan';
+                    button.disabled = true;
+                } else {
+                    card.classList.remove('active');
+                    button.disabled = false;
+                    if (tier === 'free') {
+                        button.textContent = 'Downgrade';
+                        button.disabled = true;
+                    } else {
+                        button.textContent = `Upgrade to ${SERVICE_TIERS[tier].name}`;
+                    }
+                }
+            });
+        }
+
+        function updateVIPStatus() {
+            const vipStatusEl = document.getElementById('vip-status');
+            const vipTimerEl = document.getElementById('vip-timer');
+            
+            if (userData.vipEndTime && Date.now() < userData.vipEndTime) {
+                vipStatusEl.classList.remove('hidden');
+                
+                // Update VIP timer
+                if (vipTimer) clearInterval(vipTimer);
+                vipTimer = setInterval(() => {
+                    const timeLeft = userData.vipEndTime - Date.now();
+                    if (timeLeft <= 0) {
+                        clearInterval(vipTimer);
+                        vipStatusEl.classList.add('hidden');
+                        syncUserData({ vipEndTime: null });
+                        return;
+                    }
+                    
+                    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                    vipTimerEl.textContent = `VIP • ${hours}h ${minutes}m`;
+                }, 1000);
+            } else {
+                vipStatusEl.classList.add('hidden');
+                if (vipTimer) clearInterval(vipTimer);
+            }
+        }
+
+        // === FARMING SYSTEM ===
+        function handleFarmAction() {
+            const button = document.getElementById('farm-button');
+            if (button.textContent.includes('Start')) {
+                startFarming();
+            } else if (button.textContent.includes('Claim')) {
+                claimFarmReward();
+            }
+        }
+
+        async function startFarming() {
+            await syncUserData({ farmingStartTime: Date.now() });
+            checkFarmingStatus();
+            showToast("Farming started!", "success");
+        }
+
+        async function claimFarmReward() {
+            const currentTier = SERVICE_TIERS[userData.serviceTier || 'free'];
+            const baseRate = globalSettings.farmRate || 100;
+            const multiplier = currentTier.farmingMultiplier;
+            const elapsedMinutes = userData.farmingDuration / (60 * 1000);
+            const coinsEarned = Math.floor(baseRate * multiplier * elapsedMinutes);
+            
+            const newCoins = (userData.coins || 0) + coinsEarned;
+            const newXp = (userData.xp || 0) + 100;
+            
+            await syncUserData({ 
+                coins: newCoins, 
+                farmingStartTime: null, 
+                xp: newXp 
+            });
+            
+            showToast(`Claimed ${coinsEarned} coins! ${multiplier > 1 ? `(${multiplier}× VIP boost)` : ''}`, "success");
+            createConfetti();
+            checkFarmingStatus();
+        }
+
+        function checkFarmingStatus() {
+            const button = document.getElementById('farm-button');
+            const timerEl = document.getElementById('farm-timer');
+            const progressEl = document.getElementById('progress-fill');
+            
+            if (farmInterval) clearInterval(farmInterval);
+
+            if (userData.farmingStartTime) {
+                const endTime = userData.farmingStartTime + userData.farmingDuration;
+                
+                farmInterval = setInterval(() => {
+                    const now = Date.now();
+                    const timeLeft = endTime - now;
+                    
+                    if (timeLeft <= 0) {
+                        clearInterval(farmInterval);
+                        button.textContent = 'Claim Reward';
+                        button.disabled = false;
+                        timerEl.textContent = 'Farming complete!';
+                        progressEl.style.width = '100%';
+                        return;
+                    }
+                    
+                    button.textContent = 'Farming...';
+                    button.disabled = true;
+                    
+                    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+                    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+                    
+                    timerEl.textContent = `Time left: ${hours}h ${minutes}m ${seconds}s`;
+                    
+                    const progress = 100 - (timeLeft / userData.farmingDuration) * 100;
+                    progressEl.style.width = `${progress}%`;
+                }, 1000);
+            } else {
+                button.textContent = 'Start Farming';
+                button.disabled = false;
+                timerEl.textContent = 'Ready to farm!';
+                progressEl.style.width = '0%';
+            }
+        }
+
+        // === DAILY CLAIM SYSTEM ===
+        function generateDailyCalendar() {
+            const calendarGrid = document.getElementById('calendar-grid');
+            const today = new Date();
+            const currentDay = today.getDate();
+            
+            calendarGrid.innerHTML = '';
+            
+            // Generate 7 days (today and 6 previous days)
+            for (let i = 6; i >= 0; i--) {
+                const dayDate = new Date(today);
+                dayDate.setDate(currentDay - i);
+                
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day';
+                dayEl.innerHTML = `
+                    <div style="font-weight: 600;">${dayDate.getDate()}</div>
+                    <div style="font-size: 10px;">${dayDate.toLocaleDateString('en', {weekday: 'short'})}</div>
+                `;
+                
+                // Check if this day was claimed
+                const lastClaim = userData.lastClaimDate ? new Date(userData.lastClaimDate) : null;
+                if (lastClaim && dayDate.toDateString() === lastClaim.toDateString()) {
+                    dayEl.classList.add('claimed');
+                }
+                
+                // Mark today
+                if (i === 0) {
+                    dayEl.classList.add('today');
+                    
+                    // Check if can claim today
+                    const canClaim = !lastClaim || lastClaim.toDateString() !== today.toDateString();
+                    if (canClaim) {
+                        dayEl.classList.add('available');
+                        document.getElementById('claim-button').classList.remove('hidden');
+                    }
+                }
+                
+                calendarGrid.appendChild(dayEl);
+            }
+            
+            // Update streak counter
+            document.getElementById('streak-count').textContent = `${userData.dailyClaimStreak || 0} day streak`;
+        }
+
+        async function handleDailyClaim() {
+            const today = new Date();
+            const lastClaim = userData.lastClaimDate ? new Date(userData.lastClaimDate) : null;
+            
+            // Check if already claimed today
+            if (lastClaim && lastClaim.toDateString() === today.toDateString()) {
+                showToast("Already claimed today!", "warning");
+                return;
+            }
+            
+            const baseReward = globalSettings.dailyClaimReward || 100;
+            const currentTier = SERVICE_TIERS[userData.serviceTier || 'free'];
+            const vipBonus = currentTier.farmingMultiplier > 1 ? 1.5 : 1;
+            const totalReward = Math.floor(baseReward * vipBonus);
+            
+            // Calculate streak
+            let newStreak = 1;
+            if (lastClaim) {
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                
+                if (lastClaim.toDateString() === yesterday.toDateString()) {
+                    newStreak = (userData.dailyClaimStreak || 0) + 1;
+                }
+            }
+            
+            const streakBonus = Math.min(newStreak * 0.1, 1); // Max 100% bonus
+            const finalReward = Math.floor(totalReward * (1 + streakBonus));
+            
+            await syncUserData({
+                coins: (userData.coins || 0) + finalReward,
+                dailyClaimStreak: newStreak,
+                lastClaimDate: today.toISOString()
+            });
+            
+            showToast(`Daily reward claimed! +${finalReward} coins (${newStreak} day streak)`, "success");
+            createConfetti();
+            generateDailyCalendar();
+        }
+
+        // === TIER PURCHASE SYSTEM ===
+        async function purchaseTier(tierName, starCost) {
+            if (isUpgrading) return;
+            
+            isUpgrading = true;
+            const button = event.target;
+            const originalText = button.textContent;
+            
+            button.disabled = true;
+            button.innerHTML = '<div class="spinner"></div> Processing...';
+            
+            try {
+                // Simulate Telegram Stars payment
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Activate VIP for 30 days
+                const vipEndTime = Date.now() + (30 * 24 * 60 * 60 * 1000);
+                
+                await syncUserData({
+                    serviceTier: tierName,
+                    vipEndTime: vipEndTime
+                });
+                
+                // Log purchase
+                await db.collection('purchases').add({
+                    userId: currentUser.id.toString(),
+                    userName: currentUser.first_name,
+                    tier: tierName,
+                    starCost: starCost,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    vipEndTime: vipEndTime
+                });
+                
+                showToast(`🎉 ${SERVICE_TIERS[tierName].name} activated! VIP unlocked for 30 days!`, "success");
+                createConfetti();
+                updateVIPStatus();
+                
+                // Trigger unlock animation
+                setTimeout(() => {
+                    const tierCard = document.querySelector(`[data-tier="${tierName}"]`);
+                    tierCard.style.transform = 'scale(1.1)';
+                    tierCard.style.boxShadow = '0 0 30px rgba(0, 245, 255, 0.8)';
+                    setTimeout(() => {
+                        tierCard.style.transform = '';
+                        tierCard.style.boxShadow = '';
+                    }, 1000);
+                }, 500);
+                
+            } catch (error) {
+                console.error("Purchase error:", error);
+                showToast("Purchase failed. Please try again.", "error");
+                button.textContent = originalText;
+                button.disabled = false;
+            } finally {
+                isUpgrading = false;
+                setTimeout(() => {
+                    updateTierCards();
+                }, 1000);
+            }
+        }
+
+        // === UTILITY FUNCTIONS ===
+        function showToast(message, type = "info") {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            
+            document.getElementById('toast-container').appendChild(toast);
+            
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function createConfetti() {
+            const container = document.getElementById('confetti-container');
+            const colors = ['#00f5ff', '#ff0080', '#8a2be2', '#ffd700', '#10b981'];
+            
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDelay = Math.random() * 2 + 's';
+                confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                
+                container.appendChild(confetti);
+                
+                setTimeout(() => confetti.remove(), 4000);
+            }
+        }
+
+        // === TOOLTIPS (Optional Enhancement) ===
+        function addTooltips() {
+            const tooltips = {
+                'claim-button': 'Claim daily coins & VIP bonus!',
+                'farm-button': userData.serviceTier !== 'free' ? 'VIP active — +2× farming' : 'Start farming to earn coins',
+                'vip-status': 'VIP benefits active!'
+            };
+            
+            Object.entries(tooltips).forEach(([id, text]) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.title = text;
+                }
+            });
+        }
+
+        // === CONTENT PANEL FUNCTIONS ===
+        function showFarmingContent() {
+            hideAllContentPanels();
+            document.getElementById('farming-content').classList.remove('hidden');
+        }
+
+        function showTasksContent() {
+            hideAllContentPanels();
+            document.getElementById('tasks-content').classList.remove('hidden');
+            loadTasks();
+        }
+
+        function showReferralContent() {
+            hideAllContentPanels();
+            document.getElementById('referral-content').classList.remove('hidden');
+            updateReferralData();
+        }
+
+        function showProfileContent() {
+            hideAllContentPanels();
+            document.getElementById('profile-content').classList.remove('hidden');
+            updateProfileData();
+        }
+
+        function showWithdrawContent() {
+            hideAllContentPanels();
+            document.getElementById('withdraw-content').classList.remove('hidden');
+            updateWithdrawData();
+        }
+
+        function hideAllContentPanels() {
+            const panels = ['farming-content', 'tasks-content', 'referral-content', 'profile-content', 'withdraw-content'];
+            panels.forEach(panelId => {
+                document.getElementById(panelId).classList.add('hidden');
+            });
+        }
+
+        // === TASKS SYSTEM ===
+        async function loadTasks() {
+            const tasksList = document.getElementById('tasks-list');
+            tasksList.innerHTML = '<div class="spinner" style="margin: 20px auto;"></div>';
+            
+            try {
+                // Simulate loading tasks
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                const sampleTasks = [
+                    {
+                        id: 'task1',
+                        title: 'Join Telegram Channel',
+                        description: 'Join our official Telegram channel',
+                        reward: 200,
+                        type: 'telegram',
+                        completed: userData.completedTasks?.includes('task1') || false
+                    },
+                    {
+                        id: 'task2',
+                        title: 'Follow on Twitter',
+                        description: 'Follow our Twitter account',
+                        reward: 150,
+                        type: 'social',
+                        completed: userData.completedTasks?.includes('task2') || false
+                    },
+                    {
+                        id: 'task3',
+                        title: 'Watch Tutorial Video',
+                        description: 'Watch the complete tutorial',
+                        reward: 300,
+                        type: 'video',
+                        completed: userData.completedTasks?.includes('task3') || false
+                    }
+                ];
+                
+                tasksList.innerHTML = '';
+                sampleTasks.forEach(task => {
+                    const taskEl = document.createElement('div');
+                    taskEl.className = 'glass-panel';
+                    taskEl.style.cssText = 'padding: 16px; margin-bottom: 12px; cursor: pointer; transition: all 0.3s ease;';
+                    
+                    taskEl.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 4px 0; color: var(--text-primary);">${task.title}</h4>
+                                <p style="margin: 0 0 8px 0; color: var(--text-secondary); font-size: 14px;">${task.description}</p>
+                                <div style="color: var(--neon-gold); font-weight: 600;">+${task.reward} 💰</div>
+                            </div>
+                            <button onclick="completeTask('${task.id}', ${task.reward})" 
+                                    ${task.completed ? 'disabled' : ''} 
+                                    style="padding: 8px 16px; background: ${task.completed ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, var(--neon-cyan), var(--neon-pink))'}; 
+                                           border: none; border-radius: 8px; color: white; font-weight: 600; cursor: ${task.completed ? 'not-allowed' : 'pointer'};">
+                                ${task.completed ? '✓ Done' : 'Complete'}
+                            </button>
+                        </div>
+                    `;
+                    
+                    if (!task.completed) {
+                        taskEl.addEventListener('mouseenter', () => {
+                            taskEl.style.transform = 'scale(1.02)';
+                            taskEl.style.borderColor = 'var(--neon-cyan)';
+                        });
+                        
+                        taskEl.addEventListener('mouseleave', () => {
+                            taskEl.style.transform = 'scale(1)';
+                            taskEl.style.borderColor = 'var(--glass-border)';
+                        });
+                    }
+                    
+                    tasksList.appendChild(taskEl);
+                });
+                
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+                tasksList.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Failed to load tasks</p>';
+            }
+        }
+
+        async function completeTask(taskId, reward) {
+            const button = event.target;
+            const originalText = button.textContent;
+            
+            button.disabled = true;
+            button.innerHTML = '<div class="spinner"></div>';
+            
+            try {
+                // Simulate task completion
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                const completedTasks = userData.completedTasks || [];
+                if (!completedTasks.includes(taskId)) {
+                    completedTasks.push(taskId);
+                    
+                    await syncUserData({
+                        coins: (userData.coins || 0) + reward,
+                        completedTasks: completedTasks
+                    });
+                    
+                    showToast(`Task completed! +${reward} coins earned!`, "success");
+                    createConfetti();
+                    
+                    button.textContent = '✓ Done';
+                    button.style.background = 'rgba(255,255,255,0.1)';
+                    button.style.cursor = 'not-allowed';
+                }
+                
+            } catch (error) {
+                console.error('Error completing task:', error);
+                showToast('Failed to complete task', 'error');
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+
+        // === REFERRAL SYSTEM ===
+        function updateReferralData() {
+            const currentTier = SERVICE_TIERS[userData.serviceTier || 'free'];
+            const referralCount = userData.referrals?.length || 0;
+            const baseReward = 500;
+            const totalEarnings = referralCount * baseReward * currentTier.referralMultiplier;
+            
+            document.getElementById('referral-link').value = `https://t.me/@farmingbooster_bot?start=${currentUser.id}`;
+            document.getElementById('referral-count').textContent = referralCount;
+            document.getElementById('referral-earnings').textContent = Math.floor(totalEarnings);
+            document.getElementById('referral-multiplier').textContent = `${currentTier.referralMultiplier}×`;
+        }
+
+        async function copyReferralLink() {
+            const linkInput = document.getElementById('referral-link');
+            try {
+                await navigator.clipboard.writeText(linkInput.value);
+                showToast('Referral link copied to clipboard!', 'success');
+            } catch (err) {
+                linkInput.select();
+                document.execCommand('copy');
+                showToast('Referral link copied!', 'success');
+            }
+        }
+
+        // === PROFILE SYSTEM ===
+        function updateProfileData() {
+            const currentTier = SERVICE_TIERS[userData.serviceTier || 'free'];
+            
+            document.getElementById('profile-name').textContent = userData.firstName || currentUser.first_name;
+            document.getElementById('profile-id').textContent = `ID: ${userData.id}`;
+            document.getElementById('profile-coins').textContent = Math.floor(userData.coins || 0);
+            document.getElementById('profile-level').textContent = userData.level || 1;
+            document.getElementById('profile-exchanged').textContent = `₹${(userData.exchangedTotal || 0).toFixed(2)}`;
+            document.getElementById('profile-streak').textContent = userData.dailyClaimStreak || 0;
+            
+            // Update badge
+            const badge = document.getElementById('profile-badge');
+            badge.textContent = `${currentTier.badge} Badge`;
+            
+            if (currentTier.badge === 'Bronze') {
+                badge.style.background = '#6b7280';
+            } else if (currentTier.badge === 'Platinum') {
+                badge.style.background = 'var(--warning-color)';
+            } else if (currentTier.badge === 'Diamond') {
+                badge.style.background = 'linear-gradient(135deg, var(--neon-cyan), var(--neon-pink))';
+            }
+        }
+
+        // === WITHDRAWAL SYSTEM ===
+        function updateWithdrawData() {
+            const currentTier = SERVICE_TIERS[userData.serviceTier || 'free'];
+            const inrRate = globalSettings.inrRate || 1000;
+            
+            // Update exchange rate display
+            document.getElementById('exchange-rate').textContent = `${inrRate} 💰 = ₹1`;
+            document.getElementById('available-balance').textContent = `₹${(userData.exchangedTotal || 0).toFixed(2)}`;
+            
+            // Update withdrawal limits
+            const limitsEl = document.getElementById('withdrawal-limits');
+            limitsEl.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <span>Daily Withdrawals:</span>
+                    <span style="color: var(--neon-cyan); font-weight: 600;">${userData.withdrawalsToday || 0}/${currentTier.withdrawalsPerDay}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <span>Minimum Amount:</span>
+                    <span style="color: var(--neon-gold); font-weight: 600;">₹${currentTier.minWithdrawal}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                    <span>Current Tier:</span>
+                    <span style="color: var(--neon-pink); font-weight: 600;">${currentTier.name}</span>
+                </div>
+            `;
+        }
+
+        async function convertCoins() {
+            const amount = parseInt(document.getElementById('convert-amount').value);
+            const inrRate = globalSettings.inrRate || 1000;
+            
+            if (!amount || amount <= 0) {
+                showToast('Please enter a valid coin amount', 'warning');
+                return;
+            }
+            
+            if (amount > (userData.coins || 0)) {
+                showToast('Insufficient coins', 'error');
+                return;
+            }
+            
+            const convertedINR = amount / inrRate;
+            
+            await syncUserData({
+                coins: (userData.coins || 0) - amount,
+                exchangedTotal: (userData.exchangedTotal || 0) + convertedINR
+            });
+            
+            showToast(`Converted ${amount} coins to ₹${convertedINR.toFixed(2)}`, 'success');
+            document.getElementById('convert-amount').value = '';
+            updateWithdrawData();
+        }
+
+        async function requestWithdrawal() {
+            const amount = parseFloat(document.getElementById('withdraw-amount').value);
+            const upiId = document.getElementById('withdraw-upi').value.trim();
+            const name = document.getElementById('withdraw-name').value.trim();
+            const currentTier = SERVICE_TIERS[userData.serviceTier || 'free'];
+            
+            if (!amount || !upiId || !name) {
+                showToast('Please fill all fields', 'warning');
+                return;
+            }
+            
+            if (amount < currentTier.minWithdrawal) {
+                showToast(`Minimum withdrawal is ₹${currentTier.minWithdrawal}`, 'error');
+                return;
+            }
+            
+            if (amount > (userData.exchangedTotal || 0)) {
+                showToast('Insufficient balance', 'error');
+                return;
+            }
+            
+            if ((userData.withdrawalsToday || 0) >= currentTier.withdrawalsPerDay) {
+                showToast(`Daily withdrawal limit reached (${currentTier.withdrawalsPerDay})`, 'error');
+                return;
+            }
+            
+            try {
+                // Simulate withdrawal request
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                const today = new Date().toDateString();
+                const withdrawalsToday = userData.lastWithdrawalDate === today ? (userData.withdrawalsToday || 0) + 1 : 1;
+                
+                await syncUserData({
+                    exchangedTotal: (userData.exchangedTotal || 0) - amount,
+                    withdrawalsToday: withdrawalsToday,
+                    lastWithdrawalDate: today
+                });
+                
+                // Log withdrawal request
+                await db.collection('withdrawals').add({
+                    userId: currentUser.id.toString(),
+                    userName: currentUser.first_name,
+                    amount: amount,
+                    upiId: upiId,
+                    recipientName: name,
+                    status: 'pending',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                showToast(`Withdrawal request submitted for ₹${amount}`, 'success');
+                
+                // Clear form
+                document.getElementById('withdraw-amount').value = '';
+                document.getElementById('withdraw-upi').value = '';
+                document.getElementById('withdraw-name').value = '';
+                
+                updateWithdrawData();
+                
+            } catch (error) {
+                console.error('Withdrawal error:', error);
+                showToast('Failed to submit withdrawal request', 'error');
+            }
+        }
+
+        // === REAL-TIME UPDATES (WebSocket-like simulation) ===
+        function startRealTimeUpdates() {
+            // Simulate real-time coin accumulation during farming
+            setInterval(() => {
+                if (userData.farmingStartTime && !document.getElementById('farm-button').textContent.includes('Claim')) {
+                    const currentTier = SERVICE_TIERS[userData.serviceTier || 'free'];
+                    const baseRate = globalSettings.farmRate || 100;
+                    const ratePerSecond = (baseRate * currentTier.farmingMultiplier) / 60;
+                    
+                    // Add small incremental coins for visual effect
+                    const incrementalCoins = ratePerSecond / 10; // Update every 100ms
+                    userData.coins = (userData.coins || 0) + incrementalCoins;
+                    document.getElementById('coin-display').textContent = Math.floor(userData.coins);
+                }
+            }, 100);
+            
+            // Periodic data sync
+            setInterval(async () => {
+                if (userData.farmingStartTime) {
+                    try {
+                        await syncUserData({ coins: userData.coins });
+                    } catch (error) {
+                        console.error('Sync error:', error);
+                    }
+                }
+            }, 30000); // Sync every 30 seconds
+        }
+
+        // === ENHANCED ANIMATIONS ===
+        function addAdvancedAnimations() {
+            // Add particle effects to coin display
+            const coinDisplay = document.getElementById('coin-display');
+            coinDisplay.addEventListener('click', () => {
+                createCoinBurst(coinDisplay);
+            });
+            
+            // Add glow effects to VIP status
+            const vipStatus = document.getElementById('vip-status');
+            if (!vipStatus.classList.contains('hidden')) {
+                setInterval(() => {
+                    vipStatus.style.boxShadow = '0 0 20px rgba(138, 43, 226, 0.8)';
+                    setTimeout(() => {
+                        vipStatus.style.boxShadow = '0 0 10px rgba(138, 43, 226, 0.5)';
+                    }, 1000);
+                }, 3000);
+            }
+        }
+
+        function createCoinBurst(element) {
+            const rect = element.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            for (let i = 0; i < 8; i++) {
+                const coin = document.createElement('div');
+                coin.textContent = '💰';
+                coin.style.cssText = `
+                    position: fixed;
+                    left: ${centerX}px;
+                    top: ${centerY}px;
+                    font-size: 20px;
+                    pointer-events: none;
+                    z-index: 2000;
+                    animation: coinBurst 1s ease-out forwards;
+                `;
+                
+                const angle = (i / 8) * Math.PI * 2;
+                const distance = 50;
+                const endX = centerX + Math.cos(angle) * distance;
+                const endY = centerY + Math.sin(angle) * distance;
+                
+                coin.style.setProperty('--end-x', `${endX}px`);
+                coin.style.setProperty('--end-y', `${endY}px`);
+                
+                document.body.appendChild(coin);
+                setTimeout(() => coin.remove(), 1000);
+            }
+        }
+
+        // Add coin burst animation
+        const coinBurstStyle = document.createElement('style');
+        coinBurstStyle.textContent = `
+            @keyframes coinBurst {
+                0% {
+                    transform: scale(1) translate(0, 0);
+                    opacity: 1;
+                }
+                100% {
+                    transform: scale(0.5) translate(calc(var(--end-x) - 50vw), calc(var(--end-y) - 50vh));
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(coinBurstStyle);
+
+        // Initialize advanced features
+        setTimeout(() => {
+            startRealTimeUpdates();
+            addAdvancedAnimations();
+        }, 2000);
+
+        // Initialize tooltips after UI loads
+        setTimeout(addTooltips, 1000);
+    </script>
+</body>
+</html>
