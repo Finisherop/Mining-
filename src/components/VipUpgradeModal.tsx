@@ -62,7 +62,7 @@ const VipUpgradeModal: React.FC<VipUpgradeModalProps> = ({ isOpen, onClose, tier
         } else {
           // Fallback for non-Telegram environment
           window.open(invoice.invoice_link, '_blank');
-          toast.info('Complete payment in the opened window');
+          toast('Complete payment in the opened window', { icon: 'ℹ️' });
           setIsProcessing(false);
         }
       } else {

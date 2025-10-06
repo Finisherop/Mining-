@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { UserTier, TierConfig, DailyReward, Task, Referral, WithdrawalRequest, ShopItem, Notification, FarmingSession, TabType, OverlayTabType } from '../types';
 import { User } from '../types/firebase';
-import { useFirebaseTasks, useUserTaskCompletion, completeUserTask, addWithdrawal } from '../firebase/hooks';
 
 // Tier configurations - Updated for premium hybrid dashboard
 export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
@@ -170,7 +169,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       completed: true,
       progress: 1,
       maxProgress: 1,
-      icon: '📅'
+      icon: '📅',
+      active: true,
+      createdAt: Date.now() - 24 * 60 * 60 * 1000
     },
     {
       id: '2',
@@ -181,7 +182,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       completed: false,
       progress: 3,
       maxProgress: 5,
-      icon: '👥'
+      icon: '👥',
+      active: true,
+      createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000
     },
     {
       id: '3',
@@ -192,7 +195,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       completed: false,
       progress: 750,
       maxProgress: 1000,
-      icon: '🌾'
+      icon: '🌾',
+      active: true,
+      createdAt: Date.now() - 12 * 60 * 60 * 1000
     }
   ],
   

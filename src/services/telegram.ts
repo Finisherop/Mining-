@@ -1,20 +1,5 @@
 import { TELEGRAM_BOT_API } from '../firebase/config';
-
-export interface TelegramUser {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  photo_url?: string;
-  language_code?: string;
-}
-
-export interface TelegramWebAppInitData {
-  user?: TelegramUser;
-  start_param?: string;
-  auth_date: number;
-  hash: string;
-}
+import { TelegramWebAppInitData } from '../types/telegram';
 
 // Get Telegram WebApp init data
 export function getTelegramWebAppData(): TelegramWebAppInitData | null {
@@ -22,8 +7,8 @@ export function getTelegramWebAppData(): TelegramWebAppInitData | null {
   
   try {
     // Check if running in Telegram WebApp
-    if (window.Telegram?.WebApp) {
-      const webApp = window.Telegram.WebApp;
+    if ((window as any).Telegram?.WebApp) {
+      const webApp = (window as any).Telegram.WebApp;
       webApp.ready();
       
       if (webApp.initDataUnsafe?.user) {
@@ -57,7 +42,7 @@ export function getTelegramWebAppData(): TelegramWebAppInitData | null {
 
 // Send Telegram Star invoice
 export async function createTelegramStarInvoice(
-  userId: number,
+  _userId: number,
   title: string,
   description: string,
   payload: string,
@@ -172,33 +157,5 @@ export async function getTelegramUserPhoto(userId: number): Promise<string | nul
   } catch (error) {
     console.error('Error getting Telegram user photo:', error);
     return null;
-  }
-}
-
-// Declare Telegram WebApp types for TypeScript
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp: {
-        ready(): void;
-        initDataUnsafe: {
-          user?: TelegramUser;
-          start_param?: string;
-          auth_date?: number;
-          hash?: string;
-        };
-        openInvoice(url: string, callback?: (status: string) => void): void;
-        showAlert(message: string): void;
-        showConfirm(message: string, callback: (confirmed: boolean) => void): void;
-        close(): void;
-        expand(): void;
-        MainButton: {
-          text: string;
-          show(): void;
-          hide(): void;
-          onClick(callback: () => void): void;
-        };
-      };
-    };
   }
 }
