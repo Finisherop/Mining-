@@ -51,7 +51,7 @@ export const useSystemSettings = () => {
   useEffect(() => {
     const settingsRef = ref(database, 'systemSettings');
     
-    const unsubscribe = onValue(settingsRef, (snapshot) => {
+    const unsubscribe = onValue(settingsRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
       try {
         if (snapshot.exists()) {
           setSettings({ ...defaultSettings, ...snapshot.val() });
@@ -64,7 +64,7 @@ export const useSystemSettings = () => {
       } finally {
         setLoading(false);
       }
-    }, (err) => {
+    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
       setError(err.message);
       setLoading(false);
     });
@@ -91,11 +91,12 @@ export const updateSystemSettings = async (
     
     await update(settingsRef, updatedSettings);
     
+    // ERROR FIX: Fix union type for admin action
     // Log admin action
     await logAdminAction({
-      type: 'settings_update',
       adminId,
-      action: 'Updated system settings',
+      action: 'settings_update', // <-- fix union type to match AdminAction interface
+      targetId: 'system',
       details: updates
     });
     
@@ -136,7 +137,7 @@ export const useAdminActions = (limit: number = 50) => {
   useEffect(() => {
     const actionsRef = ref(database, 'adminActions');
     
-    const unsubscribe = onValue(actionsRef, (snapshot) => {
+    const unsubscribe = onValue(actionsRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
       try {
         if (snapshot.exists()) {
           const actionsData = snapshot.val();
@@ -157,7 +158,7 @@ export const useAdminActions = (limit: number = 50) => {
       } finally {
         setLoading(false);
       }
-    }, (err) => {
+    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
       setError(err.message);
       setLoading(false);
     });

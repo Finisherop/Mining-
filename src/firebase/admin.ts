@@ -30,7 +30,7 @@ export const getAllUsers = (): Promise<Record<string, User>> => {
   return new Promise((resolve, reject) => {
     const usersRef = ref(database, 'users');
     
-    const unsubscribe = onValue(usersRef, (snapshot) => {
+    const unsubscribe = onValue(usersRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
       try {
         const users = snapshot.exists() ? snapshot.val() : {};
         resolve(users);
@@ -38,7 +38,7 @@ export const getAllUsers = (): Promise<Record<string, User>> => {
       } catch (error) {
         reject(error);
       }
-    }, (error) => {
+    }, (error: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
       reject(error);
     });
   });

@@ -18,7 +18,7 @@ export const useFirebaseUser = (userId: string | null) => {
 
     const userRef = ref(database, `users/${userId}`);
     
-    const unsubscribe = onValue(userRef, (snapshot) => {
+    const unsubscribe = onValue(userRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
       try {
         if (snapshot.exists()) {
           setUser(snapshot.val());
@@ -31,7 +31,7 @@ export const useFirebaseUser = (userId: string | null) => {
       } finally {
         setLoading(false);
       }
-    }, (err) => {
+    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
       setError(err.message);
       setLoading(false);
     });
@@ -52,7 +52,7 @@ export const useFirebaseUsers = () => {
   useEffect(() => {
     const usersRef = ref(database, 'users');
     
-    const unsubscribe = onValue(usersRef, (snapshot) => {
+    const unsubscribe = onValue(usersRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
       try {
         if (snapshot.exists()) {
           setUsers(snapshot.val());
@@ -65,7 +65,7 @@ export const useFirebaseUsers = () => {
       } finally {
         setLoading(false);
       }
-    }, (err) => {
+    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
       setError(err.message);
       setLoading(false);
     });
@@ -184,7 +184,7 @@ export const useFirebaseTasks = () => {
   useEffect(() => {
     const tasksRef = ref(database, 'tasks');
     
-    const unsubscribe = onValue(tasksRef, (snapshot) => {
+    const unsubscribe = onValue(tasksRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
       try {
         if (snapshot.exists()) {
           const tasksData = snapshot.val();
@@ -202,7 +202,7 @@ export const useFirebaseTasks = () => {
       } finally {
         setLoading(false);
       }
-    }, (err) => {
+    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
       setError(err.message);
       setLoading(false);
     });
@@ -259,7 +259,7 @@ export const useFirebaseWithdrawals = () => {
   useEffect(() => {
     const withdrawalsRef = ref(database, 'withdrawals');
     
-    const unsubscribe = onValue(withdrawalsRef, (snapshot) => {
+    const unsubscribe = onValue(withdrawalsRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
       try {
         if (snapshot.exists()) {
           const withdrawalsData = snapshot.val();
@@ -277,7 +277,7 @@ export const useFirebaseWithdrawals = () => {
       } finally {
         setLoading(false);
       }
-    }, (err) => {
+    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
       setError(err.message);
       setLoading(false);
     });
@@ -322,7 +322,7 @@ export const useFirebaseConfig = () => {
   useEffect(() => {
     const configRef = ref(database, 'config');
     
-    const unsubscribe = onValue(configRef, (snapshot) => {
+    const unsubscribe = onValue(configRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
       try {
         if (snapshot.exists()) {
           setConfig(snapshot.val());
@@ -335,7 +335,7 @@ export const useFirebaseConfig = () => {
       } finally {
         setLoading(false);
       }
-    }, (err) => {
+    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
       setError(err.message);
       setLoading(false);
     });
@@ -372,7 +372,7 @@ export const useUserTaskCompletion = (userId: string | null) => {
 
     const userTasksRef = ref(database, `userTasks/${userId}`);
     
-    const unsubscribe = onValue(userTasksRef, (snapshot) => {
+    const unsubscribe = onValue(userTasksRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
       try {
         if (snapshot.exists()) {
           const tasksData = snapshot.val();
@@ -386,7 +386,7 @@ export const useUserTaskCompletion = (userId: string | null) => {
       } finally {
         setLoading(false);
       }
-    }, (err) => {
+    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
       setError(err.message);
       setLoading(false);
     });

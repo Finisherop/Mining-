@@ -14,7 +14,7 @@ export const useVipRequests = () => {
   useEffect(() => {
     const requestsRef = ref(database, 'vipRequests');
     
-    const unsubscribe = onValue(requestsRef, (snapshot) => {
+    const unsubscribe = onValue(requestsRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
       try {
         if (snapshot.exists()) {
           setRequests(snapshot.val());
@@ -27,7 +27,7 @@ export const useVipRequests = () => {
       } finally {
         setLoading(false);
       }
-    }, (err) => {
+    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
       setError(err.message);
       setLoading(false);
     });
