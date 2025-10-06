@@ -17,8 +17,18 @@ export const useFirebaseUser = (userId: string | null) => {
 
     const userRef = ref(database, `users/${userId}`);
     
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn('Firebase user loading timeout');
+        setError('Connection timeout');
+        setLoading(false);
+      }
+    }, 8000);
+    
     const unsubscribe = onValue(userRef, (snapshot) => {
       try {
+        clearTimeout(timeoutId);
         if (snapshot.exists()) {
           setUser(snapshot.val());
         } else {
@@ -31,11 +41,15 @@ export const useFirebaseUser = (userId: string | null) => {
         setLoading(false);
       }
     }, (err) => {
+      clearTimeout(timeoutId);
       setError(err.message);
       setLoading(false);
     });
 
-    return () => off(userRef, 'value', unsubscribe);
+    return () => {
+      clearTimeout(timeoutId);
+      off(userRef, 'value', unsubscribe);
+    };
   }, [userId]);
 
   return { user, loading, error };
@@ -50,8 +64,18 @@ export const useFirebaseUsers = () => {
   useEffect(() => {
     const usersRef = ref(database, 'users');
     
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn('Firebase users loading timeout');
+        setError('Connection timeout');
+        setLoading(false);
+      }
+    }, 8000);
+    
     const unsubscribe = onValue(usersRef, (snapshot) => {
       try {
+        clearTimeout(timeoutId);
         if (snapshot.exists()) {
           setUsers(snapshot.val());
         } else {
@@ -64,11 +88,15 @@ export const useFirebaseUsers = () => {
         setLoading(false);
       }
     }, (err) => {
+      clearTimeout(timeoutId);
       setError(err.message);
       setLoading(false);
     });
 
-    return () => off(usersRef, 'value', unsubscribe);
+    return () => {
+      clearTimeout(timeoutId);
+      off(usersRef, 'value', unsubscribe);
+    };
   }, []);
 
   return { users, loading, error };

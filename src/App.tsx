@@ -57,9 +57,16 @@ function App() {
                 vipExpiry: null
               };
               
-              await createOrUpdateUser(userId, newUser);
-              saveUserToStorage(newUser);
-              setCurrentUser(newUser);
+              try {
+                await createOrUpdateUser(userId, newUser);
+                saveUserToStorage(newUser);
+                setCurrentUser(newUser);
+              } catch (firebaseError) {
+                console.error('Firebase error, using local storage:', firebaseError);
+                // Fallback to local storage if Firebase fails
+                saveUserToStorage(newUser);
+                setCurrentUser(newUser);
+              }
             }
           } else if (firebaseUser) {
             setCurrentUser(firebaseUser);
@@ -73,14 +80,26 @@ function App() {
         }
       } catch (error) {
         console.error('Error initializing app:', error);
+        // Set loading to false even on error to prevent infinite loading
+        setLoading(false);
       } finally {
         setLoading(false);
       }
     };
 
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.warn('App initialization timeout, forcing load completion');
+        setLoading(false);
+      }
+    }, 10000); // 10 second timeout
+
     if (!firebaseLoading) {
       initializeApp();
     }
+
+    return () => clearTimeout(timeoutId);
   }, [telegramUser, userId, firebaseUser, firebaseLoading]);
 
   // Update current user when Firebase user changes
