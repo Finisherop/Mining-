@@ -26,17 +26,31 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        // Check if admin mode (no Telegram user or specific admin ID)
-        if (!telegramUser || telegramUser.id === 123456789) { // Replace with actual admin ID
+        console.log('🚀 Initializing app...');
+        console.log('📱 Telegram data:', telegramData);
+        console.log('👤 Telegram user:', telegramUser);
+        console.log('🆔 User ID:', userId);
+        // Check if admin mode (specific admin ID or admin parameter)
+        const urlParams = new URLSearchParams(window.location.search);
+        const forceUserMode = urlParams.get('user') === 'true';
+        const isAdminMode = !forceUserMode && (urlParams.get('admin') === 'true' || (telegramUser && telegramUser.id === 123456789)); // Replace 123456789 with actual admin ID
+        
+        console.log('⚙️ Force user mode:', forceUserMode);
+        console.log('👑 Is admin mode:', isAdminMode);
+        
+        if (isAdminMode) {
+          console.log('🔧 Setting admin mode');
           setIsAdmin(true);
           setLoading(false);
           return;
         }
 
         // User Panel Mode
+        console.log('👥 Setting user mode');
         setIsAdmin(false);
         
         if (telegramUser && userId) {
+          console.log('✅ Processing Telegram user with ID:', userId);
           let userPhoto = '';
           try {
             userPhoto = await getTelegramUserPhoto(telegramUser.id) || '';
@@ -90,6 +104,39 @@ function App() {
             await createOrUpdateUser(userId, newUser);
             setCurrentUser(newUser);
           }
+        } else if (!telegramUser) {
+          // No Telegram user detected - create a demo user for testing
+          console.log('⚠️ No Telegram user detected, creating demo user for testing');
+          const demoUser: User = {
+            id: 'demo_user',
+            userId: 'demo_user',
+            username: 'Demo User',
+            coins: 500,
+            stars: 25,
+            tier: 'free',
+            vipExpiry: null,
+            dailyWithdrawals: 0,
+            referralCode: 'DEMO123',
+            totalReferrals: 0,
+            farmingRate: 10,
+            claimStreak: 1,
+            claimedDays: [1],
+            badges: [],
+            createdAt: Date.now(),
+            lastActive: Date.now(),
+            totalEarnings: 150,
+            isVIP: false,
+            earningMultiplier: 1,
+            boosts: 0,
+            referralCount: 0,
+            vip_tier: 'free',
+            vip_expiry: null,
+            multiplier: 1,
+            withdraw_limit: 1,
+            referral_boost: 1,
+            photo_url: ''
+          };
+          setCurrentUser(demoUser);
         }
       } catch (error) {
         console.error('Error initializing app:', error);
