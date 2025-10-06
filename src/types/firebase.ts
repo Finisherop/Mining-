@@ -29,6 +29,7 @@ export interface User {
   multiplier: number;
   withdraw_limit: number;
   referral_boost: number;
+  photo_url?: string; // User profile photo from Telegram
 }
 
 export interface TelegramUser {

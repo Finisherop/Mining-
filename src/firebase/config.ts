@@ -16,4 +16,8 @@ const app = initializeApp(firebaseConfig);
 // Initialize Realtime Database
 export const database = getDatabase(app);
 
+// Telegram Bot Configuration
+export const TELEGRAM_BOT_TOKEN = '7795769615:AAH4hhnFG_10vl8tn_dFu8AHdUziQLh6VIA';
+export const TELEGRAM_BOT_API = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
+
 export default app;

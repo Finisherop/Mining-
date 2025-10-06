@@ -65,12 +65,12 @@ const TopOverlayTabs: React.FC = () => {
   };
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+    <div className="fixed top-2 left-2 right-2 z-50">
       <motion.div
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
-        className="glass-panel-strong p-2 flex items-center space-x-2"
+        className="glass-panel-strong p-2 flex items-center justify-between overflow-x-auto scrollbar-hide"
       >
         {tabs.map((tab, index) => {
           const isActive = activeOverlayTab === tab.id;
@@ -86,8 +86,8 @@ const TopOverlayTabs: React.FC = () => {
               onClick={() => handleTabClick(tab.id)}
               disabled={isVipTab && !hasVipAccess}
               className={cn(
-                "relative group px-4 py-3 rounded-xl transition-all duration-300",
-                "flex items-center space-x-2 min-w-[120px]",
+                "relative group px-3 py-2 rounded-lg transition-all duration-300",
+                "flex items-center space-x-1 min-w-[80px] flex-shrink-0",
                 "tap-effect hover-lift",
                 isActive
                   ? "bg-gradient-to-r text-white neon-glow-strong scale-105"
@@ -107,11 +107,11 @@ const TopOverlayTabs: React.FC = () => {
               
               {/* Tab Content */}
               <div className={cn(
-                "flex items-center space-x-2",
+                "flex items-center space-x-1",
                 isVipTab && !hasVipAccess && "blur-sm"
               )}>
-                {tab.icon}
-                <span className="font-medium text-sm">{tab.label}</span>
+                <div className="w-4 h-4">{tab.icon}</div>
+                <span className="font-medium text-xs hidden sm:inline">{tab.label}</span>
               </div>
               
               {/* Active Indicator */}
