@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Gift, Star, Check, Lock } from 'lucide-react';
+import { Calendar, Gift, Star, Check, Lock, Clock } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
 import { cn, formatNumber, triggerCoinBurst, triggerStarBurst, playSound } from '../utils';
+import { isDailyClaimAvailable, getTimeUntilNextClaim, formatTimeRemaining } from '../utils/farmingStorage';
 
 const DailyClaimCalendar: React.FC = () => {
   const { user, dailyRewards, claimDailyReward } = useAppStore();
   const [claimingDay, setClaimingDay] = useState<number | null>(null);
+  
+  const canClaimDaily = isDailyClaimAvailable();
+  const timeUntilNext = getTimeUntilNextClaim();
 
   const handleClaim = async (day: number, event: React.MouseEvent<HTMLButtonElement>) => {
-    if (!user || claimingDay) return;
+    if (!user || claimingDay || !canClaimDaily) return;
     
     const reward = dailyRewards.find(r => r.day === day);
     if (!reward || reward.claimed) return;
@@ -52,10 +56,16 @@ const DailyClaimCalendar: React.FC = () => {
           </div>
         </div>
         
-        {/* Streak Counter */}
+        {/* Streak Counter & Timer */}
         <div className="text-center">
           <div className="text-2xl font-bold gradient-text">{user.claimStreak}</div>
           <div className="text-xs text-gray-400">Day Streak</div>
+          {!canClaimDaily && timeUntilNext > 0 && (
+            <div className="flex items-center justify-center mt-2 text-yellow-400">
+              <Clock className="w-3 h-3 mr-1" />
+              <span className="text-xs">{formatTimeRemaining(timeUntilNext)}</span>
+            </div>
+          )}
         </div>
       </div>
 

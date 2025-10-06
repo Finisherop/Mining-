@@ -16,6 +16,7 @@ import { useAppStore } from '../store';
 import { useFirebaseTasks, useUserTaskCompletion, completeUserTask } from '../firebase/hooks';
 import { createOrUpdateUser } from '../firebase/hooks';
 import { cn, formatNumber, triggerCoinBurst, playSound } from '../utils';
+import AdsTaskPanel from './AdsTaskPanel';
 import toast from 'react-hot-toast';
 
 const TasksPanel: React.FC = () => {
@@ -345,6 +346,9 @@ const TasksPanel: React.FC = () => {
           <li>• VIP members get bonus rewards on completion</li>
         </ul>
       </motion.div>
+
+      {/* Daily Ads Section */}
+      <AdsTaskPanel />
     </div>
   );
 };
