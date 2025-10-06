@@ -342,7 +342,7 @@ const TabbedAdminPanel: React.FC = () => {
                             <div>
                               <div className="font-semibold text-white">₹{withdrawal.amount}</div>
                               <div className="text-sm text-gray-400">
-                                Method: {withdrawal.method} | {new Date(withdrawal.requestedAt).toLocaleDateString()}
+                                Method: {withdrawal.method} | {withdrawal.requestedAt ? new Date(withdrawal.requestedAt).toLocaleDateString() : 'N/A'}
                               </div>
                               {withdrawal.details?.utrNumber && (
                                 <div className="text-sm text-yellow-400">UTR: {withdrawal.details.utrNumber}</div>

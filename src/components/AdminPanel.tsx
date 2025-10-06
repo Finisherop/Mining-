@@ -352,7 +352,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ users, loading }) => {
                     </div>
 
                     <div className="mt-2 text-xs text-gray-500">
-                      ID: {user.userId} | Last Active: {new Date(user.lastActive).toLocaleDateString()}
+                      ID: {user.userId} | Last Active: {user.lastActive ? new Date(user.lastActive).toLocaleDateString() : 'N/A'}
                     </div>
                   </div>
                 )}

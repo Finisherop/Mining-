@@ -199,7 +199,7 @@ const ReferralPanel: React.FC = () => {
                   <div>
                     <div className="font-medium text-white">{referral.username}</div>
                     <div className="text-sm text-gray-400">
-                      Joined {new Date(referral.joinedAt).toLocaleDateString()}
+                      Joined {referral.joinedAt ? new Date(referral.joinedAt).toLocaleDateString() : 'N/A'}
                     </div>
                   </div>
                 </div>
