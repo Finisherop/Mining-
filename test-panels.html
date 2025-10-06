@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Panels - Premium Bot Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0b0f1a 0%, #1b1330 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #22c5f0, #ec58ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-link {
+            display: inline-block;
+            background: linear-gradient(135deg, #22c5f0, #ec58ff);
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin: 10px 10px 10px 0;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+        }
+        .test-link:hover {
+            transform: translateY(-2px);
+        }
+        .status {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .status.success {
+            background: rgba(34, 197, 80, 0.2);
+            border: 1px solid rgba(34, 197, 80, 0.4);
+            color: #22c550;
+        }
+        .status.warning {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            color: #ffc107;
+        }
+        .code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Panel Testing Dashboard</h1>
+        
+        <div class="test-section">
+            <h2>🔧 Admin Panel Test</h2>
+            <p>Test the admin panel with demo users (Firebase not required)</p>
+            <a href="http://localhost:3002/" class="test-link" target="_blank">Open Admin Panel</a>
+            <div class="status success">
+                ✅ Should load immediately with demo users<br>
+                ✅ No Telegram user parameters needed<br>
+                ✅ Works without Firebase configuration
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>👤 User Panel Test</h2>
+            <p>Test the user panel with simulated Telegram user data</p>
+            <a href="http://localhost:3002/?user_id=123456789&username=testuser&first_name=John" class="test-link" target="_blank">Test User 1 (John)</a>
+            <a href="http://localhost:3002/?user_id=987654321&username=janesmith&first_name=Jane" class="test-link" target="_blank">Test User 2 (Jane)</a>
+            <a href="http://localhost:3002/?user_id=555666777&username=vipuser&first_name=VIP" class="test-link" target="_blank">Test User 3 (VIP)</a>
+            <div class="status success">
+                ✅ Should create new users with 100 stars<br>
+                ✅ VIP purchase should work (localStorage only)<br>
+                ✅ Real-time earnings calculation active
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔥 Firebase Status</h2>
+            <p>Current Firebase configuration status</p>
+            <div class="status warning">
+                ⚠️ Using demo Firebase config (development mode)<br>
+                📝 Update <code>src/firebase/config.ts</code> with real Firebase credentials<br>
+                🔄 Data will be stored in localStorage only
+            </div>
+            <div class="code">
+                // To enable Firebase:
+                // 1. Create Firebase project with Realtime Database
+                // 2. Replace config in src/firebase/config.ts
+                // 3. Set database rules to allow read/write
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📱 Mobile Testing</h2>
+            <p>Test mobile responsiveness and touch interactions</p>
+            <div class="status success">
+                ✅ Open Chrome DevTools (F12)<br>
+                ✅ Toggle device simulation (mobile view)<br>
+                ✅ Test touch interactions and haptic feedback<br>
+                ✅ Verify glass morphism and animations
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🐛 Debugging</h2>
+            <p>Check browser console for detailed logs</p>
+            <div class="code">
+                // Console logs to look for:
+                // ✅ "Firebase initialized successfully" OR "Firebase initialization failed"
+                // ✅ "Admin panel mode activated" OR "Using localStorage data for user"
+                // ✅ "Created new user: [username]"
+                // ⚠️ Any Firebase connection warnings (expected in demo mode)
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh status every 5 seconds
+        setTimeout(() => {
+            const devServer = 'http://localhost:3002';
+            fetch(devServer)
+                .then(() => {
+                    console.log('✅ Dev server is running');
+                })
+                .catch(() => {
+                    console.log('❌ Dev server not running - start with npm run dev');
+                });
+        }, 1000);
+    </script>
+</body>
+</html>

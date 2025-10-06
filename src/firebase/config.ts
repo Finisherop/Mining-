@@ -1,20 +1,42 @@
-import { initializeApp } from 'firebase/app';
-import { getDatabase } from 'firebase/database';
+import { initializeApp, FirebaseApp } from 'firebase/app';
+import { getDatabase, Database } from 'firebase/database';
 
+// Development configuration - replace with your actual Firebase config
 const firebaseConfig = {
-  apiKey: "your-api-key-here",
-  authDomain: "your-project.firebaseapp.com",
-  databaseURL: "https://your-project-default-rtdb.firebaseio.com/",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
+  apiKey: "demo-api-key",
+  authDomain: "demo-project.firebaseapp.com",
+  databaseURL: "https://demo-project-default-rtdb.firebaseio.com/",
+  projectId: "demo-project",
+  storageBucket: "demo-project.appspot.com",
   messagingSenderId: "123456789",
-  appId: "your-app-id"
+  appId: "demo-app-id"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+let app: FirebaseApp | undefined;
+let database: Database | any;
 
-// Initialize Realtime Database
-export const database = getDatabase(app);
+try {
+  // Initialize Firebase
+  app = initializeApp(firebaseConfig);
+  
+  // Initialize Realtime Database
+  database = getDatabase(app);
+  
+  console.log('Firebase initialized successfully');
+} catch (error) {
+  console.warn('Firebase initialization failed (using demo config):', error);
+  
+  // Create mock database for development
+  database = {
+    ref: () => ({
+      on: () => {},
+      off: () => {},
+      get: () => Promise.resolve({ exists: () => false, val: () => null }),
+      set: () => Promise.resolve(),
+      update: () => Promise.resolve()
+    })
+  };
+}
 
+export { database };
 export default app;

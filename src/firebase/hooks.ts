@@ -15,27 +15,41 @@ export const useFirebaseUser = (userId: string | null) => {
       return;
     }
 
-    const userRef = ref(database, `users/${userId}`);
-    
-    const unsubscribe = onValue(userRef, (snapshot) => {
-      try {
-        if (snapshot.exists()) {
-          setUser(snapshot.val());
-        } else {
-          setUser(null);
+    try {
+      const userRef = ref(database, `users/${userId}`);
+      
+      const unsubscribe = onValue(userRef, (snapshot) => {
+        try {
+          if (snapshot.exists()) {
+            setUser(snapshot.val());
+          } else {
+            setUser(null);
+          }
+          setError(null);
+        } catch (err) {
+          console.warn('Firebase read error:', err);
+          setError(err instanceof Error ? err.message : 'Unknown error');
+        } finally {
+          setLoading(false);
         }
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
+      }, (err) => {
+        console.warn('Firebase connection error:', err);
+        setError(err.message);
         setLoading(false);
-      }
-    }, (err) => {
-      setError(err.message);
-      setLoading(false);
-    });
+      });
 
-    return () => off(userRef, 'value', unsubscribe);
+      return () => {
+        try {
+          off(userRef, 'value', unsubscribe);
+        } catch (err) {
+          console.warn('Firebase cleanup error:', err);
+        }
+      };
+    } catch (err) {
+      console.warn('Firebase initialization error:', err);
+      setError(err instanceof Error ? err.message : 'Firebase connection failed');
+      setLoading(false);
+    }
   }, [userId]);
 
   return { user, loading, error };
@@ -48,27 +62,41 @@ export const useFirebaseUsers = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const usersRef = ref(database, 'users');
-    
-    const unsubscribe = onValue(usersRef, (snapshot) => {
-      try {
-        if (snapshot.exists()) {
-          setUsers(snapshot.val());
-        } else {
-          setUsers({});
+    try {
+      const usersRef = ref(database, 'users');
+      
+      const unsubscribe = onValue(usersRef, (snapshot) => {
+        try {
+          if (snapshot.exists()) {
+            setUsers(snapshot.val());
+          } else {
+            setUsers({});
+          }
+          setError(null);
+        } catch (err) {
+          console.warn('Firebase users read error:', err);
+          setError(err instanceof Error ? err.message : 'Unknown error');
+        } finally {
+          setLoading(false);
         }
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
+      }, (err) => {
+        console.warn('Firebase users connection error:', err);
+        setError(err.message);
         setLoading(false);
-      }
-    }, (err) => {
-      setError(err.message);
-      setLoading(false);
-    });
+      });
 
-    return () => off(usersRef, 'value', unsubscribe);
+      return () => {
+        try {
+          off(usersRef, 'value', unsubscribe);
+        } catch (err) {
+          console.warn('Firebase users cleanup error:', err);
+        }
+      };
+    } catch (err) {
+      console.warn('Firebase users initialization error:', err);
+      setError(err instanceof Error ? err.message : 'Firebase connection failed');
+      setLoading(false);
+    }
   }, []);
 
   return { users, loading, error };
@@ -105,9 +133,13 @@ export const createOrUpdateUser = async (userId: string, userData: Partial<User>
     }
     
     await set(userRef, finalUserData);
+    console.log('User data saved to Firebase:', finalUserData);
   } catch (error) {
-    console.error('Error creating/updating user:', error);
-    throw error;
+    console.warn('Error creating/updating user (Firebase may not be configured):', error);
+    // Don't throw error in development mode
+    if (process.env.NODE_ENV === 'production') {
+      throw error;
+    }
   }
 };
 
@@ -116,9 +148,13 @@ export const updateUserField = async (userId: string, field: keyof User, value: 
   try {
     const userRef = ref(database, `users/${userId}/${field}`);
     await set(userRef, value);
+    console.log(`Updated ${field} for user ${userId}:`, value);
   } catch (error) {
-    console.error('Error updating user field:', error);
-    throw error;
+    console.warn('Error updating user field (Firebase may not be configured):', error);
+    // Don't throw error in development mode
+    if (process.env.NODE_ENV === 'production') {
+      throw error;
+    }
   }
 };
 
@@ -129,7 +165,8 @@ export const purchaseVIP = async (userId: string, starCost: number = 100): Promi
     const snapshot = await get(userRef);
     
     if (!snapshot.exists()) {
-      throw new Error('User not found');
+      console.warn('User not found in Firebase, using localStorage');
+      return false;
     }
     
     const userData = snapshot.val() as User;
@@ -150,9 +187,14 @@ export const purchaseVIP = async (userId: string, starCost: number = 100): Promi
     };
     
     await set(userRef, { ...userData, ...updatedData });
+    console.log('VIP purchased successfully for user:', userId);
     return true;
   } catch (error) {
-    console.error('Error purchasing VIP:', error);
-    throw error;
+    console.warn('Error purchasing VIP (Firebase may not be configured):', error);
+    // Don't throw error in development mode
+    if (process.env.NODE_ENV === 'production') {
+      throw error;
+    }
+    return false;
   }
 };
