@@ -2,6 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide scrollbars */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .glass-panel {
+    @apply p-3;
+  }
+  
+  .neon-glow {
+    box-shadow: 0 0 10px rgba(34, 197, 240, 0.3);
+  }
+  
+  .tap-effect:active {
+    transform: scale(0.95);
+  }
+}
+
 /* Premium Glassmorphism Effects */
 @layer components {
   .glass-panel {

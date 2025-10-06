@@ -78,8 +78,8 @@ const BottomFooterTabs: React.FC = () => {
                 onClick={() => handleTabClick(tab.id)}
                 className={cn(
                   "relative group flex flex-col items-center justify-center",
-                  "px-4 py-3 rounded-xl transition-all duration-300",
-                  "tap-effect min-w-[60px]",
+                  "px-2 sm:px-4 py-2 sm:py-3 rounded-xl transition-all duration-300",
+                  "tap-effect min-w-[50px] sm:min-w-[60px]",
                   isActive
                     ? "bg-gradient-to-r from-primary-500 to-secondary-500 text-white neon-glow scale-105"
                     : "text-gray-400 hover:text-white hover:bg-white/5"
@@ -111,7 +111,7 @@ const BottomFooterTabs: React.FC = () => {
                 </div>
                 
                 {/* Label */}
-                <span className="text-xs font-medium mt-1">{tab.label}</span>
+                <span className="text-xs font-medium mt-1 hidden sm:block">{tab.label}</span>
                 
                 {/* Active Indicator */}
                 {isActive && (

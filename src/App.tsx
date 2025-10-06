@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
-import EnhancedAdminPanel from './components/EnhancedAdminPanel';
+import TabbedAdminPanel from './components/TabbedAdminPanel';
 import { useFirebaseUser, createOrUpdateUser } from './firebase/hooks';
 import { User } from './types/firebase';
-import { getTelegramUser, isTelegramUser, initTelegramWebApp } from './utils/telegram';
-import { getUserFromStorage, saveUserToStorage, syncUserData, needsSync } from './utils/localStorage';
+import { getTelegramWebAppData, getTelegramUserPhoto } from './services/telegram';
 import { motion } from 'framer-motion';
 
 function App() {
@@ -14,7 +13,8 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   // Get Telegram user data
-  const telegramUser = getTelegramUser();
+  const telegramData = getTelegramWebAppData();
+  const telegramUser = telegramData?.user;
   const userId = telegramUser?.id.toString() || null;
 
   // Firebase hooks
@@ -22,69 +22,72 @@ function App() {
 
   // Initialize app
   useEffect(() => {
-    initTelegramWebApp();
-    
     const initializeApp = async () => {
       try {
-        if (isTelegramUser() && telegramUser && userId) {
-          // User Panel Mode
-          setIsAdmin(false);
-          
-          // Check if we need to sync data
-          if (needsSync() || !firebaseLoading) {
-            const localUser = getUserFromStorage();
-            
-            if (firebaseUser || localUser) {
-              // Sync between localStorage and Firebase
-              const syncedUser = await syncUserData(userId, firebaseUser, createOrUpdateUser);
-              if (syncedUser) {
-                setCurrentUser(syncedUser);
-              }
-            } else {
-              // Create new user
-              const newUser: User = {
-                id: userId,
-                userId,
-                username: telegramUser.username || telegramUser.first_name || 'User',
-                stars: 0,
-                isVIP: false,
-                earningMultiplier: 1,
-                boosts: 0,
-                referralCount: 0,
-                totalEarnings: 0,
-                lastActive: Date.now(),
-                createdAt: Date.now(),
-                vipExpiry: null,
-                // New fields for premium system
-                coins: 0,
-                tier: 'free',
-                dailyWithdrawals: 0,
-                referralCode: `REF${userId.slice(-6)}`,
-                totalReferrals: 0,
-                farmingRate: 10,
-                claimStreak: 0,
-                claimedDays: [],
-                badges: [],
-                vip_tier: 'free',
-                vip_expiry: null,
-                multiplier: 1,
-                withdraw_limit: 1,
-                referral_boost: 1
-              };
-              
-              await createOrUpdateUser(userId, newUser);
-              saveUserToStorage(newUser);
-              setCurrentUser(newUser);
-            }
-          } else if (firebaseUser) {
-            setCurrentUser(firebaseUser);
+        // Check if admin mode (no Telegram user or specific admin ID)
+        if (!telegramUser || telegramUser.id === 123456789) { // Replace with actual admin ID
+          setIsAdmin(true);
+          setLoading(false);
+          return;
+        }
+
+        // User Panel Mode
+        setIsAdmin(false);
+        
+        if (telegramUser && userId) {
+          let userPhoto = '';
+          try {
+            userPhoto = await getTelegramUserPhoto(telegramUser.id) || '';
+          } catch (error) {
+            console.log('Could not fetch user photo:', error);
           }
-        } else {
-          // Admin Panel Mode - check for admin access
-          const isAdminAccess = window.location.search.includes('admin=true') || 
-                               window.location.pathname.includes('admin') ||
-                               !window.location.search; // Default to admin if no params
-          setIsAdmin(isAdminAccess);
+
+          if (firebaseUser) {
+            // Update existing user with latest Telegram data
+            const updatedUser = {
+              ...firebaseUser,
+              username: telegramUser.username || telegramUser.first_name || firebaseUser.username,
+              lastActive: Date.now(),
+              photo_url: userPhoto
+            };
+            
+            await createOrUpdateUser(userId, updatedUser);
+            setCurrentUser(updatedUser);
+          } else {
+            // Create new user
+            const newUser: User = {
+              id: userId,
+              userId,
+              username: telegramUser.username || telegramUser.first_name || 'User',
+              coins: 100, // Starting coins
+              stars: 0,
+              tier: 'free',
+              vipExpiry: null,
+              dailyWithdrawals: 0,
+              referralCode: `REF${userId.slice(-6)}`,
+              totalReferrals: 0,
+              farmingRate: 10,
+              claimStreak: 0,
+              claimedDays: [],
+              badges: [],
+              createdAt: Date.now(),
+              lastActive: Date.now(),
+              totalEarnings: 0,
+              isVIP: false,
+              earningMultiplier: 1,
+              boosts: 0,
+              referralCount: 0,
+              vip_tier: 'free',
+              vip_expiry: null,
+              multiplier: 1,
+              withdraw_limit: 1,
+              referral_boost: 1,
+              photo_url: userPhoto
+            };
+            
+            await createOrUpdateUser(userId, newUser);
+            setCurrentUser(newUser);
+          }
         }
       } catch (error) {
         console.error('Error initializing app:', error);
@@ -128,7 +131,7 @@ function App() {
   return (
     <div className="App">
       {isAdmin ? (
-        <EnhancedAdminPanel />
+        <TabbedAdminPanel />
       ) : currentUser ? (
         <Layout />
       ) : (

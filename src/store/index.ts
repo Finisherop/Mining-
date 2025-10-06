@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { UserTier, TierConfig, DailyReward, Task, Referral, WithdrawalRequest, ShopItem, Notification, FarmingSession, TabType, OverlayTabType } from '../types';
 import { User } from '../types/firebase';
+import { useFirebaseTasks, useUserTaskCompletion, completeUserTask, addWithdrawal } from '../firebase/hooks';
 
 // Tier configurations - Updated for premium hybrid dashboard
 export const TIER_CONFIGS: Record<UserTier, TierConfig> = {

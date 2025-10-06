@@ -31,11 +31,16 @@ export interface Task {
   title: string;
   description: string;
   reward: number;
-  type: 'daily' | 'weekly' | 'special';
+  type: 'daily' | 'weekly' | 'special' | 'youtube' | 'channel_join' | 'group_join' | 'link';
   completed: boolean;
   progress: number;
   maxProgress: number;
   icon: string;
+  url?: string; // For YouTube, channel, group, or custom link tasks
+  verification?: 'auto' | 'manual'; // How to verify completion
+  active: boolean; // Whether task is currently active
+  createdAt: number;
+  expiresAt?: number; // Optional expiry for limited-time tasks
 }
 
 export interface Referral {

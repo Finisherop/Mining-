@@ -121,23 +121,23 @@ const ShopPanel: React.FC = () => {
   const boosts = shopItems.filter(item => item.type === 'boost');
 
   return (
-    <div className="glass-panel p-6 space-y-6 h-full overflow-y-auto">
+    <div className="glass-panel p-4 sm:p-6 space-y-4 sm:space-y-6 h-full overflow-y-auto">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-lg">
-            <ShoppingBag className="w-6 h-6 text-white" />
+            <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-white">Premium Shop</h3>
-            <p className="text-sm text-gray-400">Tap to unlock VIP perks & boost farming!</p>
+            <h3 className="text-lg sm:text-xl font-bold text-white">Premium Shop</h3>
+            <p className="text-xs sm:text-sm text-gray-400">Tap to unlock VIP perks & boost farming!</p>
           </div>
         </div>
         
         {/* Stars Balance */}
-        <div className="flex items-center space-x-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 px-4 py-2 rounded-lg border border-yellow-500/30">
-          <Star className="w-5 h-5 text-yellow-400" />
-          <span className="text-lg font-bold text-yellow-400">{user.stars}</span>
+        <div className="flex items-center space-x-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 px-3 py-2 rounded-lg border border-yellow-500/30 self-start sm:self-auto">
+          <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+          <span className="text-base sm:text-lg font-bold text-yellow-400">{user.stars}</span>
         </div>
       </div>
 
