@@ -44,8 +44,10 @@ export interface TelegramWebAppData {
   start_param?: string;
 }
 
+export type BadgeType = 'bronze' | 'platinum' | 'diamond' | 'vip';
+
 export interface Badge {
-  type: 'bronze' | 'platinum' | 'diamond' | 'vip';
+  type: BadgeType;
   name: string;
   description: string;
   icon: string;

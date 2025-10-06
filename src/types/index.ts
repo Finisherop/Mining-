@@ -9,22 +9,13 @@ export interface TierConfig {
   minWithdrawal: number;
   farmingMultiplier: number;
   referralMultiplier: number;
-  badge: BadgeType;
+  badge: 'bronze' | 'platinum' | 'diamond' | 'vip';
   color: string;
   features: string[];
   duration: number; // VIP duration in days
 }
 
-export type BadgeType = 'bronze' | 'platinum' | 'diamond' | 'vip';
-
-export interface Badge {
-  type: BadgeType;
-  name: string;
-  description: string;
-  icon: string;
-  color: string;
-  unlockedAt: Date;
-}
+// Badge interface and BadgeType moved to types/firebase.ts to avoid duplication
 
 export interface DailyReward {
   day: number;
