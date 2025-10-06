@@ -124,10 +124,10 @@ export const useAppStore = create<AppState>((set, get) => ({
         description: 'Welcome to the community!',
         icon: '🥉',
         color: '#cd7f32',
-        unlockedAt: new Date()
+        unlockedAt: Date.now()
       }
     ],
-    createdAt: new Date(),
+    createdAt: Date.now(),
     lastActive: Date.now(),
     totalEarnings: 0,
     isVIP: false,
@@ -197,7 +197,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     {
       id: '1',
       username: 'Friend1',
-      joinedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      joinedAt: Date.now() - 7 * 24 * 60 * 60 * 1000,
       totalEarnings: 150,
       tier: 'free',
       active: true
@@ -205,7 +205,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     {
       id: '2',
       username: 'Friend2',
-      joinedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      joinedAt: Date.now() - 3 * 24 * 60 * 60 * 1000,
       totalEarnings: 75,
       tier: 'bronze',
       active: true
@@ -261,7 +261,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     const tierConfig = TIER_CONFIGS[user.tier];
     const session: FarmingSession = {
-      startTime: new Date(),
+      startTime: Date.now(),
       baseRate: user.farmingRate,
       multiplier: tierConfig.farmingMultiplier,
       totalEarned: 0,
@@ -275,8 +275,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { farmingSession, user } = get();
     if (!farmingSession || !user) return;
     
-    const endTime = new Date();
-    const duration = (endTime.getTime() - farmingSession.startTime.getTime()) / 1000 / 60; // minutes
+    const endTime = Date.now();
+    const duration = (endTime - farmingSession.startTime) / 1000 / 60; // minutes
     const earned = Math.floor(duration * farmingSession.baseRate * farmingSession.multiplier);
     
     set({
@@ -289,8 +289,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { farmingSession, user } = get();
     if (!farmingSession?.active || !user) return;
     
-    const now = new Date();
-    const duration = (now.getTime() - farmingSession.startTime.getTime()) / 1000 / 60; // minutes
+    const now = Date.now();
+    const duration = (now - farmingSession.startTime) / 1000 / 60; // minutes
     const earned = Math.floor(duration * farmingSession.baseRate * farmingSession.multiplier);
     
     set({
@@ -389,8 +389,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    const vipExpiry = new Date();
-    vipExpiry.setDate(vipExpiry.getDate() + 30); // 30 days VIP
+    const vipExpiry = Date.now() + (30 * 24 * 60 * 60 * 1000); // 30 days VIP
     
     set({
       user: {
@@ -406,7 +405,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             description: `Upgraded to ${tierConfig.name}`,
             icon: tier === 'bronze' ? '🥉' : '💎',
             color: tierConfig.color,
-            unlockedAt: new Date()
+            unlockedAt: Date.now()
           }
         ]
       },
@@ -432,7 +431,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     const today = new Date().toDateString();
     const todayWithdrawals = withdrawalRequests.filter(
-      w => w.requestedAt.toDateString() === today
+      w => new Date(w.requestedAt).toDateString() === today
     ).length;
     
     if (todayWithdrawals >= tierConfig.dailyWithdrawals) return false;
@@ -441,7 +440,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       id: Date.now().toString(),
       amount,
       status: 'pending',
-      requestedAt: new Date(),
+      requestedAt: Date.now(),
       method,
       details
     };
@@ -465,7 +464,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const newNotification: Notification = {
       ...notification,
       id: Date.now().toString(),
-      timestamp: new Date(),
+      timestamp: Date.now(),
       read: false
     };
     

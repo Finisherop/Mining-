@@ -5,18 +5,18 @@ export interface User {
   coins: number;
   stars: number;
   tier: 'free' | 'bronze' | 'diamond';
-  vipExpiry?: Date;
+  vipExpiry: number | null; // Use timestamp for consistency
   dailyWithdrawals: number;
-  lastWithdrawal?: Date;
+  lastWithdrawal?: number; // Use timestamp
   referralCode: string;
   referredBy?: string;
   totalReferrals: number;
   farmingRate: number;
-  lastClaim?: Date;
+  lastClaim?: number; // Use timestamp
   claimStreak: number;
   claimedDays: number[];
   badges: Badge[];
-  createdAt: Date | number;
+  createdAt: number; // Use timestamp for consistency
   lastActive: number;
   totalEarnings: number;
   isVIP: boolean;
@@ -52,5 +52,5 @@ export interface Badge {
   description: string;
   icon: string;
   color: string;
-  unlockedAt: Date;
+  unlockedAt: number; // Use timestamp for consistency
 }

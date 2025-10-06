@@ -21,7 +21,7 @@ const FarmingDashboard: React.FC = () => {
 
     const interval = setInterval(() => {
       const earnings = calculateFarmingEarnings(
-        farmingSession.startTime,
+        new Date(farmingSession.startTime),
         farmingSession.baseRate,
         farmingSession.multiplier
       );

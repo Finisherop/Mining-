@@ -30,7 +30,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ users, loading }) => {
 
   const userList = Object.values(users);
   const totalUsers = userList.length;
-  const vipUsers = userList.filter(u => u.isVIP && (u.vipExpiry || 0) > Date.now()).length;
+  const vipUsers = userList.filter(u => u.isVIP && u.vipExpiry && u.vipExpiry > Date.now()).length;
   const totalStars = userList.reduce((sum, u) => sum + u.stars, 0);
   const totalEarnings = userList.reduce((sum, u) => sum + u.totalEarnings, 0);
 
@@ -278,7 +278,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ users, loading }) => {
                           isVIP: e.target.checked,
                           earningMultiplier: e.target.checked ? 2 : 1,
                           vipExpiry: e.target.checked ? Date.now() + (30 * 24 * 60 * 60 * 1000) : null
-                        }))}
+                        } as Partial<User>))}
                         className="rounded"
                       />
                       <label className="text-white text-sm">VIP Status</label>
@@ -290,7 +290,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ users, loading }) => {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center">
                         <h3 className="text-white font-semibold mr-2">{user.username}</h3>
-                        {user.isVIP && (user.vipExpiry || 0) > Date.now() && (
+                        {user.isVIP && user.vipExpiry && user.vipExpiry > Date.now() && (
                           <Crown className="w-4 h-4 text-yellow-400" />
                         )}
                       </div>
@@ -347,7 +347,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ users, loading }) => {
                         )}
                       >
                         <Crown className="w-3 h-3" />
-                        <span>{user.isVIP && (user.vipExpiry || 0) > Date.now() ? 'Remove VIP' : 'Make VIP'}</span>
+                        <span>{user.isVIP && user.vipExpiry && user.vipExpiry > Date.now() ? 'Remove VIP' : 'Make VIP'}</span>
                       </button>
                     </div>
 

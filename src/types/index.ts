@@ -41,7 +41,7 @@ export interface Task {
 export interface Referral {
   id: string;
   username: string;
-  joinedAt: Date;
+  joinedAt: number; // Use timestamp
   totalEarnings: number;
   tier: UserTier;
   active: boolean;
@@ -51,8 +51,8 @@ export interface WithdrawalRequest {
   id: string;
   amount: number;
   status: 'pending' | 'approved' | 'rejected';
-  requestedAt: Date;
-  processedAt?: Date;
+  requestedAt: number; // Use timestamp
+  processedAt?: number; // Use timestamp
   method: string;
   details: Record<string, any>;
 }
@@ -76,7 +76,7 @@ export interface Notification {
   type: 'success' | 'error' | 'info' | 'warning';
   title: string;
   message: string;
-  timestamp: Date;
+  timestamp: number; // Use timestamp
   read: boolean;
   action?: {
     label: string;
@@ -85,8 +85,8 @@ export interface Notification {
 }
 
 export interface FarmingSession {
-  startTime: Date;
-  endTime?: Date;
+  startTime: number; // Use timestamp
+  endTime?: number; // Use timestamp
   baseRate: number;
   multiplier: number;
   totalEarned: number;
@@ -119,8 +119,8 @@ export interface EventConfig {
   name: string;
   description: string;
   type: 'limited_time' | 'special_offer' | 'bonus_multiplier';
-  startDate: Date;
-  endDate: Date;
+  startDate: number; // Use timestamp
+  endDate: number; // Use timestamp
   active: boolean;
   config: Record<string, any>;
 }
@@ -140,7 +140,7 @@ export interface AdminLog {
   username: string;
   action: string;
   details: Record<string, any>;
-  timestamp: Date;
+  timestamp: number; // Use timestamp
 }
 
 export interface BroadcastMessage {
@@ -149,8 +149,8 @@ export interface BroadcastMessage {
   message: string;
   type: 'info' | 'warning' | 'success' | 'promotion';
   active: boolean;
-  createdAt: Date;
-  expiresAt?: Date;
+  createdAt: number; // Use timestamp
+  expiresAt?: number; // Use timestamp
 }
 
 // Telegram Payment Interface
@@ -161,6 +161,6 @@ export interface TelegramPayment {
   description: string;
   payload: string;
   status: 'pending' | 'paid' | 'cancelled' | 'expired';
-  createdAt: Date;
-  paidAt?: Date;
+  createdAt: number; // Use timestamp
+  paidAt?: number; // Use timestamp
 }
