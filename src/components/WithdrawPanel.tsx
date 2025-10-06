@@ -35,7 +35,7 @@ const WithdrawPanel: React.FC = () => {
     // Check daily limit
     const today = new Date().toDateString();
     const todayWithdrawals = withdrawalRequests.filter(
-      w => w.requestedAt.toDateString() === today
+      w => new Date(w.requestedAt).toDateString() === today
     ).length;
     
     if (todayWithdrawals >= tierConfig.dailyWithdrawals) {
@@ -76,7 +76,7 @@ const WithdrawPanel: React.FC = () => {
   // Calculate daily withdrawals used
   const today = new Date().toDateString();
   const todayWithdrawals = withdrawalRequests.filter(
-    w => w.requestedAt.toDateString() === today
+    w => new Date(w.requestedAt).toDateString() === today
   ).length;
   const withdrawalsLeft = tierConfig.dailyWithdrawals - todayWithdrawals;
 
@@ -365,7 +365,7 @@ const WithdrawPanel: React.FC = () => {
                       {formatCurrency(request.amount)}
                     </div>
                     <div className="text-sm text-gray-400">
-                      {request.requestedAt.toLocaleDateString()} • {request.method.toUpperCase()}
+                      {new Date(request.requestedAt).toLocaleDateString()} • {request.method.toUpperCase()}
                     </div>
                   </div>
                 </div>
