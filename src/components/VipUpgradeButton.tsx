@@ -24,7 +24,7 @@ const VipUpgradeButton: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="fixed bottom-20 left-4 right-4 z-40"
+        className="mt-6"
       >
         <div className="bg-gradient-to-r from-primary-500/10 to-secondary-500/10 border border-primary-500/40 rounded-2xl p-4 backdrop-blur-sm">
           <div className="text-center mb-4">

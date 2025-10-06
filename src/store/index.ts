@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { UserTier, TierConfig, DailyReward, Task, Referral, WithdrawalRequest, ShopItem, Notification, FarmingSession, TabType, OverlayTabType } from '../types';
 import { User } from '../types/firebase';
+import { createOrUpdateUser } from '../firebase/hooks';
 
 // Tier configurations - Updated for premium hybrid dashboard
 export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
@@ -112,7 +113,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     stars: 45,
     tier: 'free',
     dailyWithdrawals: 0,
-    referralCode: 'BOT123',
+    referralCode: '@Mining_tech_bot?start=1',
     totalReferrals: 3,
     farmingRate: 10,
     claimStreak: 2,
@@ -279,7 +280,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ farmingSession: session });
   },
   
-  stopFarming: () => {
+  stopFarming: async () => {
     const { farmingSession, user } = get();
     if (!farmingSession || !user) return;
     
@@ -287,10 +288,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     const duration = (endTime - farmingSession.startTime) / 1000 / 60; // minutes
     const earned = Math.floor(duration * farmingSession.baseRate * farmingSession.multiplier);
     
+    const updatedUser = { ...user, coins: user.coins + earned, totalEarnings: user.totalEarnings + earned };
+    
     set({
       farmingSession: { ...farmingSession, endTime, totalEarned: earned, active: false },
-      user: { ...user, coins: user.coins + earned }
+      user: updatedUser
     });
+    
+    // Save to Firebase
+    try {
+      await createOrUpdateUser(user.userId, updatedUser);
+      console.log('💰 Farming earnings saved to Firebase:', earned);
+    } catch (error) {
+      console.error('❌ Error saving farming earnings:', error);
+    }
   },
   
   updateFarmingEarnings: () => {
@@ -308,7 +319,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   
   // Daily rewards
-  claimDailyReward: (day) => {
+  claimDailyReward: async (day) => {
     const { dailyRewards, user } = get();
     if (!user) return;
     
@@ -319,15 +330,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     const vipBonus = isVip ? reward.vipBonus || 0 : 0;
     const totalCoins = reward.coins + vipBonus;
     
-    set({
-      user: {
-        ...user,
-        coins: user.coins + totalCoins,
-        stars: user.stars + (reward.stars || 0),
-        claimStreak: user.claimStreak + 1,
-        claimedDays: [...user.claimedDays, day]
-      }
-    });
+    const updatedUser = {
+      ...user,
+      coins: user.coins + totalCoins,
+      stars: user.stars + (reward.stars || 0),
+      claimStreak: user.claimStreak + 1,
+      claimedDays: [...user.claimedDays, day],
+      totalEarnings: user.totalEarnings + totalCoins
+    };
+    
+    set({ user: updatedUser });
+    
+    // Save to Firebase
+    try {
+      await createOrUpdateUser(user.userId, updatedUser);
+      console.log('🎁 Daily reward saved to Firebase:', totalCoins);
+    } catch (error) {
+      console.error('❌ Error saving daily reward:', error);
+    }
     
     get().addNotification({
       type: 'success',
@@ -337,19 +357,33 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   
   // Tasks
-  completeTask: (taskId) => {
+  completeTask: async (taskId) => {
     const { tasks, user } = get();
     if (!user) return;
     
     const task = tasks.find(t => t.id === taskId);
     if (!task || task.completed) return;
     
+    const updatedUser = { 
+      ...user, 
+      coins: user.coins + task.reward,
+      totalEarnings: user.totalEarnings + task.reward
+    };
+    
     set({
       tasks: tasks.map(t => 
         t.id === taskId ? { ...t, completed: true, progress: t.maxProgress } : t
       ),
-      user: { ...user, coins: user.coins + task.reward }
+      user: updatedUser
     });
+    
+    // Save to Firebase
+    try {
+      await createOrUpdateUser(user.userId, updatedUser);
+      console.log('✅ Task completion saved to Firebase:', task.reward);
+    } catch (error) {
+      console.error('❌ Error saving task completion:', error);
+    }
     
     get().addNotification({
       type: 'success',

@@ -6,6 +6,7 @@ import { cn, formatNumber, getVipTimeRemaining, isVipActive } from '../utils';
 import { getTelegramWebAppData, getTelegramUserPhoto } from '../services/telegram';
 import { TelegramUser } from '../types/telegram';
 import { getCachedProfilePhoto, setCachedProfilePhoto, isCacheExpired } from '../utils/telegramProfileCache';
+import { createOrUpdateUser } from '../firebase/hooks';
 
 const ProfilePanel: React.FC = () => {
   const { user, setUser } = useAppStore();
@@ -41,6 +42,14 @@ const ProfilePanel: React.FC = () => {
               lastActive: Date.now()
             };
             setUser(updatedUser);
+            
+            // Save to Firebase
+            try {
+              await createOrUpdateUser(telegramData.user.id.toString(), updatedUser);
+              console.log('✅ Profile data synced to Firebase');
+            } catch (error) {
+              console.error('❌ Error syncing profile to Firebase:', error);
+            }
           }
           
           // Check cache first, then fetch if needed
@@ -57,6 +66,13 @@ const ProfilePanel: React.FC = () => {
                 lastActive: Date.now()
               };
               setUser(updatedUser);
+              
+              // Save to Firebase
+              try {
+                await createOrUpdateUser(user.userId, updatedUser);
+              } catch (error) {
+                console.error('❌ Error syncing cached photo to Firebase:', error);
+              }
             }
           } else {
             console.log('📸 Fetching fresh profile photo...');
@@ -78,6 +94,14 @@ const ProfilePanel: React.FC = () => {
                 lastActive: Date.now()
               };
               setUser(updatedUser);
+              
+              // Save to Firebase
+              try {
+                await createOrUpdateUser(user.userId, updatedUser);
+                console.log('✅ Profile photo synced to Firebase');
+              } catch (error) {
+                console.error('❌ Error syncing photo to Firebase:', error);
+              }
             } catch (error) {
               console.error('❌ Error fetching profile photo:', error);
               // Cache the failure to avoid repeated attempts
@@ -119,6 +143,14 @@ const ProfilePanel: React.FC = () => {
           lastActive: Date.now()
         };
         setUser(updatedUser);
+        
+        // Save to Firebase
+        try {
+          await createOrUpdateUser(user.userId, updatedUser);
+          console.log('✅ Manual refresh synced to Firebase');
+        } catch (error) {
+          console.error('❌ Error syncing manual refresh to Firebase:', error);
+        }
       } catch (error) {
         console.error('❌ Error refreshing profile photo:', error);
         setCachedProfilePhoto(telegramData.user.id, null);
@@ -465,27 +497,6 @@ const ProfilePanel: React.FC = () => {
         </div>
       )}
 
-      {/* Upgrade CTA for Free Users */}
-      {!isVip && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-primary-500/10 to-secondary-500/10 border border-primary-500/40 rounded-lg p-6 text-center"
-        >
-          <div className="text-4xl mb-3">🚀</div>
-          <h4 className="text-lg font-bold text-white mb-2">Upgrade to VIP</h4>
-          <p className="text-sm text-gray-400 mb-4">
-            Unlock premium badges, boost your farming, and earn more rewards!
-          </p>
-          <motion.button
-            className="bg-gradient-to-r from-primary-500 to-secondary-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-primary-600 hover:to-secondary-600 transition-all duration-300 tap-effect neon-glow"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            View VIP Plans
-          </motion.button>
-        </motion.div>
-      )}
     </div>
   );
 };
