@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
-import UserPanel from './components/UserPanel';
-import AdminPanel from './components/AdminPanel';
+import Layout from './components/Layout';
+import EnhancedAdminPanel from './components/EnhancedAdminPanel';
 import { useFirebaseUser, useFirebaseUsers, createOrUpdateUser } from './firebase/hooks';
 import { User } from './types/firebase';
 import { getTelegramUser, isTelegramUser, initTelegramWebApp } from './utils/telegram';
@@ -54,7 +54,23 @@ function App() {
                 totalEarnings: 0,
                 lastActive: Date.now(),
                 createdAt: Date.now(),
-                vipExpiry: null
+                vipExpiry: null,
+                // New fields for premium system
+                id: userId,
+                coins: 0,
+                tier: 'free',
+                dailyWithdrawals: 0,
+                referralCode: `REF${userId.slice(-6)}`,
+                totalReferrals: 0,
+                farmingRate: 10,
+                claimStreak: 0,
+                claimedDays: [],
+                badges: [],
+                vip_tier: 'free',
+                vip_expiry: null,
+                multiplier: 1,
+                withdraw_limit: 1,
+                referral_boost: 1
               };
               
               await createOrUpdateUser(userId, newUser);
@@ -117,9 +133,9 @@ function App() {
   return (
     <div className="App">
       {isAdmin ? (
-        <AdminPanel users={allUsers} loading={usersLoading} />
+        <EnhancedAdminPanel />
       ) : currentUser ? (
-        <UserPanel user={currentUser} onUserUpdate={handleUserUpdate} />
+        <Layout />
       ) : (
         <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
           <motion.div

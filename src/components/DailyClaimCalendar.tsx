@@ -33,8 +33,8 @@ const DailyClaimCalendar: React.FC = () => {
   if (!user) return null;
 
   const tierConfig = TIER_CONFIGS[user.tier];
-  const isVip = user.tier !== 'free';
-  const nextClaimableDay = dailyRewards.find(r => !r.claimed)?.day || null;
+  const isVip = user.vip_tier !== 'free' && user.vip_expiry && user.vip_expiry > Date.now();
+  const nextClaimableDay = dailyRewards.find(r => !user.claimedDays.includes(r.day))?.day || null;
 
   return (
     <div className="glass-panel p-6 space-y-6">
@@ -47,7 +47,7 @@ const DailyClaimCalendar: React.FC = () => {
           <div>
             <h3 className="text-xl font-bold text-white">Daily Rewards</h3>
             <p className="text-sm text-gray-400">
-              Claim daily coins & {isVip ? 'VIP bonus!' : 'upgrade for bonus!'}
+              Tap to claim → reward + VIP bonus!
             </p>
           </div>
         </div>
@@ -78,7 +78,7 @@ const DailyClaimCalendar: React.FC = () => {
       {/* Calendar Grid */}
       <div className="grid grid-cols-7 gap-3">
         {dailyRewards.map((reward, index) => {
-          const isClaimed = reward.claimed;
+          const isClaimed = user.claimedDays.includes(reward.day);
           const isClaimable = reward.day === nextClaimableDay;
           const isClaiming = claimingDay === reward.day;
           const isLocked = !isClaimed && !isClaimable;

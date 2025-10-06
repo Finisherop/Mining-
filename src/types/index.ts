@@ -13,8 +13,16 @@ export interface User {
   farmingRate: number;
   lastClaim?: Date;
   claimStreak: number;
+  claimedDays: number[]; // Array of claimed days (1-7)
   badges: Badge[];
   createdAt: Date;
+  // New VIP fields
+  vip_tier: UserTier;
+  vip_expiry: number | null;
+  multiplier: number;
+  withdraw_limit: number;
+  referral_boost: number;
+  farmingSession?: FarmingSession;
 }
 
 export type UserTier = 'free' | 'bronze' | 'diamond';
@@ -29,6 +37,7 @@ export interface TierConfig {
   badge: BadgeType;
   color: string;
   features: string[];
+  duration: number; // VIP duration in days
 }
 
 export type BadgeType = 'bronze' | 'platinum' | 'diamond' | 'vip';
@@ -48,6 +57,7 @@ export interface DailyReward {
   stars?: number;
   claimed: boolean;
   date: Date;
+  vipBonus?: number; // Additional VIP bonus
 }
 
 export interface Task {
@@ -119,3 +129,72 @@ export interface FarmingSession {
 
 export type TabType = 'farm' | 'tasks' | 'referral' | 'profile' | 'withdraw';
 export type OverlayTabType = 'shop' | 'vip' | 'boosts' | 'events';
+
+// Admin Panel Interfaces
+export interface AdminConfig {
+  tiers: Record<UserTier, TierConfig>;
+  boosts: BoostConfig[];
+  events: EventConfig[];
+  settings: GlobalSettings;
+}
+
+export interface BoostConfig {
+  id: string;
+  name: string;
+  description: string;
+  multiplier: number;
+  duration: number; // hours
+  starCost: number;
+  active: boolean;
+}
+
+export interface EventConfig {
+  id: string;
+  name: string;
+  description: string;
+  type: 'limited_time' | 'special_offer' | 'bonus_multiplier';
+  startDate: Date;
+  endDate: Date;
+  active: boolean;
+  config: Record<string, any>;
+}
+
+export interface GlobalSettings {
+  maintenanceMode: boolean;
+  maxDailyWithdrawals: Record<UserTier, number>;
+  minWithdrawalAmounts: Record<UserTier, number>;
+  referralBonuses: Record<UserTier, number>;
+  farmingRates: Record<UserTier, number>;
+}
+
+export interface AdminLog {
+  id: string;
+  type: 'purchase' | 'withdrawal' | 'claim' | 'referral' | 'admin_action';
+  userId: string;
+  username: string;
+  action: string;
+  details: Record<string, any>;
+  timestamp: Date;
+}
+
+export interface BroadcastMessage {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'success' | 'promotion';
+  active: boolean;
+  createdAt: Date;
+  expiresAt?: Date;
+}
+
+// Telegram Payment Interface
+export interface TelegramPayment {
+  invoiceId: string;
+  userId: string;
+  amount: number; // in stars
+  description: string;
+  payload: string;
+  status: 'pending' | 'paid' | 'cancelled' | 'expired';
+  createdAt: Date;
+  paidAt?: Date;
+}

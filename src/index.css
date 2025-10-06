@@ -2,6 +2,115 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Premium Glassmorphism Effects */
+@layer components {
+  .glass-panel {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl;
+  }
+  
+  .glass-panel-strong {
+    @apply bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl;
+  }
+  
+  .neon-glow {
+    box-shadow: 0 0 20px rgba(34, 197, 240, 0.3), 0 0 40px rgba(236, 88, 255, 0.2);
+  }
+  
+  .neon-glow-strong {
+    box-shadow: 0 0 30px rgba(34, 197, 240, 0.5), 0 0 60px rgba(236, 88, 255, 0.3);
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent;
+  }
+  
+  .bg-gradient-dark {
+    background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+  }
+  
+  .tap-effect {
+    @apply active:scale-95 transition-transform duration-150;
+  }
+  
+  .hover-lift {
+    @apply hover:translate-y-[-2px] transition-transform duration-300;
+  }
+  
+  .vip-badge {
+    animation: vip-pulse 2s ease-in-out infinite;
+  }
+  
+  .coin-icon::before {
+    content: "🪙";
+    font-size: 1.2em;
+  }
+  
+  .coin-flip {
+    animation: coin-flip 0.6s ease-in-out;
+  }
+  
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+}
+
+@keyframes vip-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.3);
+  }
+}
+
+@keyframes coin-flip {
+  0% { transform: rotateY(0deg); }
+  50% { transform: rotateY(180deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+@keyframes float {
+  0%, 100% { 
+    transform: translateY(0px) rotate(0deg); 
+  }
+  33% { 
+    transform: translateY(-10px) rotate(1deg); 
+  }
+  66% { 
+    transform: translateY(5px) rotate(-1deg); 
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .glass-panel {
+    @apply rounded-xl;
+  }
+  
+  .glass-panel-strong {
+    @apply rounded-xl;
+  }
+}
+
 @layer base {
   * {
     box-sizing: border-box;

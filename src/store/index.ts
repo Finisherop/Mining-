@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { User, UserTier, TierConfig, DailyReward, Task, Referral, WithdrawalRequest, ShopItem, Notification, FarmingSession, TabType, OverlayTabType } from '../types';
 
-// Tier configurations
+// Tier configurations - Updated for premium hybrid dashboard
 export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
   free: {
     name: 'Free',
@@ -12,7 +12,8 @@ export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
     referralMultiplier: 1,
     badge: 'bronze',
     color: '#94a3b8',
-    features: ['Basic farming', '1 withdrawal/day', 'Bronze badge']
+    features: ['1 withdrawal/day', 'min ₹200', 'Bronze badge'],
+    duration: 0
   },
   bronze: {
     name: 'Bronze VIP',
@@ -23,7 +24,8 @@ export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
     referralMultiplier: 1,
     badge: 'platinum',
     color: '#f59e0b',
-    features: ['2× farming speed', '3 withdrawals/day', 'Platinum badge', 'VIP status']
+    features: ['3 withdrawals/day', 'min ₹100', '2× farming speed', 'Platinum badge'],
+    duration: 30
   },
   diamond: {
     name: 'Diamond VIP',
@@ -34,7 +36,8 @@ export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
     referralMultiplier: 1.5,
     badge: 'diamond',
     color: '#3b82f6',
-    features: ['2.5× farming speed', '5 withdrawals/day', 'Diamond badge', '1.5× referral rewards', 'Premium VIP status']
+    features: ['5 withdrawals/day', 'min ₹200', '2.5× farming speed', '1.5× referral reward', 'Diamond badge'],
+    duration: 30
   }
 };
 
@@ -111,6 +114,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     totalReferrals: 3,
     farmingRate: 10,
     claimStreak: 2,
+    claimedDays: [1, 2], // Days 1 and 2 already claimed
     badges: [
       {
         type: 'bronze',
@@ -121,7 +125,13 @@ export const useAppStore = create<AppState>((set, get) => ({
         unlockedAt: new Date()
       }
     ],
-    createdAt: new Date()
+    createdAt: new Date(),
+    // New VIP fields
+    vip_tier: 'free',
+    vip_expiry: null,
+    multiplier: 1,
+    withdraw_limit: 1,
+    referral_boost: 1
   },
   
   activeTab: 'farm',
@@ -135,7 +145,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     coins: 50 + (i * 10),
     stars: i === 6 ? 5 : undefined,
     claimed: i < 2,
-    date: new Date(Date.now() + (i * 24 * 60 * 60 * 1000))
+    date: new Date(Date.now() + (i * 24 * 60 * 60 * 1000)),
+    vipBonus: Math.floor((50 + (i * 10)) * 0.5) // 50% VIP bonus
   })),
   
   tasks: [
@@ -286,28 +297,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!user) return;
     
     const reward = dailyRewards.find(r => r.day === day);
-    if (!reward || reward.claimed) return;
+    if (!reward || user.claimedDays.includes(day)) return;
     
-    const tierConfig = TIER_CONFIGS[user.tier];
-    const bonusCoins = Math.floor(reward.coins * (tierConfig.farmingMultiplier - 1));
-    const totalCoins = reward.coins + bonusCoins;
+    const isVip = user.vip_tier !== 'free' && user.vip_expiry && user.vip_expiry > Date.now();
+    const vipBonus = isVip ? reward.vipBonus || 0 : 0;
+    const totalCoins = reward.coins + vipBonus;
     
     set({
-      dailyRewards: dailyRewards.map(r => 
-        r.day === day ? { ...r, claimed: true } : r
-      ),
       user: {
         ...user,
         coins: user.coins + totalCoins,
         stars: user.stars + (reward.stars || 0),
-        claimStreak: user.claimStreak + 1
+        claimStreak: user.claimStreak + 1,
+        claimedDays: [...user.claimedDays, day]
       }
     });
     
     get().addNotification({
       type: 'success',
       title: 'Daily Reward Claimed!',
-      message: `+${totalCoins} coins${reward.stars ? ` +${reward.stars} stars` : ''}${bonusCoins > 0 ? ` (VIP bonus: +${bonusCoins})` : ''}`
+      message: `+${totalCoins} coins${reward.stars ? ` +${reward.stars} stars` : ''}${vipBonus > 0 ? ` (VIP bonus: +${vipBonus})` : ''}`
     });
   },
   
