@@ -134,6 +134,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     earningMultiplier: 1,
     boosts: 0,
     referralCount: 0,
+    // VIP expiry field
+    vipExpiry: null,
     // New VIP fields
     vip_tier: 'free',
     vip_expiry: null,

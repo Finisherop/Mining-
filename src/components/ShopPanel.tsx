@@ -48,7 +48,7 @@ const ShopPanel: React.FC = () => {
                     description: `Upgraded to ${tierConfig.name}`,
                     icon: tier === 'bronze' ? '🥉' : '💎',
                     color: tierConfig.color,
-                    unlockedAt: new Date()
+                    unlockedAt: Date.now()
                   }
                 ]
               };
