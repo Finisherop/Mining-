@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0b0f1a 0%, #1b1330 50%, #2d1b69 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .panel-link {
+            display: inline-block;
+            padding: 15px 30px;
+            margin: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .panel-link:hover {
+            background: rgba(0, 212, 255, 0.2);
+            border-color: #00d4ff;
+            transform: translateY(-2px);
+        }
+        .info {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Panel Testing</h1>
+        
+        <div class="info">
+            <h3>Available Dashboards:</h3>
+            <p>Choose which panel you want to test:</p>
+        </div>
+
+        <div>
+            <a href="index.html?admin=true" class="panel-link">
+                ⚙️ Admin Panel<br>
+                <small>React-based admin dashboard</small>
+            </a>
+            
+            <a href="index.html?user_id=123&first_name=TestUser" class="panel-link">
+                👤 User Panel<br>
+                <small>React-based user dashboard</small>
+            </a>
+            
+            <a href="premium-dashboard.html" class="panel-link">
+                💎 Premium Dashboard<br>
+                <small>Standalone premium farming app</small>
+            </a>
+        </div>
+
+        <div class="info">
+            <h4>📋 Testing Instructions:</h4>
+            <ul style="text-align: left;">
+                <li><strong>Admin Panel:</strong> Manages users, VIP status, and system settings</li>
+                <li><strong>User Panel:</strong> Shows user stats, VIP purchase, and earnings</li>
+                <li><strong>Premium Dashboard:</strong> Complete farming app with booster shop</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h4>🔧 Development Setup:</h4>
+            <p>For React panels: <code>npm install && npm run dev</code></p>
+            <p>For Premium Dashboard: Open directly in browser</p>
+        </div>
+    </div>
+
+    <script>
+        // Add some interactivity
+        document.querySelectorAll('.panel-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = '';
+                }, 150);
+            });
+        });
+    </script>
+</body>
+</html>

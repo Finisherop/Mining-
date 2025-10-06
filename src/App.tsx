@@ -65,8 +65,11 @@ function App() {
             setCurrentUser(firebaseUser);
           }
         } else {
-          // Admin Panel Mode
-          setIsAdmin(true);
+          // Admin Panel Mode - check for admin access
+          const isAdminAccess = window.location.search.includes('admin=true') || 
+                               window.location.pathname.includes('admin') ||
+                               !window.location.search; // Default to admin if no params
+          setIsAdmin(isAdminAccess);
         }
       } catch (error) {
         console.error('Error initializing app:', error);
