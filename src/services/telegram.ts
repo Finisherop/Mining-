@@ -24,7 +24,7 @@ export function getTelegramWebAppData(): TelegramWebAppInitData | null {
     // Fallback for development/testing
     return {
       user: {
-        id: 123456789,
+        id: 987654321,
         first_name: 'Test',
         last_name: 'User',
         username: 'testuser',
