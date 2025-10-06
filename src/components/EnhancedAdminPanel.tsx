@@ -430,7 +430,7 @@ const EnhancedAdminPanel: React.FC = () => {
                       </div>
                       <div>
                         <div className="text-gray-300 font-semibold">
-                          {new Date(user.createdAt).toLocaleDateString()}
+                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                         </div>
                         <div className="text-xs text-gray-400">Joined</div>
                       </div>

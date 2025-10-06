@@ -434,7 +434,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     const today = new Date().toDateString();
     const todayWithdrawals = withdrawalRequests.filter(
-      w => new Date(w.requestedAt).toDateString() === today
+      w => w.requestedAt && new Date(w.requestedAt).toDateString() === today
     ).length;
     
     if (todayWithdrawals >= tierConfig.dailyWithdrawals) return false;

@@ -11,8 +11,8 @@ const ProfilePanel: React.FC = () => {
 
   const tierConfig = TIER_CONFIGS[user.tier];
   const isVip = user.tier !== 'free';
-  const vipActive = isVipActive(user.vipExpiry ? new Date(user.vipExpiry) : undefined);
-  const vipTimeLeft = getVipTimeRemaining(user.vipExpiry ? new Date(user.vipExpiry) : undefined);
+  const vipActive = isVipActive(user.vipExpiry && typeof user.vipExpiry === 'number' ? new Date(user.vipExpiry) : undefined);
+  const vipTimeLeft = getVipTimeRemaining(user.vipExpiry && typeof user.vipExpiry === 'number' ? new Date(user.vipExpiry) : undefined);
 
   const stats = [
     {
@@ -99,7 +99,7 @@ const ProfilePanel: React.FC = () => {
             </div>
             
             <div className="text-sm text-gray-400">
-              Member since {new Date(user.createdAt).toLocaleDateString()}
+              Member since {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
             </div>
           </div>
         </div>
@@ -150,7 +150,7 @@ const ProfilePanel: React.FC = () => {
                 {badge.description}
               </div>
               <div className="text-xs text-gray-500">
-                {new Date(badge.unlockedAt).toLocaleDateString()}
+                {badge.unlockedAt ? new Date(badge.unlockedAt).toLocaleDateString() : 'N/A'}
               </div>
             </motion.div>
           ))}
