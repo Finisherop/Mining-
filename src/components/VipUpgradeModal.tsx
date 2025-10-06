@@ -4,7 +4,7 @@ import { Crown, Star, CreditCard, X, Copy, Check, Loader2 } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
 import { cn, copyToClipboard, playSound } from '../utils';
 import { createTelegramStarInvoice, sendTelegramMessage } from '../services/telegram';
-import { addWithdrawal } from '../firebase/hooks';
+import { createVipRequest } from '../firebase/vipHooks';
 import toast from 'react-hot-toast';
 
 interface VipUpgradeModalProps {
@@ -44,12 +44,33 @@ const VipUpgradeModal: React.FC<VipUpgradeModalProps> = ({ isOpen, onClose, tier
       if (invoice) {
         // Open invoice in Telegram WebApp
         if (window.Telegram?.WebApp) {
-          window.Telegram.WebApp.openInvoice(invoice.invoice_link, (status) => {
+          window.Telegram.WebApp.openInvoice(invoice.invoice_link, async (status) => {
             if (status === 'paid') {
-              // Payment successful - activate VIP
-              activateVip();
-              toast.success('🎉 VIP Activated! Payment successful!');
-              playSound('success');
+              // Payment successful - create VIP request for immediate activation
+              try {
+                const vipRequest = {
+                  userId: user.userId,
+                  username: user.username,
+                  tier,
+                  paymentMethod: 'stars' as const,
+                  amount: tierConfig.starCost,
+                  status: 'approved' as const, // Auto-approve star payments
+                  requestedAt: Date.now(),
+                  processedAt: Date.now(),
+                  adminNotes: 'Auto-approved Telegram Stars payment',
+                  paymentDetails: {
+                    invoiceId: invoice.invoice_link
+                  }
+                };
+                
+                await createVipRequest(vipRequest);
+                activateVip();
+                toast.success('🎉 VIP Activated! Payment successful!');
+                playSound('success');
+              } catch (error) {
+                console.error('Error processing star payment:', error);
+                toast.error('Payment successful but activation failed. Contact admin.');
+              }
             } else if (status === 'cancelled') {
               toast.error('Payment cancelled');
               playSound('error');
@@ -83,23 +104,23 @@ const VipUpgradeModal: React.FC<VipUpgradeModalProps> = ({ isOpen, onClose, tier
     playSound('click');
 
     try {
-      // Create manual payment request
-      const withdrawalData = {
-        amount: tierConfig.starCost * 10, // Convert stars to rupees (example rate)
+      // Create VIP purchase request
+      const vipRequest = {
+        userId: user.userId,
+        username: user.username,
+        tier,
+        paymentMethod: 'upi' as const,
+        amount: tierConfig.starCost * 10, // Convert stars to rupees
         status: 'pending' as const,
         requestedAt: Date.now(),
-        method: 'vip_upgrade_upi',
-        details: {
-          tier,
-          utrNumber: utrNumber.trim(),
-          userId: user.userId,
-          username: user.username
+        paymentDetails: {
+          utrNumber: utrNumber.trim()
         }
       };
 
-      const withdrawalId = await addWithdrawal(withdrawalData);
+      const requestId = await createVipRequest(vipRequest);
       
-      if (withdrawalId) {
+      if (requestId) {
         // Send notification to admin
         await sendTelegramMessage(
           123456789, // Admin chat ID
@@ -109,7 +130,8 @@ const VipUpgradeModal: React.FC<VipUpgradeModalProps> = ({ isOpen, onClose, tier
           `💰 Amount: ₹${tierConfig.starCost * 10}\n` +
           `🏦 UTR: ${utrNumber}\n` +
           `📅 Time: ${new Date().toLocaleString()}\n\n` +
-          `Please verify payment and activate VIP manually.`
+          `Request ID: ${requestId}\n` +
+          `Please verify payment and approve in admin panel.`
         );
 
         toast.success('VIP upgrade request submitted! Admin will verify and activate within 24 hours.');

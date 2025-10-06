@@ -3,6 +3,7 @@ import { UserTier, TierConfig, DailyReward, Task, Referral, WithdrawalRequest, S
 import { User } from '../types/firebase';
 import { createOrUpdateUser } from '../firebase/hooks';
 import { saveFarmingSession, getFarmingSession, clearFarmingSession, saveLastDailyClaim, isDailyClaimAvailable } from '../utils/farmingStorage';
+import { saveUserToLocalStorage, autoSyncUserData } from '../utils/dataSync';
 
 // Tier configurations - Updated for premium hybrid dashboard
 export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
@@ -259,7 +260,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   notifications: [],
   
   // Actions
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    set({ user });
+    if (user) {
+      saveUserToLocalStorage(user);
+      autoSyncUserData(user);
+    }
+  },
   setActiveTab: (tab) => set({ activeTab: tab }),
   setActiveOverlayTab: (tab) => set({ activeOverlayTab: tab }),
   setLoading: (loading) => set({ isLoading: loading }),

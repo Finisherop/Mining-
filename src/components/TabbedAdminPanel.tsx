@@ -11,15 +11,18 @@ import {
   X,
   ExternalLink,
   Save,
-  RefreshCw
+  RefreshCw,
+  Crown,
+  CreditCard
 } from 'lucide-react';
 import { useFirebaseUsers, useFirebaseTasks, useFirebaseWithdrawals, addTask, updateTask, deleteTask, updateWithdrawal } from '../firebase/hooks';
 import { createOrUpdateUser } from '../firebase/hooks';
+import { useVipRequests } from '../firebase/vipHooks';
 import { cn, playSound } from '../utils';
 import { Task } from '../types';
 import toast from 'react-hot-toast';
 
-type AdminTab = 'users' | 'tasks' | 'settings';
+type AdminTab = 'users' | 'tasks' | 'vip-requests' | 'withdrawals' | 'settings';
 
 interface TaskFormData {
   title: string;
@@ -48,10 +51,13 @@ const TabbedAdminPanel: React.FC = () => {
   const { users, loading: usersLoading } = useFirebaseUsers();
   const { tasks, loading: tasksLoading } = useFirebaseTasks();
   const { withdrawals, loading: withdrawalsLoading } = useFirebaseWithdrawals();
+  const { requests: vipRequests } = useVipRequests();
 
   const tabs = [
     { id: 'users' as AdminTab, label: 'User Management', icon: Users, count: Object.keys(users).length },
     { id: 'tasks' as AdminTab, label: 'Task Management', icon: CheckSquare, count: tasks.length },
+    { id: 'vip-requests' as AdminTab, label: 'VIP Requests', icon: Crown, count: Object.values(vipRequests).filter(r => r.status === 'pending').length },
+    { id: 'withdrawals' as AdminTab, label: 'Withdrawals', icon: CreditCard, count: Object.values(withdrawals).filter(w => w.status === 'pending').length },
     { id: 'settings' as AdminTab, label: 'Settings', icon: Settings, count: 0 }
   ];
 
