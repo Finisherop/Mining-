@@ -12,7 +12,7 @@ export const useToast = () => {
     
     unreadNotifications.forEach(notification => {
       const toastId = toast.custom(
-        (t) => (
+        () => (
           <motion.div
             initial={{ opacity: 0, y: 50, scale: 0.3 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}

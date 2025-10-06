@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Star, Crown, Zap, Clock, Check, Loader2 } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
-import { cn, formatNumber, triggerConfetti, triggerStarBurst, playSound } from '../utils';
+import { cn, triggerConfetti, triggerStarBurst, playSound } from '../utils';
 
 const ShopPanel: React.FC = () => {
   const { user, shopItems, purchaseItem, upgradeTier, isLoading } = useAppStore();
@@ -46,7 +46,6 @@ const ShopPanel: React.FC = () => {
 
   const tierUpgrades = shopItems.filter(item => item.type === 'tier_upgrade');
   const boosts = shopItems.filter(item => item.type === 'boost');
-  const cosmetics = shopItems.filter(item => item.type === 'cosmetic');
 
   return (
     <div className="glass-panel p-6 space-y-6 h-full overflow-y-auto">

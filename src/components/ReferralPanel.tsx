@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Copy, Share2, Gift, TrendingUp, Crown, Check } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
-import { cn, formatNumber, formatCurrency, copyToClipboard, playSound } from '../utils';
+import { cn, formatNumber, copyToClipboard, playSound } from '../utils';
 
 const ReferralPanel: React.FC = () => {
   const { user, referrals } = useAppStore();
