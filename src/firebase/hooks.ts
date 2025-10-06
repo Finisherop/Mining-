@@ -109,7 +109,7 @@ export const createOrUpdateUser = async (userId: string, userData: Partial<User>
         referralCount: userData.referralCount || 0,
         totalEarnings: userData.totalEarnings || 0,
         lastActive: Date.now(),
-        vipExpiry: userData.vipExpiry || null,
+        vipExpiry: typeof userData.vipExpiry === 'number' ? userData.vipExpiry : null,
         vip_tier: userData.vip_tier || 'free',
         vip_expiry: userData.vip_expiry || null,
         multiplier: userData.multiplier || 1,

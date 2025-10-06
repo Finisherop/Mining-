@@ -140,7 +140,7 @@ export const logAdminAction = async (
       username,
       action: `Admin ${type.replace('_', ' ')}`,
       details,
-      timestamp: new Date()
+      timestamp: Date.now()
     };
     
     await push(logsRef, logEntry);
@@ -161,7 +161,7 @@ export const getAdminLogs = async (limit: number = 100): Promise<AdminLog[]> => 
     const logs = snapshot.val();
     return Object.entries(logs)
       .map(([logId, log]) => ({ id: logId, ...(log as Omit<AdminLog, 'id'>) }))
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, limit);
   } catch (error) {
     console.error('Error getting admin logs:', error);
@@ -183,8 +183,8 @@ export const createBroadcast = async (
       message,
       type,
       active: true,
-      createdAt: new Date(),
-      expiresAt
+      createdAt: Date.now(),
+      expiresAt: expiresAt ? expiresAt.getTime() : undefined
     };
     
     await push(broadcastsRef, broadcast);
@@ -208,12 +208,12 @@ export const getBroadcasts = async (): Promise<BroadcastMessage[]> => {
       .map(([id, broadcast]) => ({ id, ...(broadcast as Omit<BroadcastMessage, 'id'>) }))
       .filter(broadcast => {
         if (!broadcast.active) return false;
-        if (broadcast.expiresAt && new Date(broadcast.expiresAt) < new Date()) {
+        if (broadcast.expiresAt && broadcast.expiresAt < Date.now()) {
           return false;
         }
         return true;
       })
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort((a, b) => b.createdAt - a.createdAt);
   } catch (error) {
     console.error('Error getting broadcasts:', error);
     return [];
@@ -236,7 +236,7 @@ export const logPayment = async (payment: Omit<TelegramPayment, 'createdAt'>): P
     const paymentsRef = ref(database, 'payments');
     const paymentData: TelegramPayment = {
       ...payment,
-      createdAt: new Date()
+      createdAt: Date.now()
     };
     
     await push(paymentsRef, paymentData);
@@ -266,7 +266,7 @@ export const getPaymentHistory = async (userId?: string): Promise<TelegramPaymen
     const payments = snapshot.val();
     return Object.entries(payments)
       .map(([, payment]) => ({ ...(payment as TelegramPayment) }))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort((a, b) => b.createdAt - a.createdAt);
   } catch (error) {
     console.error('Error getting payment history:', error);
     return [];

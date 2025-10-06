@@ -99,7 +99,7 @@ const ProfilePanel: React.FC = () => {
             </div>
             
             <div className="text-sm text-gray-400">
-              Member since {user.createdAt.toLocaleDateString()}
+              Member since {new Date(user.createdAt).toLocaleDateString()}
             </div>
           </div>
         </div>
