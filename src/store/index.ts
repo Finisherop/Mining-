@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { UserTier, TierConfig, DailyReward, Task, Referral, WithdrawalRequest, ShopItem, Notification, FarmingSession, TabType, OverlayTabType } from '../types';
 import { User } from '../types/firebase';
 import { createOrUpdateUser } from '../firebase/hooks';
+import { saveFarmingSession, getFarmingSession, clearFarmingSession, saveLastDailyClaim, isDailyClaimAvailable } from '../utils/farmingStorage';
 
 // Tier configurations - Updated for premium hybrid dashboard
 export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
@@ -149,7 +150,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeOverlayTab: null,
   isLoading: false,
   
-  farmingSession: null,
+  farmingSession: getFarmingSession(),
   
   dailyRewards: Array.from({ length: 7 }, (_, i) => ({
     day: i + 1,
@@ -278,6 +279,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     };
     
     set({ farmingSession: session });
+    saveFarmingSession(session);
+    console.log('🚀 Farming session started and saved');
   },
   
   stopFarming: async () => {
@@ -289,11 +292,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     const earned = Math.floor(duration * farmingSession.baseRate * farmingSession.multiplier);
     
     const updatedUser = { ...user, coins: user.coins + earned, totalEarnings: user.totalEarnings + earned };
+    const completedSession = { ...farmingSession, endTime, totalEarned: earned, active: false };
     
     set({
-      farmingSession: { ...farmingSession, endTime, totalEarned: earned, active: false },
+      farmingSession: completedSession,
       user: updatedUser
     });
+    
+    // Clear farming session from storage
+    clearFarmingSession();
     
     // Save to Firebase
     try {
@@ -312,10 +319,15 @@ export const useAppStore = create<AppState>((set, get) => ({
     const duration = (now - farmingSession.startTime) / 1000 / 60; // minutes
     const earned = Math.floor(duration * farmingSession.baseRate * farmingSession.multiplier);
     
+    const updatedSession = { ...farmingSession, totalEarned: earned };
+    
     set({
       user: { ...user, coins: user.coins + (earned - farmingSession.totalEarned) },
-      farmingSession: { ...farmingSession, totalEarned: earned }
+      farmingSession: updatedSession
     });
+    
+    // Update farming session in storage
+    saveFarmingSession(updatedSession);
   },
   
   // Daily rewards
@@ -323,8 +335,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { dailyRewards, user } = get();
     if (!user) return;
     
+    // Check if daily claim is available (24-hour restriction)
+    if (!isDailyClaimAvailable()) {
+      get().addNotification({
+        type: 'error',
+        title: 'Daily Claim Not Available',
+        message: 'Please wait 24 hours between daily claims'
+      });
+      return;
+    }
+    
     const reward = dailyRewards.find(r => r.day === day);
-    if (!reward || user.claimedDays.includes(day)) return;
+    if (!reward) return;
     
     const isVip = user.vip_tier !== 'free' && user.vip_expiry && user.vip_expiry > Date.now();
     const vipBonus = isVip ? reward.vipBonus || 0 : 0;
@@ -340,6 +362,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     };
     
     set({ user: updatedUser });
+    
+    // Save last claim timestamp
+    saveLastDailyClaim(Date.now());
     
     // Save to Firebase
     try {

@@ -158,6 +158,18 @@ function App() {
     }
   }, [firebaseUser, isAdmin]);
 
+  // Sync user data with store on app load
+  useEffect(() => {
+    if (currentUser) {
+      // Import store dynamically to avoid circular dependency
+      import('./store').then(({ useAppStore }) => {
+        const { setUser } = useAppStore.getState();
+        setUser(currentUser);
+        console.log('✅ User data synced with store');
+      });
+    }
+  }, [currentUser]);
+
 
   if (loading || (isTelegramUser() && firebaseLoading)) {
     return (
