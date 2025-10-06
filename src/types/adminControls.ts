@@ -1,15 +1,10 @@
 // Admin Controls System Types
-export interface SystemSettings {
+export interface AdminSettings {
   // Farming Settings
-  farmingRates: {
-    free: number;
-    bronze: number;
-    diamond: number;
-  };
-  farmingMultipliers: {
-    free: number;
-    bronze: number;
-    diamond: number;
+  farming: {
+    baseRate: number; // coins per minute
+    maxDuration: number; // maximum farming duration in hours
+    cooldownTime: number; // cooldown between farming sessions in minutes
   };
   
   // Task Rewards
@@ -23,58 +18,55 @@ export interface SystemSettings {
   };
   
   // Conversion Rates
-  conversionRates: {
-    coinsToINR: number; // How many coins = 1 INR
-    starsToINR: number; // How many stars = 1 INR
+  conversion: {
+    coinsToInr: number; // how many coins = 1 INR
+    starsToInr: number; // how many stars = 1 INR
+    adsReward: number; // coins per ad
   };
   
   // Withdrawal Settings
-  withdrawalLimits: {
-    free: { min: number; max: number; daily: number };
-    bronze: { min: number; max: number; daily: number };
-    diamond: { min: number; max: number; daily: number };
+  withdrawal: {
+    minAmounts: {
+      free: number;
+      bronze: number;
+      diamond: number;
+    };
+    dailyLimits: {
+      free: number;
+      bronze: number;
+      diamond: number;
+    };
+    processingFee: number; // percentage
   };
   
   // VIP Settings
-  vipPricing: {
-    bronze: { stars: number; inr: number; duration: number };
-    diamond: { stars: number; inr: number; duration: number };
+  vip: {
+    prices: {
+      bronze: number; // in stars
+      diamond: number; // in stars
+    };
+    duration: number; // days
+    multipliers: {
+      bronze: number;
+      diamond: number;
+    };
   };
   
-  // Referral Settings
-  referralRewards: {
-    free: number;
-    bronze: number;
-    diamond: number;
+  // System Settings
+  system: {
+    maintenanceMode: boolean;
+    maxUsersPerDay: number;
+    referralBonus: number;
+    dailyClaimCooldown: number; // hours
   };
-  
-  // Ads Settings
-  adsSettings: {
-    dailyLimit: number;
-    rewardPerAd: number;
-    adDuration: number;
-    vipUnlimited: boolean;
-  };
-  
-  // System Status
-  maintenanceMode: boolean;
-  registrationOpen: boolean;
-  lastUpdated: number;
-  updatedBy: string;
 }
 
 export interface AdminAction {
   id: string;
-  type: 'settings_update' | 'vip_approval' | 'withdrawal_approval' | 'user_action';
   adminId: string;
-  targetUserId?: string;
-  action: string;
+  action: 'approve_vip' | 'reject_vip' | 'approve_withdrawal' | 'reject_withdrawal' | 'update_settings' | 'ban_user' | 'unban_user';
+  targetId: string; // user ID or request ID
   details: Record<string, any>;
   timestamp: number;
-}
-
-export interface ConversionCalculation {
-  coins: number;
-  inr: number;
-  rate: number;
+  notes?: string;
 }
