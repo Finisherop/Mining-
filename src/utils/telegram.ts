@@ -1,7 +1,7 @@
 import { TelegramUser } from '../types/firebase';
 
 // Telegram Bot API Key placeholder
-export const TELEGRAM_BOT_API_KEY = "YOUR_BOT_API_KEY_HERE";
+export const TELEGRAM_BOT_API_KEY = "7795769615:AAH4hhnFG_10vl8tn_dFu8AHdUziQLh6VIA";
 
 // Parse URL parameters to detect Telegram user
 export const getTelegramUser = (): TelegramUser | null => {
