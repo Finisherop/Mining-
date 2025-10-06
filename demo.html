@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Links - Premium Bot Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0b0f1a 0%, #1b1330 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #22c5f0, #ec58ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .demo-link {
+            display: block;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .demo-link:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(34, 197, 240, 0.3);
+        }
+        .demo-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .demo-desc {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+        .demo-url {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            border-radius: 6px;
+            word-break: break-all;
+        }
+        .note {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Premium Bot Dashboard Demo</h1>
+        
+        <div class="note">
+            <strong>📝 Note:</strong> These are demo links to test different access modes. In production, users would access through your Telegram bot's WebApp button.
+        </div>
+
+        <a href="/" class="demo-link">
+            <div class="demo-title">🔧 Admin Panel</div>
+            <div class="demo-desc">Access admin panel (no Telegram user parameters)</div>
+            <div class="demo-url">https://your-domain.com/</div>
+        </a>
+
+        <a href="/?user_id=123456789&username=testuser&first_name=John" class="demo-link">
+            <div class="demo-title">👤 User Panel - New User</div>
+            <div class="demo-desc">Simulate new Telegram user (will create account)</div>
+            <div class="demo-url">https://your-domain.com/?user_id=123456789&username=testuser&first_name=John</div>
+        </a>
+
+        <a href="/?user_id=987654321&username=vipuser&first_name=Jane" class="demo-link">
+            <div class="demo-title">👑 User Panel - VIP User</div>
+            <div class="demo-desc">Simulate VIP Telegram user (admin can pre-configure)</div>
+            <div class="demo-url">https://your-domain.com/?user_id=987654321&username=vipuser&first_name=Jane</div>
+        </a>
+
+        <div class="note">
+            <strong>🔥 Firebase Setup Required:</strong>
+            <ol>
+                <li>Create Firebase project with Realtime Database</li>
+                <li>Update <code>src/firebase/config.ts</code> with your config</li>
+                <li>Deploy and test with real Telegram bot integration</li>
+            </ol>
+        </div>
+
+        <div class="note">
+            <strong>📱 Mobile Testing:</strong>
+            <ul>
+                <li>Open Chrome DevTools</li>
+                <li>Toggle device simulation (mobile view)</li>
+                <li>Test touch interactions and responsive design</li>
+                <li>Use Android device simulation for best results</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
