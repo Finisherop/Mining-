@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { User, UserTier, TierConfig, DailyReward, Task, Referral, WithdrawalRequest, ShopItem, Notification, FarmingSession, TabType, OverlayTabType } from '../types';
+import { UserTier, TierConfig, DailyReward, Task, Referral, WithdrawalRequest, ShopItem, Notification, FarmingSession, TabType, OverlayTabType } from '../types';
+import { User } from '../types/firebase';
 
 // Tier configurations - Updated for premium hybrid dashboard
 export const TIER_CONFIGS: Record<UserTier, TierConfig> = {
@@ -105,6 +106,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Initial state
   user: {
     id: '1',
+    userId: '1',
     username: 'BotUser',
     coins: 1250,
     stars: 45,
@@ -126,6 +128,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
     ],
     createdAt: new Date(),
+    lastActive: Date.now(),
+    totalEarnings: 0,
+    isVIP: false,
+    earningMultiplier: 1,
+    boosts: 0,
+    referralCount: 0,
     // New VIP fields
     vip_tier: 'free',
     vip_expiry: null,

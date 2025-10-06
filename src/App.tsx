@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import EnhancedAdminPanel from './components/EnhancedAdminPanel';
-import { useFirebaseUser, useFirebaseUsers, createOrUpdateUser } from './firebase/hooks';
+import { useFirebaseUser, createOrUpdateUser } from './firebase/hooks';
 import { User } from './types/firebase';
 import { getTelegramUser, isTelegramUser, initTelegramWebApp } from './utils/telegram';
 import { getUserFromStorage, saveUserToStorage, syncUserData, needsSync } from './utils/localStorage';

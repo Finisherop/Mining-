@@ -1,6 +1,7 @@
 import { ref, get, set, push, onValue, off, query, orderByChild, equalTo } from 'firebase/database';
 import { database } from './config';
-import { User, AdminConfig, AdminLog, BroadcastMessage, TelegramPayment } from '../types';
+import { AdminConfig, AdminLog, BroadcastMessage, TelegramPayment } from '../types';
+import { User } from '../types/firebase';
 
 // Admin Configuration Management
 export const getAdminConfig = async (): Promise<AdminConfig | null> => {
@@ -264,7 +265,7 @@ export const getPaymentHistory = async (userId?: string): Promise<TelegramPaymen
 
     const payments = snapshot.val();
     return Object.entries(payments)
-      .map(([id, payment]) => ({ ...(payment as TelegramPayment) }))
+      .map(([, payment]) => ({ ...(payment as TelegramPayment) }))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   } catch (error) {
     console.error('Error getting payment history:', error);
