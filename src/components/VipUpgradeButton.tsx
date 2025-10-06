@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Crown, Star, Zap } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
-import { cn, playSound, triggerConfetti } from '../utils';
+import { playSound, triggerConfetti } from '../utils';
 import VipUpgradeModal from './VipUpgradeModal';
 
 const VipUpgradeButton: React.FC = () => {

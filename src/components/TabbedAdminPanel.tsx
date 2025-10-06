@@ -3,16 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, 
   Settings, 
-  Tasks, 
-  Crown, 
+  CheckSquare, 
   Plus, 
   Edit3, 
   Trash2, 
   Check, 
   X,
-  Youtube,
-  MessageCircle,
-  Link,
   ExternalLink,
   Save,
   RefreshCw
@@ -20,8 +16,7 @@ import {
 import { useFirebaseUsers, useFirebaseTasks, useFirebaseWithdrawals, addTask, updateTask, deleteTask, updateWithdrawal } from '../firebase/hooks';
 import { createOrUpdateUser } from '../firebase/hooks';
 import { cn, playSound } from '../utils';
-import { Task, WithdrawalRequest } from '../types';
-import { User } from '../types/firebase';
+import { Task } from '../types';
 import toast from 'react-hot-toast';
 
 type AdminTab = 'users' | 'tasks' | 'settings';
@@ -56,7 +51,7 @@ const TabbedAdminPanel: React.FC = () => {
 
   const tabs = [
     { id: 'users' as AdminTab, label: 'User Management', icon: Users, count: Object.keys(users).length },
-    { id: 'tasks' as AdminTab, label: 'Task Management', icon: Tasks, count: tasks.length },
+    { id: 'tasks' as AdminTab, label: 'Task Management', icon: CheckSquare, count: tasks.length },
     { id: 'settings' as AdminTab, label: 'Settings', icon: Settings, count: 0 }
   ];
 

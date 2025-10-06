@@ -5,6 +5,8 @@ import TabbedAdminPanel from './components/TabbedAdminPanel';
 import { useFirebaseUser, createOrUpdateUser } from './firebase/hooks';
 import { User } from './types/firebase';
 import { getTelegramWebAppData, getTelegramUserPhoto } from './services/telegram';
+import { saveUserToStorage } from './utils/localStorage';
+import { isTelegramUser } from './utils/telegram';
 import { motion } from 'framer-motion';
 
 function App() {

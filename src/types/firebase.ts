@@ -32,18 +32,6 @@ export interface User {
   photo_url?: string; // User profile photo from Telegram
 }
 
-export interface TelegramUser {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-  language_code?: string;
-}
-
-export interface TelegramWebAppData {
-  user?: TelegramUser;
-  start_param?: string;
-}
 
 export type BadgeType = 'bronze' | 'platinum' | 'diamond' | 'vip';
 
