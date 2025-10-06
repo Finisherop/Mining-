@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, Star, Crown, Zap, Clock, Check, Loader2, Lock, Sparkles } from 'lucide-react';
+import { ShoppingBag, Star, Crown, Zap, Clock, Check, Loader2 } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
 import { cn, triggerConfetti, triggerStarBurst, playSound } from '../utils';
 import { purchaseVIPTier, showPaymentAlert, showPaymentConfirm, paymentHaptic } from '../utils/telegramPayments';
 import toast from 'react-hot-toast';
 
 const ShopPanel: React.FC = () => {
-  const { user, shopItems, purchaseItem, upgradeTier, isLoading, setUser } = useAppStore();
+  const { user, shopItems, purchaseItem, isLoading, setUser } = useAppStore();
   const [purchasingItem, setPurchasingItem] = useState<string | null>(null);
   const [purchaseProgress, setPurchaseProgress] = useState<string>('');
 
-  const handleVIPPurchase = async (tier: 'bronze' | 'diamond', starCost: number, event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleVIPPurchase = async (tier: 'bronze' | 'diamond', starCost: number) => {
     if (!user || purchasingItem) return;
 
     const tierConfig = TIER_CONFIGS[tier];
@@ -225,7 +225,7 @@ const ShopPanel: React.FC = () => {
                   
                   {/* Purchase Button */}
                   <motion.button
-                    onClick={(e) => handleVIPPurchase(tier, item.starCost, e)}
+                    onClick={() => handleVIPPurchase(tier, item.starCost)}
                     disabled={!canPurchase || isPurchasing}
                     className={cn(
                       "w-full py-3 px-4 rounded-lg font-semibold transition-all duration-300",

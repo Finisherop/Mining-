@@ -4,25 +4,15 @@ import {
   Users, 
   Star, 
   Crown, 
-  Edit3,
-  Save,
   X,
-  Plus,
-  Minus,
   Settings,
-  Database,
-  TrendingUp,
   Shield,
-  MessageSquare,
   Activity,
   Download,
   Ban,
   RotateCcw,
-  Eye,
-  EyeOff,
   Megaphone,
   DollarSign,
-  Calendar,
   Filter
 } from 'lucide-react';
 import { User, AdminLog, BroadcastMessage, TelegramPayment, UserTier } from '../types';
@@ -39,7 +29,7 @@ import {
   getAdminStats
 } from '../firebase/admin';
 import { TIER_CONFIGS } from '../store';
-import { cn, formatNumber } from '../utils';
+import { cn } from '../utils';
 import toast from 'react-hot-toast';
 
 interface AdminStats {
@@ -61,8 +51,6 @@ const EnhancedAdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'users' | 'logs' | 'broadcasts' | 'payments' | 'settings'>('users');
   
   // User management states
-  const [editingUser, setEditingUser] = useState<string | null>(null);
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [userFilter, setUserFilter] = useState<'all' | 'vip' | 'free' | 'banned'>('all');
   
   // Broadcast states

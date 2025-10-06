@@ -89,17 +89,32 @@ export const createOrUpdateUser = async (userId: string, userData: Partial<User>
     } else {
       // Create new user with defaults
       finalUserData = {
+        id: userId,
         userId,
         username: userData.username || 'Unknown',
         stars: userData.stars || 0,
+        coins: userData.coins || 0,
+        tier: userData.tier || 'free',
+        dailyWithdrawals: userData.dailyWithdrawals || 0,
+        referralCode: userData.referralCode || `REF${userId.slice(-6)}`,
+        totalReferrals: userData.totalReferrals || 0,
+        farmingRate: userData.farmingRate || 10,
+        claimStreak: userData.claimStreak || 0,
+        claimedDays: userData.claimedDays || [],
+        badges: userData.badges || [],
+        createdAt: userData.createdAt || Date.now(),
         isVIP: userData.isVIP || false,
         earningMultiplier: userData.earningMultiplier || 1,
         boosts: userData.boosts || 0,
         referralCount: userData.referralCount || 0,
         totalEarnings: userData.totalEarnings || 0,
         lastActive: Date.now(),
-        createdAt: userData.createdAt || Date.now(),
         vipExpiry: userData.vipExpiry || null,
+        vip_tier: userData.vip_tier || 'free',
+        vip_expiry: userData.vip_expiry || null,
+        multiplier: userData.multiplier || 1,
+        withdraw_limit: userData.withdraw_limit || 1,
+        referral_boost: userData.referral_boost || 1,
         ...userData
       };
     }
