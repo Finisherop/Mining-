@@ -15,7 +15,8 @@ import {
   DollarSign,
   Filter
 } from 'lucide-react';
-import { User, AdminLog, BroadcastMessage, TelegramPayment, UserTier } from '../types';
+import { AdminLog, BroadcastMessage, TelegramPayment, UserTier } from '../types';
+import { User } from '../types/firebase';
 import { 
   getAllUsers, 
   updateUserVIP, 

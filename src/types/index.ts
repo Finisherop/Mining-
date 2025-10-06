@@ -1,36 +1,4 @@
-export interface User {
-  id: string;
-  userId: string; // Keep both for compatibility
-  username: string;
-  coins: number;
-  stars: number;
-  tier: UserTier;
-  vipExpiry?: Date;
-  dailyWithdrawals: number;
-  lastWithdrawal?: Date;
-  referralCode: string;
-  referredBy?: string;
-  totalReferrals: number;
-  farmingRate: number;
-  lastClaim?: Date;
-  claimStreak: number;
-  claimedDays: number[]; // Array of claimed days (1-7)
-  badges: Badge[];
-  createdAt: Date;
-  lastActive: number; // Add missing field
-  totalEarnings: number; // Add missing field
-  isVIP: boolean; // Add missing field
-  earningMultiplier: number; // Add missing field
-  boosts: number; // Add missing field
-  referralCount: number; // Add missing field
-  // New VIP fields
-  vip_tier: UserTier;
-  vip_expiry: number | null;
-  multiplier: number;
-  withdraw_limit: number;
-  referral_boost: number;
-  farmingSession?: FarmingSession;
-}
+// User interface is now defined in types/firebase.ts
 
 export type UserTier = 'free' | 'bronze' | 'diamond';
 

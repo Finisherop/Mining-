@@ -30,8 +30,8 @@ export interface PaymentResult {
  */
 export const createStarInvoice = async (
   userId: string,
-  tier: UserTier,
-  starAmount: number
+  _tier: UserTier,
+  _starAmount: number
 ): Promise<PaymentResult> => {
   try {
     // In a real implementation, this would call your backend API
