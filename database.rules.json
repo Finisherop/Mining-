@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "users": {
+      "$userId": {
+        ".read": true,
+        ".write": true,
+        ".validate": "newData.hasChildren(['userId', 'username', 'stars', 'isVIP', 'earningMultiplier'])"
+      }
+    },
+    "admin": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
