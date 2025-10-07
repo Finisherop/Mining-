@@ -1,68 +1,64 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
-import './index.css'
-// Import Telegram types
-import './utils/telegramPayments'
+/**
+ * SIMPLIFIED MAIN ENTRY POINT
+ * 
+ * Removes complex initialization logic and renders app immediately
+ * Telegram WebApp integration happens seamlessly without blocking
+ */
 
-// Simple initialization - let App.tsx handle the step-by-step process
-const initializeReactApp = () => {
-  console.log('🚀 Starting React application...');
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.tsx';
+import './index.css';
+import './utils/telegramPayments';
+
+// Simple, immediate initialization
+const initializeApp = () => {
+  console.log('🚀 Simplified App: Starting immediately');
   
-  // Hide HTML loading screen
-  if (typeof window !== 'undefined' && (window as any).hideLoadingScreen) {
-    (window as any).hideLoadingScreen();
+  // Hide HTML loading screen if present
+  const loadingScreen = document.getElementById('loading-screen');
+  if (loadingScreen) {
+    loadingScreen.style.display = 'none';
   }
   
+  // Render React app immediately
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <App />
-    </React.StrictMode>,
+    </React.StrictMode>
   );
   
-  console.log('⚛️ React app mounted - App.tsx will handle step-by-step initialization');
+  console.log('✅ Simplified App: Rendered successfully');
 };
 
-// Enhanced Telegram WebApp initialization with better timing
+// Enhanced Telegram WebApp setup (non-blocking)
 if (typeof window !== 'undefined') {
-  // Function to initialize with proper timing
-  const initWithTiming = () => {
-    if (window.Telegram?.WebApp) {
-      console.log('📱 Telegram WebApp detected, ensuring proper initialization...');
+  // Set up Telegram WebApp if available
+  if (window.Telegram?.WebApp) {
+    console.log('📱 Telegram WebApp detected - setting up');
+    
+    const webApp = window.Telegram.WebApp;
+    
+    // Configure WebApp immediately
+    webApp.expand();
+    webApp.ready(() => {
+      console.log('📱 Telegram WebApp ready');
       
-      const webApp = window.Telegram.WebApp;
+      // Set theme colors
+      if (webApp.setHeaderColor) webApp.setHeaderColor('#0b0f1a');
+      if (webApp.setBackgroundColor) webApp.setBackgroundColor('#0b0f1a');
       
-      // Set up WebApp immediately
-      webApp.expand();
-      webApp.ready(() => {
-        console.log('✅ Telegram WebApp ready callback triggered');
-        
-        // Add a small delay to ensure all Telegram data is available
-        setTimeout(() => {
-          console.log('🚀 Starting React app after Telegram initialization');
-          initializeReactApp();
-        }, 100);
-      });
-      
-      // Fallback timeout in case ready() doesn't fire
-      setTimeout(() => {
-        if (!document.getElementById('root')?.hasChildNodes()) {
-          console.log('⏰ Telegram ready timeout, starting app anyway');
-          initializeReactApp();
-        }
-      }, 3000);
-      
-    } else {
-      console.log('🌐 Web browser mode detected, starting immediately');
-      initializeReactApp();
-    }
-  };
-
-  // Check if DOM is ready
+      // Enable haptic feedback
+      if (webApp.HapticFeedback) {
+        webApp.HapticFeedback.impactOccurred('light');
+      }
+    });
+  }
+  
+  // Initialize app immediately - don't wait for Telegram
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initWithTiming);
+    document.addEventListener('DOMContentLoaded', initializeApp);
   } else {
-    // DOM is already ready
-    initWithTiming();
+    initializeApp();
   }
 }

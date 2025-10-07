@@ -6,11 +6,10 @@ import { Task, WithdrawalRequest, AdminConfig } from '../types';
 import { extractSafeUserId, sanitizeFirebasePath } from '../utils/firebaseSanitizer';
 import { safeCreateOrUpdateUser, createSafeRef } from './safeConnection';
 
-// Custom hook for Firebase user data
+// Simplified Firebase user hook with background sync
 export const useFirebaseUser = (userId: string | null) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false); // Changed: No initial loading state
 
   useEffect(() => {
     if (!userId) {
@@ -19,27 +18,32 @@ export const useFirebaseUser = (userId: string | null) => {
     }
 
     try {
-      // SAFE: Use sanitized user ID for Firebase path
+      // SAFE: Use sanitized user ID for Firebase path (keeping security from main)
       const safeUserId = extractSafeUserId(userId);
       const userRef = ref(database, `users/${safeUserId}`);
-      console.log(`🔒 Setting up safe user listener for ID: ${safeUserId}`);
+      console.log(`🔒 Setting up safe Firebase sync for user: ${safeUserId}`);
     
-    const unsubscribe = onValue(userRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
+    // Set up real-time listener for background sync
+    const unsubscribe = onValue(userRef, (snapshot: any) => {
       try {
         if (snapshot.exists()) {
-          setUser(snapshot.val());
+          const userData = snapshot.val() as User;
+          console.log('📱 Firebase user data updated:', userData.firstName);
+          setUser(userData);
         } else {
+          console.log('👤 No Firebase user data found - will create new user');
           setUser(null);
         }
-        setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        console.error('Firebase sync error (non-blocking):', err);
+        // Don't set error state - let app continue with cached data
       } finally {
         setLoading(false);
       }
-    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
-      setError(err.message);
+    }, (err: any) => {
+      console.error('Firebase listener error (non-blocking):', err);
       setLoading(false);
+      // Don't block app - continue with cached data
     });
 
     return () => off(userRef, 'value', unsubscribe);
@@ -50,7 +54,7 @@ export const useFirebaseUser = (userId: string | null) => {
     }
   }, [userId]);
 
-  return { user, loading, error };
+  return { user, loading };
 };
 
 
@@ -251,40 +255,16 @@ export const purchaseVIP = async (userId: string, starCost: number = 100): Promi
   }
 };
 
-// Custom hook for Firebase tasks with delayed loading
+// Simplified Firebase tasks hook - loads immediately
 export const useFirebaseTasks = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Changed: No initial loading
   const [error, setError] = useState<string | null>(null);
-  const [dataLoadingEnabled, setDataLoadingEnabled] = useState(false);
-
-  // Listen for data loading event
-  useEffect(() => {
-    const handleStartDataLoading = () => {
-      console.log('📊 Tasks data loading enabled');
-      setDataLoadingEnabled(true);
-    };
-
-    window.addEventListener('startDataLoading', handleStartDataLoading);
-    
-    // Also enable immediately if already ready
-    if ((window as any).dataFetchReady) {
-      setDataLoadingEnabled(true);
-    }
-
-    return () => {
-      window.removeEventListener('startDataLoading', handleStartDataLoading);
-    };
-  }, []);
 
   useEffect(() => {
-    if (!dataLoadingEnabled) {
-      return;
-    }
-
     const tasksRef = ref(database, 'tasks');
     
-    const unsubscribe = onValue(tasksRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
+    const unsubscribe = onValue(tasksRef, (snapshot: any) => {
       try {
         if (snapshot.exists()) {
           const tasksData = snapshot.val();
@@ -292,34 +272,28 @@ export const useFirebaseTasks = () => {
             ...tasksData[key],
             id: key
           }));
-          // FIX: Only update if data actually changed to prevent blinking
-          setTasks(prevTasks => {
-            const currentIds = prevTasks.map(t => t.id).sort().join(',');
-            const newIds = tasksList.map(t => t.id).sort().join(',');
-            
-            // Only update if task list actually changed
-            if (currentIds !== newIds || JSON.stringify(prevTasks) !== JSON.stringify(tasksList)) {
-              console.log('📝 Tasks updated from Firebase:', tasksList.length);
-              return tasksList;
-            }
-            return prevTasks;
-          });
+          
+          // Update tasks immediately
+          setTasks(tasksList);
+          console.log('📝 Tasks loaded from Firebase:', tasksList.length);
         } else {
           setTasks([]);
         }
         setError(null);
       } catch (err) {
+        console.error('Tasks loading error (non-blocking):', err);
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
         setLoading(false);
       }
-    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
+    }, (err: any) => {
+      console.error('Tasks listener error (non-blocking):', err);
       setError(err.message);
       setLoading(false);
     });
 
     return () => off(tasksRef, 'value', unsubscribe);
-  }, [dataLoadingEnabled]);
+  }, []);
 
   return { tasks, loading, error };
 };
