@@ -12,6 +12,7 @@ import { User } from './types/firebase';
 import { getTelegramWebAppData, getTelegramUserPhoto } from './services/telegram';
 import { saveUserToStorage } from './utils/localStorage';
 import { isTelegramUser } from './utils/telegram';
+import { getNetworkStatus, shouldShowSlowNetworkWarning, getNetworkRecommendations } from './utils/networkUtils';
 import { motion } from 'framer-motion';
 
 function App() {
@@ -23,7 +24,8 @@ function App() {
     firebase: boolean;
     retryCount: number;
     lastRetry: number;
-  }>({ telegram: false, firebase: false, retryCount: 0, lastRetry: 0 });
+    showSlowNetworkWarning: boolean;
+  }>({ telegram: false, firebase: false, retryCount: 0, lastRetry: 0, showSlowNetworkWarning: false });
 
   // Get Telegram user data
   const telegramData = getTelegramWebAppData();
@@ -33,6 +35,29 @@ function App() {
   // Firebase hooks
   const { user: firebaseUser, loading: firebaseLoading } = useFirebaseUser(userId);
 
+  // Listen for Firebase timeout event
+  useEffect(() => {
+    const handleFirebaseTimeout = () => {
+      console.log('🔥 Firebase timeout detected, continuing with limited functionality');
+      setInitializationState(prev => ({
+        ...prev,
+        firebase: true,
+        showSlowNetworkWarning: true
+      }));
+      
+      toast.error('Database connection slow. Some features may be limited.', {
+        duration: 5000,
+        id: 'firebase-timeout'
+      });
+    };
+
+    window.addEventListener('firebaseTimeout', handleFirebaseTimeout);
+    
+    return () => {
+      window.removeEventListener('firebaseTimeout', handleFirebaseTimeout);
+    };
+  }, []);
+
   // Initialize app with proper Telegram and Firebase checks
   useEffect(() => {
     const initializeApp = async () => {
@@ -41,14 +66,22 @@ function App() {
         const telegramAvailable = window.Telegram?.WebApp !== undefined;
         console.log(telegramAvailable ? '🚀 Telegram WebApp detected, initializing…' : '🌐 Web browser mode detected');
         
-        // Check Firebase connection
+        // Check Firebase connection with timeout
         const firebaseConnected = (window as any).firebaseConnected === true;
+        const firebaseTimeout = Date.now() - (window as any).firebaseInitTime > 10000; // 10 second timeout
+        
         console.log(firebaseConnected ? '🔥 Firebase connected successfully.' : '⏳ Waiting for Firebase connection...');
+        
+        // If Firebase is taking too long, continue without it
+        if (!firebaseConnected && firebaseTimeout) {
+          console.log('⚠️ Firebase connection timeout, continuing with offline mode');
+          (window as any).firebaseConnected = 'timeout';
+        }
         
         setInitializationState(prev => ({
           ...prev,
           telegram: telegramAvailable,
-          firebase: firebaseConnected
+          firebase: firebaseConnected || firebaseTimeout
         }));
         
         console.log('🚀 Initializing app...');
@@ -275,15 +308,15 @@ function App() {
       } catch (error) {
         console.error('Error initializing app:', error);
         
-        // Auto-retry on error
+        // Auto-retry on error with improved logic
         const now = Date.now();
-        if (initializationState.retryCount < 5 && now - initializationState.lastRetry > 3000) {
-          console.log('🔄 Initialization retry due to slow network.');
+        if (initializationState.retryCount < 3 && now - initializationState.lastRetry > 5000) {
+          console.log('🔄 Initialization retry due to connection issues.');
           
           // Show toast notification for retry
-          toast.loading(`Retrying connection... (${initializationState.retryCount + 1}/5)`, {
+          toast.loading(`Retrying connection... (${initializationState.retryCount + 1}/3)`, {
             id: 'retry-toast',
-            duration: 2500
+            duration: 3000
           });
           
           setInitializationState(prev => ({
@@ -292,17 +325,29 @@ function App() {
             lastRetry: now
           }));
           
-          // Retry after 3 seconds
+          // Retry after 5 seconds
           setTimeout(() => {
             if (!firebaseLoading) {
               initializeApp();
             }
-          }, 3000);
+          }, 5000);
+        } else if (initializationState.retryCount >= 3 && !initializationState.showSlowNetworkWarning) {
+          // Show slow network warning after 3 failed attempts
+          console.log('⚠️ Multiple connection attempts failed, showing slow network warning');
+          setInitializationState(prev => ({
+            ...prev,
+            showSlowNetworkWarning: true
+          }));
+          
+          toast.error('Connection issues detected. You can continue with limited functionality.', {
+            id: 'slow-network-toast',
+            duration: 5000
+          });
         }
       } finally {
         // Only set loading to false if both Telegram and Firebase are ready or max retries reached
         if ((initializationState.telegram || !window.Telegram?.WebApp) && 
-            (initializationState.firebase || initializationState.retryCount >= 5)) {
+            (initializationState.firebase || initializationState.retryCount >= 3)) {
           setLoading(false);
         }
       }
@@ -335,7 +380,7 @@ function App() {
 
   // Enhanced loading state with retry options
   if (loading || (isTelegramUser() && firebaseLoading)) {
-    const showRetryOption = initializationState.retryCount >= 3 && Date.now() - initializationState.lastRetry > 8000;
+    const showRetryOption = initializationState.showSlowNetworkWarning || (initializationState.retryCount >= 2 && Date.now() - initializationState.lastRetry > 10000);
     
     return (
       <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
@@ -370,22 +415,60 @@ function App() {
               
               {initializationState.retryCount > 0 && (
                 <p className="text-xs text-gray-500 mt-4">
-                  Retry attempt {initializationState.retryCount}/5
+                  Retry attempt {initializationState.retryCount}/3
                 </p>
+              )}
+              
+              {initializationState.showSlowNetworkWarning && (
+                <div className="mt-4 p-3 bg-yellow-900/30 border border-yellow-600/30 rounded-lg">
+                  <p className="text-xs text-yellow-400">
+                    ⚠️ Slow connection detected. The app may take longer to load all features.
+                  </p>
+                </div>
               )}
             </>
           ) : (
             <>
               <div className="text-6xl mb-4">🔄</div>
               <h2 className="text-xl font-bold text-white mb-2">Slow Network Detected</h2>
-              <p className="text-gray-400 mb-6">
+              <p className="text-gray-400 mb-4">
                 The app is taking longer than usual to load. This might be due to a slow network connection.
               </p>
+              
+              {(() => {
+                const networkStatus = getNetworkStatus();
+                const recommendations = getNetworkRecommendations(networkStatus);
+                
+                return (
+                  <div className="mb-6">
+                    <div className="bg-gray-800/50 p-3 rounded-lg mb-4">
+                      <h4 className="text-sm font-medium text-white mb-2">Network Diagnostics:</h4>
+                      <div className="text-xs text-gray-400 space-y-1">
+                        <div>Status: {networkStatus.isOnline ? 'Online' : 'Offline'}</div>
+                        <div>Quality: {networkStatus.quality}</div>
+                        <div>Speed: {networkStatus.downlink > 0 ? `${networkStatus.downlink}Mbps` : 'Unknown'}</div>
+                        <div>Type: {networkStatus.effectiveType.toUpperCase()}</div>
+                      </div>
+                    </div>
+                    
+                    {recommendations.length > 0 && (
+                      <div className="bg-blue-900/30 p-3 rounded-lg">
+                        <h4 className="text-sm font-medium text-blue-400 mb-2">Suggestions:</h4>
+                        <ul className="text-xs text-blue-300 space-y-1">
+                          {recommendations.map((rec, index) => (
+                            <li key={index}>• {rec}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               
               <div className="space-y-3">
                 <button
                   onClick={() => {
-                    setInitializationState({ telegram: false, firebase: false, retryCount: 0, lastRetry: 0 });
+                    setInitializationState({ telegram: false, firebase: false, retryCount: 0, lastRetry: 0, showSlowNetworkWarning: false });
                     setLoading(true);
                     window.location.reload();
                   }}
@@ -396,11 +479,24 @@ function App() {
                 
                 <button
                   onClick={() => {
+                    console.log('🚀 User chose to continue with limited functionality');
                     setLoading(false);
+                    toast.success('Loading app with available features...', { duration: 3000 });
                   }}
                   className="w-full px-4 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
                 >
-                  ⚡ Continue Anyway
+                  ⚡ Continue with Limited Features
+                </button>
+                
+                <button
+                  onClick={() => {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    window.location.reload();
+                  }}
+                  className="w-full px-4 py-3 bg-red-700 text-white rounded-lg hover:bg-red-600 transition-colors mt-2"
+                >
+                  🗑️ Clear Cache & Reload
                 </button>
               </div>
               

@@ -29,6 +29,7 @@
       // Initialize Firebase immediately
       try {
         console.log('🔥 Initializing Firebase from CDN...');
+        window.firebaseInitTime = Date.now(); // Track initialization time
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
         
@@ -43,12 +44,20 @@
         window.firebasePush = push;
         window.firebaseUpdate = update;
         
-        // Test connection with enhanced logging
+        // Test connection with enhanced logging and timeout
         const connectedRef = ref(database, '.info/connected');
-        onValue(connectedRef, (snapshot) => {
+        let connectionTimeout;
+        
+        const connectionHandler = (snapshot) => {
           if (snapshot.val() === true) {
             console.log('✅ Firebase connected successfully.');
             window.firebaseConnected = true;
+            
+            // Clear timeout
+            if (connectionTimeout) {
+              clearTimeout(connectionTimeout);
+              connectionTimeout = null;
+            }
             
             // Dispatch ready event
             window.dispatchEvent(new CustomEvent('firebaseReady'));
@@ -56,7 +65,16 @@
             console.log('❌ Firebase disconnected - retrying connection...');
             window.firebaseConnected = false;
           }
-        });
+        };
+        
+        onValue(connectedRef, connectionHandler);
+        
+        // Set connection timeout (8 seconds)
+        connectionTimeout = setTimeout(() => {
+          console.log('⏰ Firebase connection timeout - continuing with offline mode');
+          window.firebaseConnected = 'timeout';
+          window.dispatchEvent(new CustomEvent('firebaseTimeout'));
+        }, 8000);
         
         console.log('🎯 Firebase initialization complete');
       } catch (error) {
@@ -167,7 +185,7 @@
           updateStatus();
           setInterval(updateStatus, 1000);
         }
-      }, 15000); // Increased to 15 seconds to give more time
+      }, 20000); // Increased to 20 seconds to give more time for slow networks
       
       // Clear timeout if app loads successfully
       window.clearLoadingTimeout = () => {

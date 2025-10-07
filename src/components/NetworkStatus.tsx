@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Wifi, WifiOff, Monitor, Smartphone, Tablet } from 'lucide-react';
+import { Wifi, WifiOff, Monitor, Smartphone, Tablet, AlertTriangle } from 'lucide-react';
 
 interface NetworkStatusProps {
   className?: string;
@@ -10,6 +10,8 @@ const NetworkStatus: React.FC<NetworkStatusProps> = ({ className = '' }) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [deviceType, setDeviceType] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const [networkInfo, setNetworkInfo] = useState<string>('');
+  const [connectionQuality, setConnectionQuality] = useState<'good' | 'slow' | 'poor'>('good');
+  const [firebaseStatus, setFirebaseStatus] = useState<'connected' | 'connecting' | 'offline'>('connecting');
 
   useEffect(() => {
     const handleOnline = () => {
@@ -34,11 +36,35 @@ const NetworkStatus: React.FC<NetworkStatusProps> = ({ className = '' }) => {
       }
     };
 
-    // Network info detection
+    // Network info detection with quality assessment
     const getNetworkInfo = () => {
       const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
       if (connection) {
-        setNetworkInfo(`${connection.effectiveType || 'unknown'} - ${connection.downlink || '?'}Mbps`);
+        const effectiveType = connection.effectiveType || 'unknown';
+        const downlink = connection.downlink || 0;
+        
+        setNetworkInfo(`${effectiveType} - ${downlink}Mbps`);
+        
+        // Assess connection quality
+        if (effectiveType === '4g' && downlink > 5) {
+          setConnectionQuality('good');
+        } else if (effectiveType === '3g' || (effectiveType === '4g' && downlink <= 5)) {
+          setConnectionQuality('slow');
+        } else {
+          setConnectionQuality('poor');
+        }
+      }
+    };
+
+    // Monitor Firebase connection status
+    const checkFirebaseStatus = () => {
+      const firebaseConnected = (window as any).firebaseConnected;
+      if (firebaseConnected === true) {
+        setFirebaseStatus('connected');
+      } else if (firebaseConnected === 'timeout') {
+        setFirebaseStatus('offline');
+      } else {
+        setFirebaseStatus('connecting');
       }
     };
 
@@ -48,11 +74,16 @@ const NetworkStatus: React.FC<NetworkStatusProps> = ({ className = '' }) => {
     
     detectDeviceType();
     getNetworkInfo();
+    checkFirebaseStatus();
+
+    // Check Firebase status periodically
+    const firebaseInterval = setInterval(checkFirebaseStatus, 2000);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('resize', detectDeviceType);
+      clearInterval(firebaseInterval);
     };
   }, []);
 
@@ -61,6 +92,25 @@ const NetworkStatus: React.FC<NetworkStatusProps> = ({ className = '' }) => {
       case 'mobile': return <Smartphone className="w-3 h-3" />;
       case 'tablet': return <Tablet className="w-3 h-3" />;
       default: return <Monitor className="w-3 h-3" />;
+    }
+  };
+
+  const getConnectionColor = () => {
+    if (!isOnline) return 'text-red-400';
+    switch (connectionQuality) {
+      case 'good': return 'text-green-400';
+      case 'slow': return 'text-yellow-400';
+      case 'poor': return 'text-orange-400';
+      default: return 'text-gray-400';
+    }
+  };
+
+  const getFirebaseStatusColor = () => {
+    switch (firebaseStatus) {
+      case 'connected': return 'text-green-400';
+      case 'connecting': return 'text-yellow-400';
+      case 'offline': return 'text-red-400';
+      default: return 'text-gray-400';
     }
   };
 
@@ -74,12 +124,32 @@ const NetworkStatus: React.FC<NetworkStatusProps> = ({ className = '' }) => {
         {/* Network Status */}
         <div className="flex items-center space-x-1">
           {isOnline ? (
-            <Wifi className="w-3 h-3 text-green-400" />
+            connectionQuality === 'poor' ? (
+              <AlertTriangle className="w-3 h-3 text-orange-400" />
+            ) : (
+              <Wifi className={`w-3 h-3 ${getConnectionColor()}`} />
+            )
           ) : (
             <WifiOff className="w-3 h-3 text-red-400" />
           )}
-          <span className={isOnline ? 'text-green-400' : 'text-red-400'}>
-            {isOnline ? 'Online' : 'Offline'}
+          <span className={getConnectionColor()}>
+            {isOnline ? (
+              connectionQuality === 'good' ? 'Fast' : 
+              connectionQuality === 'slow' ? 'Slow' : 'Poor'
+            ) : 'Offline'}
+          </span>
+        </div>
+
+        {/* Firebase Status */}
+        <div className="flex items-center space-x-1">
+          <div className={`w-2 h-2 rounded-full ${
+            firebaseStatus === 'connected' ? 'bg-green-400' :
+            firebaseStatus === 'connecting' ? 'bg-yellow-400 animate-pulse' :
+            'bg-red-400'
+          }`} />
+          <span className={getFirebaseStatusColor()}>
+            {firebaseStatus === 'connected' ? 'DB' :
+             firebaseStatus === 'connecting' ? 'DB...' : 'DB✗'}
           </span>
         </div>
 
@@ -90,14 +160,11 @@ const NetworkStatus: React.FC<NetworkStatusProps> = ({ className = '' }) => {
         </div>
 
         {/* Network Speed (if available) */}
-        {networkInfo && (
-          <div className="text-gray-400">
+        {networkInfo && connectionQuality !== 'good' && (
+          <div className="text-gray-400 text-xs">
             {networkInfo}
           </div>
         )}
-
-        {/* Connection Indicator */}
-        <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`} />
       </div>
     </motion.div>
   );
