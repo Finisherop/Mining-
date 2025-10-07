@@ -383,7 +383,7 @@ const SuperEnhancedAdminPanel: React.FC = () => {
             <span className="text-sm">Manage Users</span>
           </button>
           <button 
-            onClick={() => setActiveTab('settings')}
+            onClick={() => setActiveFooterTab('settings')}
             className="p-4 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-400 transition-colors"
           >
             <Settings className="w-6 h-6 mx-auto mb-2" />
