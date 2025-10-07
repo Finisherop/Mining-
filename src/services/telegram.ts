@@ -12,6 +12,7 @@ export function getTelegramWebAppData(): TelegramWebAppInitData | null {
       webApp.ready();
       
       if (webApp.initDataUnsafe?.user) {
+        console.log('✅ Telegram WebApp detected');
         return {
           user: webApp.initDataUnsafe.user,
           start_param: webApp.initDataUnsafe.start_param,
@@ -21,19 +22,32 @@ export function getTelegramWebAppData(): TelegramWebAppInitData | null {
       }
     }
     
-    // Fallback for development/testing
-    return {
-      user: {
-        id: 987654321,
-        first_name: 'Test',
-        last_name: 'User',
-        username: 'testuser',
-        photo_url: '',
-        language_code: 'en'
-      },
-      auth_date: Date.now(),
-      hash: 'dev_hash'
-    };
+    // FIX: Check URL parameters for external device access
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasUserParam = urlParams.get('user') === 'true';
+    const hasAdminParam = urlParams.get('admin') === 'true';
+    const hasDemoParam = urlParams.get('demo');
+    
+    // FIX: Only return fallback data for development, not for external devices
+    if (process.env.NODE_ENV === 'development' && !hasUserParam && !hasAdminParam && !hasDemoParam) {
+      console.log('🛠️ Development mode - using fallback Telegram data');
+      return {
+        user: {
+          id: 987654321,
+          first_name: 'Dev',
+          last_name: 'User',
+          username: 'devuser',
+          photo_url: '',
+          language_code: 'en'
+        },
+        auth_date: Date.now(),
+        hash: 'dev_hash'
+      };
+    }
+    
+    // FIX: Return null for external devices - let App.tsx handle this
+    console.log('🌐 External device detected - no Telegram WebApp data');
+    return null;
   } catch (error) {
     console.error('Error getting Telegram WebApp data:', error);
     return null;
