@@ -37,7 +37,7 @@ function App() {
         const urlParams = new URLSearchParams(window.location.search);
         const forceUserMode = urlParams.get('user') === 'true';
         // Admin access: URL param OR specific Telegram IDs
-        const adminUserIds = [123456789, 987654321]; // Add your Telegram user IDs here
+        const adminUserIds = [6779644494, 987654321]; // Add your Telegram user IDs here
         const isAdminMode = !forceUserMode && (
           urlParams.get('admin') === 'true' || 
           urlParams.get('superadmin') === 'true' ||
