@@ -21,9 +21,55 @@ import toast from 'react-hot-toast';
 
 const TasksPanel: React.FC = () => {
   const { user, setUser } = useAppStore();
-  const { tasks, loading: tasksLoading } = useFirebaseTasks();
-  const { completedTasks, loading: completionLoading } = useUserTaskCompletion(user?.userId || null);
+  const { tasks, loading: tasksLoading, error: tasksError } = useFirebaseTasks();
+  const { completedTasks, loading: completionLoading, error: completionError } = useUserTaskCompletion(user?.userId || null);
   const [completingTask, setCompletingTask] = useState<string | null>(null);
+
+  // FIX: Add error handling and loading state for blank screen issue
+  if (tasksLoading || completionLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
+        <div className="glass-panel p-6 text-center">
+          <RefreshCw className="w-8 h-8 text-primary-400 animate-spin mx-auto mb-2" />
+          <p className="text-white">Loading tasks...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // FIX: Handle error states
+  if (tasksError || completionError) {
+    return (
+      <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
+        <div className="glass-panel p-6 text-center">
+          <div className="text-red-400 text-4xl mb-4">⚠️</div>
+          <h3 className="text-lg font-semibold text-white mb-2">Error Loading Tasks</h3>
+          <p className="text-gray-400 mb-4">
+            {tasksError || completionError || 'Unable to load tasks. Please try again.'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // FIX: Handle case when user is not available
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
+        <div className="glass-panel p-6 text-center">
+          <div className="text-yellow-400 text-4xl mb-4">🔒</div>
+          <h3 className="text-lg font-semibold text-white mb-2">User Not Found</h3>
+          <p className="text-gray-400">Please login to access tasks.</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleCompleteTask = async (taskId: string, event: React.MouseEvent<HTMLButtonElement>) => {
     if (!user || completingTask) return;
@@ -207,14 +253,6 @@ const TasksPanel: React.FC = () => {
       </motion.div>
     );
   };
-
-  if (tasksLoading || completionLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <RefreshCw className="w-8 h-8 text-primary-400 animate-spin" />
-      </div>
-    );
-  }
 
   const activeTasks = useMemo(() => tasks.filter(task => task.active), [tasks]);
   const dailyTasks = useMemo(() => activeTasks.filter(t => t.type === 'daily'), [activeTasks]);
