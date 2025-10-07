@@ -13,7 +13,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { useAppStore } from '../store';
-import { useFirebaseTasks, useUserTaskCompletion, completeUserTask } from '../firebase/hooks';
+import { useFirebaseTasks, useUserTaskCompletion, useUserTaskVerification, completeUserTask, markTaskAsVerified } from '../firebase/hooks';
 import { createOrUpdateUser } from '../firebase/hooks';
 import { cn, formatNumber, triggerCoinBurst, playSound } from '../utils';
 import AdsTaskPanel from './AdsTaskPanel';
@@ -23,7 +23,9 @@ const TasksPanel: React.FC = () => {
   const { user, setUser } = useAppStore();
   const { tasks, loading: tasksLoading, error: tasksError } = useFirebaseTasks();
   const { completedTasks, loading: completionLoading, error: completionError } = useUserTaskCompletion(user?.userId || null);
+  const { verifiedTasks, loading: verificationLoading } = useUserTaskVerification(user?.userId || null);
   const [completingTask, setCompletingTask] = useState<string | null>(null);
+  const [verifyingTask, setVerifyingTask] = useState<string | null>(null);
 
   // Move all useMemo hooks to top level to avoid hook order violations
   const activeTasks = useMemo(() => tasks.filter(task => task.active), [tasks]);
@@ -35,7 +37,7 @@ const TasksPanel: React.FC = () => {
   const remainingCount = useMemo(() => activeTasks.length - completedCount, [activeTasks, completedCount]);
 
   // FIX: Add error handling and loading state for blank screen issue
-  if (tasksLoading || completionLoading) {
+  if (tasksLoading || completionLoading || verificationLoading) {
     return (
       <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
         <div className="glass-panel p-6 text-center">
@@ -119,6 +121,52 @@ const TasksPanel: React.FC = () => {
     }
   };
 
+  // Handle task link verification
+  const handleTaskVerification = async (task: any) => {
+    if (!user || !task.url || verifyingTask) return;
+    
+    setVerifyingTask(task.id);
+    playSound('click');
+    
+    try {
+      // Open the link in new tab
+      const newWindow = window.open(task.url, '_blank');
+      
+      if (newWindow) {
+        toast.success('Link opened! Please complete the action and return here.');
+        
+        // Wait for user to return (simulate verification delay)
+        setTimeout(async () => {
+          try {
+            // Mark task as verified
+            const success = await markTaskAsVerified(user.userId, task.id);
+            
+            if (success) {
+              toast.success('Task verified! You can now claim your reward.');
+              playSound('success');
+            } else {
+              toast.error('Verification failed. Please try again.');
+              playSound('error');
+            }
+          } catch (error) {
+            console.error('Verification error:', error);
+            toast.error('Verification failed. Please try again.');
+            playSound('error');
+          } finally {
+            setVerifyingTask(null);
+          }
+        }, 3000); // 3 second delay for verification
+      } else {
+        toast.error('Please allow popups to open the link.');
+        setVerifyingTask(null);
+      }
+    } catch (error) {
+      console.error('Error opening task link:', error);
+      toast.error('Failed to open link.');
+      setVerifyingTask(null);
+    }
+  };
+
   const handleTaskAction = (task: any) => {
     if (task.url) {
       window.open(task.url, '_blank');
@@ -154,8 +202,11 @@ const TasksPanel: React.FC = () => {
 
   const TaskCard = ({ task, index }: { task: any; index: number }) => {
     const isCompleted = completedTasks.includes(task.id);
+    const isVerified = verifiedTasks.includes(task.id);
     const isCompletingThis = completingTask === task.id;
+    const isVerifyingThis = verifyingTask === task.id;
     const hasUrl = Boolean(task.url);
+    const needsVerification = hasUrl && !isVerified && !isCompleted;
 
     return (
       <motion.div
@@ -233,6 +284,56 @@ const TasksPanel: React.FC = () => {
               <CheckSquare className="w-4 h-4" />
               <span className="text-sm font-medium">Completed</span>
             </motion.div>
+          ) : needsVerification ? (
+            <motion.button
+              onClick={() => handleTaskVerification(task)}
+              disabled={isVerifyingThis}
+              className={cn(
+                "px-4 py-2 rounded-lg font-medium transition-all duration-300 tap-effect flex items-center space-x-2",
+                isVerifyingThis
+                  ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600"
+              )}
+              whileHover={!isVerifyingThis ? { scale: 1.05 } : {}}
+              whileTap={!isVerifyingThis ? { scale: 0.95 } : {}}
+            >
+              {isVerifyingThis ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Verifying...</span>
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Open Link</span>
+                </>
+              )}
+            </motion.button>
+          ) : isVerified ? (
+            <motion.button
+              onClick={(e) => handleCompleteTask(task.id, e)}
+              disabled={isCompletingThis}
+              className={cn(
+                "px-4 py-2 rounded-lg font-medium transition-all duration-300 tap-effect flex items-center space-x-2",
+                isCompletingThis
+                  ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600"
+              )}
+              whileHover={!isCompletingThis ? { scale: 1.05 } : {}}
+              whileTap={!isCompletingThis ? { scale: 0.95 } : {}}
+            >
+              {isCompletingThis ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Claiming...</span>
+                </>
+              ) : (
+                <>
+                  <CheckSquare className="w-4 h-4" />
+                  <span>Claim Reward</span>
+                </>
+              )}
+            </motion.button>
           ) : (
             <motion.button
               onClick={(e) => handleCompleteTask(task.id, e)}
@@ -379,10 +480,11 @@ const TasksPanel: React.FC = () => {
       >
         <h5 className="font-semibold text-blue-400 mb-2">💡 Task Tips</h5>
         <ul className="text-sm text-gray-300 space-y-1">
-          <li>• Click the link icon to visit task URLs</li>
+          <li>• Click "Open Link" to visit task URLs first</li>
+          <li>• Complete the action (subscribe, join, etc.) on the opened page</li>
+          <li>• Return here to see "Claim Reward" button after verification</li>
           <li>• Social tasks offer the highest rewards</li>
           <li>• Daily tasks reset every 24 hours</li>
-          <li>• Complete tasks to earn coins instantly</li>
           <li>• VIP members get bonus rewards on completion</li>
         </ul>
       </motion.div>

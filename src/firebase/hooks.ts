@@ -422,6 +422,73 @@ export const useUserTaskCompletion = (userId: string | null) => {
   return { completedTasks, loading, error };
 };
 
+// User task verification tracking
+export const useUserTaskVerification = (userId: string | null) => {
+  const [verifiedTasks, setVerifiedTasks] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    const verifiedTasksRef = ref(database, `userTasks/${userId}`);
+    
+    const unsubscribe = onValue(verifiedTasksRef, (snapshot: any) => {
+      try {
+        if (snapshot.exists()) {
+          const tasksData = snapshot.val();
+          const verifiedTaskIds = Object.keys(tasksData).filter(taskId => tasksData[taskId].verified);
+          
+          setVerifiedTasks(prevVerified => {
+            const currentIds = prevVerified.sort().join(',');
+            const newIds = verifiedTaskIds.sort().join(',');
+            
+            if (currentIds !== newIds) {
+              console.log('✅ Verified tasks updated:', verifiedTaskIds.length);
+              return verifiedTaskIds;
+            }
+            return prevVerified;
+          });
+        } else {
+          setVerifiedTasks([]);
+        }
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    }, (err: any) => {
+      setError(err.message);
+      setLoading(false);
+    });
+
+    return () => off(verifiedTasksRef, 'value', unsubscribe);
+  }, [userId]);
+
+  return { verifiedTasks, loading, error };
+};
+
+// Mark task as verified (link opened)
+export const markTaskAsVerified = async (userId: string, taskId: string): Promise<boolean> => {
+  try {
+    const taskRef = ref(database, `userTasks/${userId}/${taskId}`);
+    await update(taskRef, {
+      verified: true,
+      verifiedAt: Date.now()
+    });
+    
+    console.log('✅ Task marked as verified:', taskId);
+    return true;
+  } catch (error) {
+    console.error('❌ Error marking task as verified:', error);
+    return false;
+  }
+};
+
 // Function to complete task
 export const completeUserTask = async (userId: string, taskId: string, reward: number): Promise<boolean> => {
   try {
