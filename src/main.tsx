@@ -5,11 +5,11 @@ import './index.css'
 // Import Telegram types
 import './utils/telegramPayments'
 
-// Initialize app only after Telegram WebApp is ready
-const initializeApp = () => {
-  console.log('🚀 Telegram WebApp detected, initializing…');
+// Simple initialization - let App.tsx handle the step-by-step process
+const initializeReactApp = () => {
+  console.log('🚀 Starting React application...');
   
-  // Hide loading screen
+  // Hide HTML loading screen
   if (typeof window !== 'undefined' && (window as any).hideLoadingScreen) {
     (window as any).hideLoadingScreen();
   }
@@ -20,19 +20,20 @@ const initializeApp = () => {
     </React.StrictMode>,
   );
   
-  console.log('🎉 App loaded successfully inside Telegram Mini App.');
+  console.log('⚛️ React app mounted - App.tsx will handle step-by-step initialization');
 };
 
-// Check if Telegram WebApp is available and ready
+// Initialize React app immediately - let App.tsx handle Telegram WebApp initialization
 if (typeof window !== 'undefined') {
+  // Wait for Telegram WebApp ready if available, otherwise start immediately
   if (window.Telegram?.WebApp) {
-    // Telegram WebApp is available, wait for ready
+    console.log('📱 Telegram WebApp detected, waiting for ready state...');
     window.Telegram.WebApp.ready(() => {
-      initializeApp();
+      console.log('✅ Telegram WebApp is ready');
+      initializeReactApp();
     });
   } else {
-    // Fallback for web browsers (no Telegram)
-    console.log('🌐 Running in web browser mode, initializing immediately');
-    initializeApp();
+    console.log('🌐 Web browser mode detected, starting immediately');
+    initializeReactApp();
   }
 }

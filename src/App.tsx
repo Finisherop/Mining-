@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import TabbedAdminPanel from './components/TabbedAdminPanel';
 import SuperAdminPanel from './components/SuperAdminPanel';
 import NetworkStatus from './components/NetworkStatus';
+import StepByStepLoader from './components/StepByStepLoader';
 import { useFirebaseUser, createOrUpdateUser } from './firebase/hooks';
 import { User } from './types/firebase';
 import { getTelegramWebAppData, getTelegramUserPhoto } from './services/telegram';
@@ -15,360 +16,286 @@ import { isTelegramUser } from './utils/telegram';
 import { getNetworkStatus, shouldShowSlowNetworkWarning, getNetworkRecommendations } from './utils/networkUtils';
 import { motion } from 'framer-motion';
 
+// App initialization states
+type AppState = 'initializing' | 'ready' | 'error';
+
 function App() {
+  const [appState, setAppState] = useState<AppState>('initializing');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [initializationState, setInitializationState] = useState<{
-    telegram: boolean;
-    firebase: boolean;
-    retryCount: number;
-    lastRetry: number;
-    showSlowNetworkWarning: boolean;
-  }>({ telegram: false, firebase: false, retryCount: 0, lastRetry: 0, showSlowNetworkWarning: false });
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  // Get Telegram user data
-  const telegramData = getTelegramWebAppData();
-  const telegramUser = telegramData?.user;
-  const userId = telegramUser?.id.toString() || null;
+  // These will be set after step-by-step initialization
+  const [telegramData, setTelegramData] = useState<any>(null);
+  const [telegramUser, setTelegramUser] = useState<any>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Firebase hooks
+  // Firebase hooks - only initialize after step-by-step process
   const { user: firebaseUser, loading: firebaseLoading } = useFirebaseUser(userId);
 
-  // Listen for Firebase timeout event
-  useEffect(() => {
-    const handleFirebaseTimeout = () => {
-      console.log('🔥 Firebase timeout detected, continuing with limited functionality');
-      setInitializationState(prev => ({
-        ...prev,
-        firebase: true,
-        showSlowNetworkWarning: true
-      }));
-      
-      toast.error('Database connection slow. Some features may be limited.', {
-        duration: 5000,
-        id: 'firebase-timeout'
-      });
-    };
-
-    window.addEventListener('firebaseTimeout', handleFirebaseTimeout);
+  // Handle initialization completion
+  const handleInitializationComplete = async () => {
+    console.log('🎉 Step-by-step initialization completed, processing user data...');
     
-    return () => {
-      window.removeEventListener('firebaseTimeout', handleFirebaseTimeout);
-    };
-  }, []);
+    try {
+      // Get Telegram data after initialization
+      const telegramDataResult = getTelegramWebAppData();
+      const telegramUserResult = telegramDataResult?.user;
+      const userIdResult = telegramUserResult?.id.toString() || null;
+      
+      setTelegramData(telegramDataResult);
+      setTelegramUser(telegramUserResult);
+      setUserId(userIdResult);
+      
+      console.log('📱 Telegram data processed:', { telegramUserResult, userIdResult });
+      
+      // Process user type and admin access
+      await processUserAccess(telegramDataResult, telegramUserResult);
+      
+    } catch (error) {
+      console.error('❌ Error processing user data after initialization:', error);
+      setErrorMessage('Failed to process user data');
+      setAppState('error');
+    }
+  };
 
-  // Initialize app with proper Telegram and Firebase checks
-  useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        // Check Telegram WebApp availability
-        const telegramAvailable = window.Telegram?.WebApp !== undefined;
-        console.log(telegramAvailable ? '🚀 Telegram WebApp detected, initializing…' : '🌐 Web browser mode detected');
-        
-        // Check Firebase connection with timeout
-        const firebaseConnected = (window as any).firebaseConnected === true;
-        const firebaseTimeout = Date.now() - (window as any).firebaseInitTime > 10000; // 10 second timeout
-        
-        console.log(firebaseConnected ? '🔥 Firebase connected successfully.' : '⏳ Waiting for Firebase connection...');
-        
-        // If Firebase is taking too long, continue without it
-        if (!firebaseConnected && firebaseTimeout) {
-          console.log('⚠️ Firebase connection timeout, continuing with offline mode');
-          (window as any).firebaseConnected = 'timeout';
-        }
-        
-        setInitializationState(prev => ({
-          ...prev,
-          telegram: telegramAvailable,
-          firebase: firebaseConnected || firebaseTimeout
-        }));
-        
-        console.log('🚀 Initializing app...');
-        console.log('📱 Telegram data:', telegramData);
-        console.log('👤 Telegram user:', telegramUser);
-        console.log('🆔 User ID:', userId);
-        
-        // Handle access from other devices (non-Telegram)
-        const urlParams = new URLSearchParams(window.location.search);
-        const forceUserMode = urlParams.get('user') === 'true';
-        
-        // Admin access: URL param OR specific Telegram IDs
-        const adminUserIds = [987654321]; // Updated with actual admin IDs
-        const isAdminMode = !forceUserMode && (
-          urlParams.get('admin') === 'true' || 
-          urlParams.get('superadmin') === 'true' ||
-          (telegramUser && adminUserIds.includes(telegramUser.id))
-        );
-        
-        // Check if accessing from external device (no Telegram data)
-        const isExternalDevice = !telegramUser && !telegramData;
-        const demoUserId = urlParams.get('demo') || 'demo-user-001';
-        
-        console.log('⚙️ Force user mode:', forceUserMode);
-        console.log('👑 Is admin mode:', isAdminMode);
-        console.log('📱 Is external device:', isExternalDevice);
-        
-        if (isAdminMode) {
-          console.log('🔧 Setting admin mode');
-          setIsAdmin(true);
-          
-          // Create admin user for SuperAdmin panel
-          const adminUser: User = {
-            id: 'admin-user',
-            userId: telegramUser?.id.toString() || 'admin-demo',
-            username: telegramUser?.username || 'admin',
-            firstName: telegramUser?.first_name || 'Super',
-            lastName: telegramUser?.last_name || 'Admin',
-            coins: 999999,
-            stars: 999999,
-            tier: 'diamond',
-            vipType: 'diamond',
-            vipExpiry: Date.now() + (365 * 24 * 60 * 60 * 1000), // 1 year
-            dailyWithdrawals: 0,
-            referralCode: 'ADMIN001',
-            totalReferrals: 0,
-            farmingRate: 100,
-            claimStreak: 0,
-            claimedDays: [],
-            badges: [],
-            createdAt: Date.now(),
-            lastActive: Date.now(),
-            totalEarnings: 0,
-            isVIP: true,
-            banned: false,
-            earningMultiplier: 10,
-            boosts: 0,
-            referralCount: 0,
-            vip_tier: 'diamond',
-            vip_expiry: Date.now() + (365 * 24 * 60 * 60 * 1000),
-            multiplier: 10,
-            withdraw_limit: 999999,
-            referral_boost: 10
-          };
-          
-          setCurrentUser(adminUser);
-          setLoading(false);
-          return;
-        }
+  // Handle initialization error
+  const handleInitializationError = (error: string) => {
+    console.error('❌ Initialization failed:', error);
+    setErrorMessage(error);
+    setAppState('error');
+  };
 
-        // Handle external device access with demo user
-        if (isExternalDevice) {
-          console.log('🌐 External device detected - creating demo user');
-          const demoUser: User = {
-            id: demoUserId,
-            userId: demoUserId,
-            username: `demo_${demoUserId}`,
-            firstName: 'Demo',
-            lastName: 'User',
-            coins: 1000,
-            stars: 50,
-            tier: 'free',
-            vipType: 'free',
-            vipExpiry: null,
-            dailyWithdrawals: 0,
-            referralCode: `DEMO${Date.now().toString().slice(-4)}`,
-            totalReferrals: 0,
-            farmingRate: 10,
-            claimStreak: 0,
-            claimedDays: [],
-            badges: [],
-            createdAt: Date.now(),
-            lastActive: Date.now(),
-            totalEarnings: 0,
-            isVIP: false,
-            banned: false,
-            earningMultiplier: 1,
-            boosts: 0,
-            referralCount: 0,
-            vip_tier: 'free',
-            vip_expiry: null,
-            multiplier: 1,
-            withdraw_limit: 1000,
-            referral_boost: 1
-          };
-          
-          setCurrentUser(demoUser);
-          saveUserToStorage(demoUser);
-          setLoading(false);
-          return;
-        }
-
-        // Handle Telegram user (existing or new)
-        if (telegramUser) {
-          console.log('👤 Processing Telegram user...');
-          
-          let finalUser: User;
-          
-          if (firebaseUser) {
-            console.log('📝 Updating existing user profile...');
-            // Get user photo
-            const photoUrl = await getTelegramUserPhoto(telegramUser.id);
-            
-            // Update existing user with latest Telegram data
-            finalUser = {
-              ...firebaseUser,
-              firstName: telegramUser.first_name || firebaseUser.firstName || 'User',
-              lastName: telegramUser.last_name || firebaseUser.lastName || '',
-              username: telegramUser.username || firebaseUser.username || `user_${telegramUser.id}`,
-              photo_url: photoUrl || firebaseUser.photo_url,
-              lastActive: Date.now()
-            };
-          } else {
-            console.log('🆕 Creating new user profile...');
-            // Get user photo for new user
-            const photoUrl = await getTelegramUserPhoto(telegramUser.id);
-            
-            // Create completely new user
-            finalUser = {
-              id: telegramUser.id.toString(),
-              userId: telegramUser.id.toString(),
-              username: telegramUser.username || `user_${telegramUser.id}`,
-              firstName: telegramUser.first_name || 'User',
-              lastName: telegramUser.last_name || '',
-              coins: 1000, // Starting coins
-              stars: 10,   // Starting stars
-              tier: 'free',
-              vipType: 'free',
-              vipExpiry: null,
-              dailyWithdrawals: 0,
-              referralCode: `REF${telegramUser.id.toString().slice(-6)}`,
-              totalReferrals: 0,
-              farmingRate: 10,
-              claimStreak: 0,
-              claimedDays: [],
-              badges: [],
-              createdAt: Date.now(),
-              lastActive: Date.now(),
-              totalEarnings: 0,
-              isVIP: false,
-              banned: false,
-              earningMultiplier: 1,
-              boosts: 0,
-              referralCount: 0,
-              vip_tier: 'free',
-              vip_expiry: null,
-              multiplier: 1,
-              withdraw_limit: 1000,
-              referral_boost: 1,
-              photo_url: photoUrl || undefined
-            };
-          }
-
-          // Save/update in Firebase
-          await createOrUpdateUser(telegramUser.id.toString(), finalUser);
-          setCurrentUser(finalUser);
-          saveUserToStorage(finalUser);
-          
-          console.log('✅ User processed successfully:', finalUser.firstName);
-        } else if (firebaseUser && !telegramUser) {
-          // Handle case where Firebase user exists but no Telegram data
-          console.log('📱 Using existing Firebase user without Telegram');
-          setCurrentUser(firebaseUser);
-          saveUserToStorage(firebaseUser);
-        } else if (!telegramUser && !firebaseUser && !isExternalDevice) {
-          // Create fallback demo user for web access
-          console.log('🌐 Creating fallback demo user for web access');
-          const fallbackUser: User = {
-            id: 'web-demo-user',
-            userId: 'web-demo-user',
-            username: 'WebUser',
-            firstName: 'Web',
-            lastName: 'User',
-            coins: 500,
-            stars: 25,
-            tier: 'free',
-            vipType: 'free',
-            vipExpiry: null,
-            dailyWithdrawals: 0,
-            referralCode: 'WEBDEMO',
-            totalReferrals: 0,
-            farmingRate: 10,
-            claimStreak: 0,
-            claimedDays: [],
-            badges: [],
-            createdAt: Date.now(),
-            lastActive: Date.now(),
-            totalEarnings: 0,
-            isVIP: false,
-            banned: false,
-            earningMultiplier: 1,
-            boosts: 0,
-            referralCount: 0,
-            vip_tier: 'free',
-            vip_expiry: null,
-            multiplier: 1,
-            withdraw_limit: 1000,
-            referral_boost: 1
-          };
-          
-          setCurrentUser(fallbackUser);
-          saveUserToStorage(fallbackUser);
-        }
-      } catch (error) {
-        console.error('Error initializing app:', error);
-        
-        // Auto-retry on error with improved logic
-        const now = Date.now();
-        if (initializationState.retryCount < 3 && now - initializationState.lastRetry > 5000) {
-          console.log('🔄 Initialization retry due to connection issues.');
-          
-          // Show toast notification for retry
-          toast.loading(`Retrying connection... (${initializationState.retryCount + 1}/3)`, {
-            id: 'retry-toast',
-            duration: 3000
-          });
-          
-          setInitializationState(prev => ({
-            ...prev,
-            retryCount: prev.retryCount + 1,
-            lastRetry: now
-          }));
-          
-          // Retry after 5 seconds
-          setTimeout(() => {
-            if (!firebaseLoading) {
-              initializeApp();
-            }
-          }, 5000);
-        } else if (initializationState.retryCount >= 3 && !initializationState.showSlowNetworkWarning) {
-          // Show slow network warning after 3 failed attempts
-          console.log('⚠️ Multiple connection attempts failed, showing slow network warning');
-          setInitializationState(prev => ({
-            ...prev,
-            showSlowNetworkWarning: true
-          }));
-          
-          toast.error('Connection issues detected. You can continue with limited functionality.', {
-            id: 'slow-network-toast',
-            duration: 5000
-          });
-        }
-      } finally {
-        // Only set loading to false if both Telegram and Firebase are ready or max retries reached
-        if ((initializationState.telegram || !window.Telegram?.WebApp) && 
-            (initializationState.firebase || initializationState.retryCount >= 3)) {
-          setLoading(false);
-        }
+  // Process user access and create user profiles
+  const processUserAccess = async (telegramDataResult: any, telegramUserResult: any) => {
+    try {
+      // Handle access from other devices (non-Telegram)
+      const urlParams = new URLSearchParams(window.location.search);
+      const forceUserMode = urlParams.get('user') === 'true';
+      
+      // Admin access: URL param OR specific Telegram IDs
+      const adminUserIds = [987654321]; // Updated with actual admin IDs
+      const isAdminMode = !forceUserMode && (
+        urlParams.get('admin') === 'true' || 
+        urlParams.get('superadmin') === 'true' ||
+        (telegramUserResult && adminUserIds.includes(telegramUserResult.id))
+      );
+      
+      // Check if accessing from external device (no Telegram data)
+      const isExternalDevice = !telegramUserResult && !telegramDataResult;
+      const demoUserId = urlParams.get('demo') || 'demo-user-001';
+      
+      console.log('⚙️ Access mode analysis:', { forceUserMode, isAdminMode, isExternalDevice });
+      
+      if (isAdminMode) {
+        await createAdminUser(telegramUserResult);
+      } else if (isExternalDevice) {
+        await createDemoUser(demoUserId);
+      } else {
+        // Will be handled by Firebase hooks when userId is set
+        console.log('👤 Regular user mode - waiting for Firebase user data...');
       }
+      
+      setAppState('ready');
+      
+    } catch (error) {
+      console.error('❌ Error processing user access:', error);
+      throw error;
+    }
+  };
+
+  // Create admin user
+  const createAdminUser = async (telegramUserResult: any) => {
+    console.log('🔧 Creating admin user...');
+    setIsAdmin(true);
+    
+    const adminUser: User = {
+      id: 'admin-user',
+      userId: telegramUserResult?.id.toString() || 'admin-demo',
+      username: telegramUserResult?.username || 'admin',
+      firstName: telegramUserResult?.first_name || 'Super',
+      lastName: telegramUserResult?.last_name || 'Admin',
+      coins: 999999,
+      stars: 999999,
+      tier: 'diamond',
+      vipType: 'diamond',
+      vipExpiry: Date.now() + (365 * 24 * 60 * 60 * 1000),
+      dailyWithdrawals: 0,
+      referralCode: 'ADMIN001',
+      totalReferrals: 0,
+      farmingRate: 100,
+      claimStreak: 0,
+      claimedDays: [],
+      badges: [],
+      createdAt: Date.now(),
+      lastActive: Date.now(),
+      totalEarnings: 0,
+      isVIP: true,
+      banned: false,
+      earningMultiplier: 10,
+      boosts: 0,
+      referralCount: 0,
+      vip_tier: 'diamond',
+      vip_expiry: Date.now() + (365 * 24 * 60 * 60 * 1000),
+      multiplier: 10,
+      withdraw_limit: 999999,
+      referral_boost: 10
     };
+    
+    setCurrentUser(adminUser);
+    console.log('✅ Admin user created');
+  };
 
-    if (!firebaseLoading) {
-      initializeApp();
-    }
-  }, [telegramUser, userId, firebaseUser, firebaseLoading, initializationState.retryCount]);
+  // Create demo user
+  const createDemoUser = async (demoUserId: string) => {
+    console.log('🌐 Creating demo user...');
+    
+    const demoUser: User = {
+      id: demoUserId,
+      userId: demoUserId,
+      username: `demo_${demoUserId}`,
+      firstName: 'Demo',
+      lastName: 'User',
+      coins: 1000,
+      stars: 50,
+      tier: 'free',
+      vipType: 'free',
+      vipExpiry: null,
+      dailyWithdrawals: 0,
+      referralCode: `DEMO${Date.now().toString().slice(-4)}`,
+      totalReferrals: 0,
+      farmingRate: 10,
+      claimStreak: 0,
+      claimedDays: [],
+      badges: [],
+      createdAt: Date.now(),
+      lastActive: Date.now(),
+      totalEarnings: 0,
+      isVIP: false,
+      banned: false,
+      earningMultiplier: 1,
+      boosts: 0,
+      referralCount: 0,
+      vip_tier: 'free',
+      vip_expiry: null,
+      multiplier: 1,
+      withdraw_limit: 1000,
+      referral_boost: 1
+    };
+    
+    setCurrentUser(demoUser);
+    saveUserToStorage(demoUser);
+    console.log('✅ Demo user created');
+  };
 
-  // Update current user when Firebase user changes
+  // Handle Firebase user changes (for regular Telegram users)
   useEffect(() => {
-    if (firebaseUser && !isAdmin) {
-      setCurrentUser(firebaseUser);
-      saveUserToStorage(firebaseUser);
+    if (firebaseUser && !isAdmin && appState === 'ready' && userId) {
+      console.log('👤 Processing Firebase user data...');
+      handleFirebaseUser(firebaseUser);
     }
-  }, [firebaseUser, isAdmin]);
+  }, [firebaseUser, isAdmin, appState, userId]);
+
+  // Handle Firebase user processing
+  const handleFirebaseUser = async (user: User) => {
+    try {
+      let finalUser: User;
+      
+      if (telegramUser) {
+        console.log('📝 Updating existing user with Telegram data...');
+        // Get user photo
+        const photoUrl = await getTelegramUserPhoto(telegramUser.id);
+        
+        // Update existing user with latest Telegram data
+        finalUser = {
+          ...user,
+          firstName: telegramUser.first_name || user.firstName || 'User',
+          lastName: telegramUser.last_name || user.lastName || '',
+          username: telegramUser.username || user.username || `user_${telegramUser.id}`,
+          photo_url: photoUrl || user.photo_url,
+          lastActive: Date.now()
+        };
+        
+        // Save/update in Firebase
+        await createOrUpdateUser(telegramUser.id.toString(), finalUser);
+      } else {
+        finalUser = user;
+      }
+      
+      setCurrentUser(finalUser);
+      saveUserToStorage(finalUser);
+      
+      console.log('✅ Firebase user processed successfully:', finalUser.firstName);
+    } catch (error) {
+      console.error('❌ Error processing Firebase user:', error);
+    }
+  };
+
+  // Create new Telegram user if no Firebase user exists
+  useEffect(() => {
+    if (!firebaseUser && !firebaseLoading && telegramUser && appState === 'ready' && !isAdmin) {
+      console.log('🆕 Creating new Telegram user...');
+      createNewTelegramUser();
+    }
+  }, [firebaseUser, firebaseLoading, telegramUser, appState, isAdmin]);
+
+  // Create new Telegram user
+  const createNewTelegramUser = async () => {
+    try {
+      console.log('🆕 Creating new user profile...');
+      // Get user photo for new user
+      const photoUrl = await getTelegramUserPhoto(telegramUser.id);
+      
+      // Create completely new user
+      const newUser: User = {
+        id: telegramUser.id.toString(),
+        userId: telegramUser.id.toString(),
+        username: telegramUser.username || `user_${telegramUser.id}`,
+        firstName: telegramUser.first_name || 'User',
+        lastName: telegramUser.last_name || '',
+        coins: 1000, // Starting coins
+        stars: 10,   // Starting stars
+        tier: 'free',
+        vipType: 'free',
+        vipExpiry: null,
+        dailyWithdrawals: 0,
+        referralCode: `REF${telegramUser.id.toString().slice(-6)}`,
+        totalReferrals: 0,
+        farmingRate: 10,
+        claimStreak: 0,
+        claimedDays: [],
+        badges: [],
+        createdAt: Date.now(),
+        lastActive: Date.now(),
+        totalEarnings: 0,
+        isVIP: false,
+        banned: false,
+        earningMultiplier: 1,
+        boosts: 0,
+        referralCount: 0,
+        vip_tier: 'free',
+        vip_expiry: null,
+        multiplier: 1,
+        withdraw_limit: 1000,
+        referral_boost: 1,
+        photo_url: photoUrl || undefined
+      };
+
+      // Save in Firebase
+      await createOrUpdateUser(telegramUser.id.toString(), newUser);
+      setCurrentUser(newUser);
+      saveUserToStorage(newUser);
+      
+      console.log('✅ New user created successfully:', newUser.firstName);
+    } catch (error) {
+      console.error('❌ Error creating new user:', error);
+    }
+  };
 
   // Sync user data with store on app load
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && appState === 'ready') {
       // Import store dynamically to avoid circular dependency
       import('./store').then(({ useAppStore }) => {
         const { setUser } = useAppStore.getState();
@@ -376,12 +303,38 @@ function App() {
         console.log('✅ User data synced with store');
       });
     }
-  }, [currentUser]);
+  }, [currentUser, appState]);
 
-  // Enhanced loading state with retry options
-  if (loading || (isTelegramUser() && firebaseLoading)) {
-    const showRetryOption = initializationState.showSlowNetworkWarning || (initializationState.retryCount >= 2 && Date.now() - initializationState.lastRetry > 10000);
-    
+  // Load additional data after UI is rendered (Step 6)
+  useEffect(() => {
+    if (appState === 'ready' && currentUser && !dataLoaded) {
+      // Delay data loading to ensure UI is rendered first
+      setTimeout(() => {
+        console.log('📊 Loading additional data after UI render...');
+        setDataLoaded(true);
+        
+        // Trigger data loading in components
+        window.dispatchEvent(new CustomEvent('startDataLoading'));
+        
+        toast.success('Welcome! All features are now available.', {
+          duration: 3000,
+          id: 'welcome-toast'
+        });
+      }, 1000);
+    }
+  }, [appState, currentUser, dataLoaded]);
+
+  // Render based on app state
+  if (appState === 'initializing') {
+    return (
+      <StepByStepLoader
+        onComplete={handleInitializationComplete}
+        onError={handleInitializationError}
+      />
+    );
+  }
+
+  if (appState === 'error') {
     return (
       <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
         <motion.div
@@ -389,138 +342,71 @@ function App() {
           animate={{ opacity: 1, scale: 1 }}
           className="glass-panel p-8 text-center max-w-md mx-4"
         >
-          {!showRetryOption ? (
-            <>
-              <div className="w-12 h-12 border-4 border-primary-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-white mb-2">Loading...</h2>
-              <p className="text-gray-400 mb-4">
-                {isAdmin ? 'Initializing admin panel' : 'Setting up your dashboard'}
-              </p>
-              
-              {/* Initialization status */}
-              <div className="space-y-2 text-sm">
-                <div className={`flex items-center justify-between p-2 rounded ${initializationState.telegram ? 'bg-green-900/30' : 'bg-yellow-900/30'}`}>
-                  <span>Telegram WebApp</span>
-                  <span className={initializationState.telegram ? 'text-green-400' : 'text-yellow-400'}>
-                    {initializationState.telegram ? '✓' : '⏳'}
-                  </span>
-                </div>
-                <div className={`flex items-center justify-between p-2 rounded ${initializationState.firebase ? 'bg-green-900/30' : 'bg-yellow-900/30'}`}>
-                  <span>Firebase Connection</span>
-                  <span className={initializationState.firebase ? 'text-green-400' : 'text-yellow-400'}>
-                    {initializationState.firebase ? '✓' : '⏳'}
-                  </span>
-                </div>
-              </div>
-              
-              {initializationState.retryCount > 0 && (
-                <p className="text-xs text-gray-500 mt-4">
-                  Retry attempt {initializationState.retryCount}/3
-                </p>
-              )}
-              
-              {initializationState.showSlowNetworkWarning && (
-                <div className="mt-4 p-3 bg-yellow-900/30 border border-yellow-600/30 rounded-lg">
-                  <p className="text-xs text-yellow-400">
-                    ⚠️ Slow connection detected. The app may take longer to load all features.
-                  </p>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div className="text-6xl mb-4">🔄</div>
-              <h2 className="text-xl font-bold text-white mb-2">Slow Network Detected</h2>
-              <p className="text-gray-400 mb-4">
-                The app is taking longer than usual to load. This might be due to a slow network connection.
-              </p>
-              
-              {(() => {
-                const networkStatus = getNetworkStatus();
-                const recommendations = getNetworkRecommendations(networkStatus);
-                
-                return (
-                  <div className="mb-6">
-                    <div className="bg-gray-800/50 p-3 rounded-lg mb-4">
-                      <h4 className="text-sm font-medium text-white mb-2">Network Diagnostics:</h4>
-                      <div className="text-xs text-gray-400 space-y-1">
-                        <div>Status: {networkStatus.isOnline ? 'Online' : 'Offline'}</div>
-                        <div>Quality: {networkStatus.quality}</div>
-                        <div>Speed: {networkStatus.downlink > 0 ? `${networkStatus.downlink}Mbps` : 'Unknown'}</div>
-                        <div>Type: {networkStatus.effectiveType.toUpperCase()}</div>
-                      </div>
-                    </div>
-                    
-                    {recommendations.length > 0 && (
-                      <div className="bg-blue-900/30 p-3 rounded-lg">
-                        <h4 className="text-sm font-medium text-blue-400 mb-2">Suggestions:</h4>
-                        <ul className="text-xs text-blue-300 space-y-1">
-                          {recommendations.map((rec, index) => (
-                            <li key={index}>• {rec}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-              
-              <div className="space-y-3">
-                <button
-                  onClick={() => {
-                    setInitializationState({ telegram: false, firebase: false, retryCount: 0, lastRetry: 0, showSlowNetworkWarning: false });
-                    setLoading(true);
-                    window.location.reload();
-                  }}
-                  className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-colors font-medium"
-                >
-                  🔄 Retry Loading
-                </button>
-                
-                <button
-                  onClick={() => {
-                    console.log('🚀 User chose to continue with limited functionality');
-                    setLoading(false);
-                    toast.success('Loading app with available features...', { duration: 3000 });
-                  }}
-                  className="w-full px-4 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                >
-                  ⚡ Continue with Limited Features
-                </button>
-                
-                <button
-                  onClick={() => {
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    window.location.reload();
-                  }}
-                  className="w-full px-4 py-3 bg-red-700 text-white rounded-lg hover:bg-red-600 transition-colors mt-2"
-                >
-                  🗑️ Clear Cache & Reload
-                </button>
-              </div>
-              
-              <p className="text-xs text-gray-500 mt-4">
-                If issues persist, try clearing your browser cache
-              </p>
-            </>
-          )}
+          <div className="text-6xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold text-white mb-2">Initialization Failed</h2>
+          <p className="text-gray-400 mb-6">
+            {errorMessage || 'An error occurred during app initialization.'}
+          </p>
+          
+          <div className="space-y-3">
+            <button
+              onClick={() => {
+                setAppState('initializing');
+                setErrorMessage('');
+                window.location.reload();
+              }}
+              className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-colors font-medium"
+            >
+              🔄 Retry Initialization
+            </button>
+            
+            <button
+              onClick={() => {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.reload();
+              }}
+              className="w-full px-4 py-3 bg-red-700 text-white rounded-lg hover:bg-red-600 transition-colors"
+            >
+              🗑️ Clear Cache & Reload
+            </button>
+          </div>
         </motion.div>
       </div>
     );
   }
 
+  // Show loading while waiting for user data (for regular users)
+  if (appState === 'ready' && !currentUser && !isAdmin && userId && firebaseLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass-panel p-8 text-center max-w-md mx-4"
+        >
+          <div className="w-12 h-12 border-4 border-primary-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">Loading User Profile</h2>
+          <p className="text-gray-400 mb-4">
+            Retrieving your profile data...
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Main app render (after successful initialization)
   return (
     <div className="App">
       {/* Network status indicator for device connectivity */}
       <NetworkStatus />
       
+      {/* Render appropriate panel based on user type */}
       {isAdmin ? (
         (() => {
           const urlParams = new URLSearchParams(window.location.search);
           const isSuperAdmin = urlParams.get('superadmin') === 'true';
           
-          // Debug logs
           console.log('🔍 Admin panel render:', { isAdmin, isSuperAdmin, currentUser: !!currentUser });
           
           if (isSuperAdmin && currentUser) {
@@ -534,6 +420,7 @@ function App() {
       ) : currentUser ? (
         <Layout />
       ) : (
+        // Fallback for cases where no user is available
         <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -585,6 +472,7 @@ function App() {
         </div>
       )}
       
+      {/* Toast notifications */}
       <Toaster
         position="top-center"
         toastOptions={{

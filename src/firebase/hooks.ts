@@ -175,13 +175,37 @@ export const purchaseVIP = async (userId: string, starCost: number = 100): Promi
   }
 };
 
-// Custom hook for Firebase tasks
+// Custom hook for Firebase tasks with delayed loading
 export const useFirebaseTasks = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [dataLoadingEnabled, setDataLoadingEnabled] = useState(false);
+
+  // Listen for data loading event
+  useEffect(() => {
+    const handleStartDataLoading = () => {
+      console.log('📊 Tasks data loading enabled');
+      setDataLoadingEnabled(true);
+    };
+
+    window.addEventListener('startDataLoading', handleStartDataLoading);
+    
+    // Also enable immediately if already ready
+    if ((window as any).dataFetchReady) {
+      setDataLoadingEnabled(true);
+    }
+
+    return () => {
+      window.removeEventListener('startDataLoading', handleStartDataLoading);
+    };
+  }, []);
 
   useEffect(() => {
+    if (!dataLoadingEnabled) {
+      return;
+    }
+
     const tasksRef = ref(database, 'tasks');
     
     const unsubscribe = onValue(tasksRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
@@ -219,7 +243,7 @@ export const useFirebaseTasks = () => {
     });
 
     return () => off(tasksRef, 'value', unsubscribe);
-  }, []);
+  }, [dataLoadingEnabled]);
 
   return { tasks, loading, error };
 };
