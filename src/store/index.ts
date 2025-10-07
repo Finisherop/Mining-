@@ -294,14 +294,38 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   stopFarming: async () => {
     const { farmingSession, user } = get();
-    if (!farmingSession || !user) return;
+    if (!farmingSession?.active || !user) {
+      console.log('❌ Cannot stop farming: No active session or user');
+      return;
+    }
     
     const endTime = Date.now();
     const duration = (endTime - farmingSession.startTime) / 1000 / 60; // minutes
-    const earned = Math.floor(duration * farmingSession.baseRate * farmingSession.multiplier);
     
-    const updatedUser = { ...user, coins: user.coins + earned, totalEarnings: user.totalEarnings + earned };
-    const completedSession = { ...farmingSession, endTime, totalEarned: earned, active: false };
+    // Use current totalEarned from session instead of recalculating
+    const finalEarned = farmingSession.totalEarned || Math.floor(duration * farmingSession.baseRate * farmingSession.multiplier);
+    
+    console.log('🏁 Stopping farming session:', {
+      duration: duration.toFixed(2),
+      earned: finalEarned,
+      baseRate: farmingSession.baseRate,
+      multiplier: farmingSession.multiplier
+    });
+    
+    // Update user coins with the earned amount
+    const updatedUser = { 
+      ...user, 
+      coins: user.coins + finalEarned, 
+      totalEarnings: user.totalEarnings + finalEarned,
+      lastActive: Date.now()
+    };
+    
+    const completedSession = { 
+      ...farmingSession, 
+      endTime, 
+      totalEarned: finalEarned, 
+      active: false 
+    };
     
     set({
       farmingSession: completedSession,
@@ -311,10 +335,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Clear farming session from storage
     clearFarmingSession();
     
+    console.log('✅ Farming stopped. Coins earned:', finalEarned);
+    console.log('💰 Updated user coins:', updatedUser.coins);
+    
     // Save to Firebase
     try {
       await createOrUpdateUser(user.userId, updatedUser);
-      console.log('💰 Farming earnings saved to Firebase:', earned);
+      console.log('💰 Farming earnings saved to Firebase:', finalEarned);
     } catch (error) {
       console.error('❌ Error saving farming earnings:', error);
     }

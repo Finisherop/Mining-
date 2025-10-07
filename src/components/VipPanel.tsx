@@ -2,10 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Crown, Star, TrendingUp, Users, CreditCard, Gift, Zap } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
+import { useSystemSettings } from '../firebase/adminControlsHooks';
 import { cn } from '../utils';
 
 const VipPanel: React.FC = () => {
   const { user } = useAppStore();
+  const { settings } = useSystemSettings(); // Get admin settings for VIP pricing
 
   if (!user) return null;
 

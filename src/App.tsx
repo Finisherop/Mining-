@@ -138,49 +138,94 @@ function App() {
           return;
         }
 
-        // Handle Telegram user
-        if (telegramUser && firebaseUser) {
-          console.log('👤 Telegram user found, updating profile...');
+        // Handle Telegram user (existing or new)
+        if (telegramUser) {
+          console.log('👤 Processing Telegram user...');
           
-          // Get user photo
-          const photoUrl = await getTelegramUserPhoto(telegramUser.id);
+          let finalUser: User;
           
-          // Update user with Telegram data
-          const updatedUser = {
-            ...firebaseUser,
-            firstName: telegramUser.first_name || firebaseUser.firstName || 'User',
-            lastName: telegramUser.last_name || firebaseUser.lastName || '',
-            username: telegramUser.username || firebaseUser.username || `user_${telegramUser.id}`,
-            photo_url: photoUrl || firebaseUser.photo_url,
-            lastActive: Date.now()
-          };
+          if (firebaseUser) {
+            console.log('📝 Updating existing user profile...');
+            // Get user photo
+            const photoUrl = await getTelegramUserPhoto(telegramUser.id);
+            
+            // Update existing user with latest Telegram data
+            finalUser = {
+              ...firebaseUser,
+              firstName: telegramUser.first_name || firebaseUser.firstName || 'User',
+              lastName: telegramUser.last_name || firebaseUser.lastName || '',
+              username: telegramUser.username || firebaseUser.username || `user_${telegramUser.id}`,
+              photo_url: photoUrl || firebaseUser.photo_url,
+              lastActive: Date.now()
+            };
+          } else {
+            console.log('🆕 Creating new user profile...');
+            // Get user photo for new user
+            const photoUrl = await getTelegramUserPhoto(telegramUser.id);
+            
+            // Create completely new user
+            finalUser = {
+              id: telegramUser.id.toString(),
+              userId: telegramUser.id.toString(),
+              username: telegramUser.username || `user_${telegramUser.id}`,
+              firstName: telegramUser.first_name || 'User',
+              lastName: telegramUser.last_name || '',
+              coins: 1000, // Starting coins
+              stars: 10,   // Starting stars
+              tier: 'free',
+              vipType: 'free',
+              vipExpiry: null,
+              dailyWithdrawals: 0,
+              referralCode: `REF${telegramUser.id.toString().slice(-6)}`,
+              totalReferrals: 0,
+              farmingRate: 10,
+              claimStreak: 0,
+              claimedDays: [],
+              badges: [],
+              createdAt: Date.now(),
+              lastActive: Date.now(),
+              totalEarnings: 0,
+              isVIP: false,
+              banned: false,
+              earningMultiplier: 1,
+              boosts: 0,
+              referralCount: 0,
+              vip_tier: 'free',
+              vip_expiry: null,
+              multiplier: 1,
+              withdraw_limit: 1000,
+              referral_boost: 1,
+              photo_url: photoUrl || undefined
+            };
+          }
 
-          // Update in Firebase
-          await createOrUpdateUser(telegramUser.id.toString(), updatedUser);
-          setCurrentUser(updatedUser);
-          saveUserToStorage(updatedUser);
+          // Save/update in Firebase
+          await createOrUpdateUser(telegramUser.id.toString(), finalUser);
+          setCurrentUser(finalUser);
+          saveUserToStorage(finalUser);
           
-          console.log('✅ User profile updated successfully');
-        } else if (telegramUser && !firebaseUser) {
-          console.log('🆕 New Telegram user, creating profile...');
-          
-          // Get user photo
-          const photoUrl = await getTelegramUserPhoto(telegramUser.id);
-          
-          // Create new user
-          const newUser: User = {
-            id: telegramUser.id.toString(),
-            userId: telegramUser.id.toString(),
-            username: telegramUser.username || `user_${telegramUser.id}`,
-            firstName: telegramUser.first_name || 'User',
-            lastName: telegramUser.last_name || '',
-            coins: 1000, // Starting coins
-            stars: 10,   // Starting stars
+          console.log('✅ User processed successfully:', finalUser.firstName);
+        } else if (firebaseUser && !telegramUser) {
+          // Handle case where Firebase user exists but no Telegram data
+          console.log('📱 Using existing Firebase user without Telegram');
+          setCurrentUser(firebaseUser);
+          saveUserToStorage(firebaseUser);
+        } else if (!telegramUser && !firebaseUser && !isExternalDevice) {
+          // Create fallback demo user for web access
+          console.log('🌐 Creating fallback demo user for web access');
+          const fallbackUser: User = {
+            id: 'web-demo-user',
+            userId: 'web-demo-user',
+            username: 'WebUser',
+            firstName: 'Web',
+            lastName: 'User',
+            coins: 500,
+            stars: 25,
             tier: 'free',
             vipType: 'free',
             vipExpiry: null,
             dailyWithdrawals: 0,
-            referralCode: `REF${telegramUser.id.toString().slice(-6)}`,
+            referralCode: 'WEBDEMO',
             totalReferrals: 0,
             farmingRate: 10,
             claimStreak: 0,
@@ -198,16 +243,11 @@ function App() {
             vip_expiry: null,
             multiplier: 1,
             withdraw_limit: 1000,
-            referral_boost: 1,
-            photo_url: photoUrl || undefined
+            referral_boost: 1
           };
-
-          // Save to Firebase
-          await createOrUpdateUser(telegramUser.id.toString(), newUser);
-          setCurrentUser(newUser);
-          saveUserToStorage(newUser);
           
-          console.log('✅ New user created successfully');
+          setCurrentUser(fallbackUser);
+          saveUserToStorage(fallbackUser);
         }
       } catch (error) {
         console.error('Error initializing app:', error);

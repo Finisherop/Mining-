@@ -72,7 +72,21 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ adminUser }) => {
         updatedBy: adminUser.userId
       };
 
-      const success = await updateSystemSettings(updatedSettings, adminUser.userId);
+      // Ensure all required fields are present
+      const completeSettings = {
+        ...updatedSettings,
+        referralRewards: updatedSettings.referralRewards || { free: 10, bronze: 15, diamond: 25 },
+        adsSettings: updatedSettings.adsSettings || {
+          dailyLimit: 10,
+          rewardPerAd: 5,
+          adDuration: 30,
+          vipUnlimited: true
+        },
+        maintenanceMode: updatedSettings.maintenanceMode ?? false,
+        registrationOpen: updatedSettings.registrationOpen ?? true
+      };
+      
+      const success = await updateSystemSettings(completeSettings, adminUser.userId);
       
       if (success) {
         toast.success('Settings saved successfully!');
@@ -1041,8 +1055,8 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ adminUser }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-dark p-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-dark p-4" style={{ scrollBehavior: 'auto' }}>
+      <div className="max-w-7xl mx-auto" style={{ scrollBehavior: 'auto' }}>
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center justify-between">
@@ -1091,10 +1105,10 @@ const SuperAdminPanel: React.FC<SuperAdminPanelProps> = ({ adminUser }) => {
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.1 }}
           >
             {activeTab === 'overview' && <OverviewTab />}
             {activeTab === 'settings' && <SettingsTab />}

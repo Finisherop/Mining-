@@ -77,33 +77,44 @@ export const useSystemSettings = () => {
 
 // Update system settings
 export const updateSystemSettings = async (
-  updates: Partial<SystemSettings>,
+  updates: Partial<SystemSettings> | SystemSettings,
   adminId: string
 ): Promise<boolean> => {
   try {
     const settingsRef = ref(database, 'systemSettings');
     
+    // Get current settings first
+    const currentSnapshot = await get(settingsRef);
+    const currentSettings = currentSnapshot.exists() ? currentSnapshot.val() : defaultSettings;
+    
     const updatedSettings = {
+      ...currentSettings,
       ...updates,
       lastUpdated: Date.now(),
       updatedBy: adminId
     };
     
-    await update(settingsRef, updatedSettings);
+    // Use set to replace with complete settings
+    await set(settingsRef, updatedSettings);
     
-    // ERROR FIX: Fix union type for admin action
     // Log admin action
-    await logAdminAction({
-      adminId,
-      action: 'settings_update', // <-- fix union type to match AdminAction interface
-      targetId: 'system',
-      details: updates
-    });
+    try {
+      await logAdminAction({
+        adminId,
+        action: 'settings_update',
+        targetId: 'system',
+        details: updates
+      });
+    } catch (logError) {
+      console.warn('⚠️ Failed to log admin action:', logError);
+    }
     
-    console.log('✅ System settings updated');
+    console.log('✅ System settings updated successfully');
+    console.log('📊 Updated settings:', updatedSettings);
     return true;
   } catch (error) {
     console.error('❌ Error updating system settings:', error);
+    console.error('📋 Error details:', error);
     return false;
   }
 };
