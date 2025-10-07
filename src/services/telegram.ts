@@ -3,7 +3,7 @@ import { TelegramWebAppInitData } from '../types/telegram';
 // Import Telegram types
 import '../utils/telegramPayments';
 
-// Get Telegram WebApp init data with enhanced error handling
+// Get Telegram WebApp init data with enhanced error handling for any Telegram ID
 export function getTelegramWebAppData(): TelegramWebAppInitData | null {
   if (typeof window === 'undefined') {
     console.log('⚠️ Server-side rendering detected - no Telegram WebApp available');
@@ -15,31 +15,74 @@ export function getTelegramWebAppData(): TelegramWebAppInitData | null {
     if (window.Telegram?.WebApp) {
       const webApp = window.Telegram.WebApp;
       
-      // Don't call ready() here - it should be called in main.tsx
+      // Enhanced user data extraction with fallbacks
       if (webApp.initDataUnsafe?.user) {
+        const user = webApp.initDataUnsafe.user;
+        
+        // Validate user data and provide fallbacks
+        const userData = {
+          id: user.id || Date.now(), // Fallback to timestamp if no ID
+          first_name: user.first_name || 'User',
+          last_name: user.last_name || '',
+          username: user.username || `user_${user.id || Date.now()}`,
+          photo_url: user.photo_url || '',
+          language_code: user.language_code || 'en'
+        };
+        
         console.log('✅ Telegram WebApp user data found:', {
-          id: webApp.initDataUnsafe.user.id,
-          username: webApp.initDataUnsafe.user.username,
-          first_name: webApp.initDataUnsafe.user.first_name
+          id: userData.id,
+          username: userData.username,
+          first_name: userData.first_name,
+          last_name: userData.last_name
         });
+        
         return {
-          user: webApp.initDataUnsafe.user,
+          user: userData,
           start_param: webApp.initDataUnsafe.start_param,
           auth_date: webApp.initDataUnsafe.auth_date || Date.now(),
           hash: webApp.initDataUnsafe.hash || ''
         };
       } else {
-        console.log('⚠️ Telegram WebApp detected but no user data available - may need to wait for initialization');
+        console.log('⚠️ Telegram WebApp detected but no user data available yet');
+        
+        // Check if we can get user data from other sources
+        if (webApp.initData) {
+          console.log('📱 Attempting to parse initData string');
+          try {
+            // Parse the initData string if available
+            const initDataParams = new URLSearchParams(webApp.initData);
+            const userParam = initDataParams.get('user');
+            if (userParam) {
+              const parsedUser = JSON.parse(decodeURIComponent(userParam));
+              console.log('✅ Parsed user data from initData:', parsedUser);
+              return {
+                user: {
+                  id: parsedUser.id || Date.now(),
+                  first_name: parsedUser.first_name || 'User',
+                  last_name: parsedUser.last_name || '',
+                  username: parsedUser.username || `user_${parsedUser.id || Date.now()}`,
+                  photo_url: parsedUser.photo_url || '',
+                  language_code: parsedUser.language_code || 'en'
+                },
+                start_param: initDataParams.get('start_param'),
+                auth_date: parseInt(initDataParams.get('auth_date') || Date.now().toString()),
+                hash: initDataParams.get('hash') || ''
+              };
+            }
+          } catch (parseError) {
+            console.warn('⚠️ Failed to parse initData:', parseError);
+          }
+        }
       }
     }
     
-    // FIX: Check URL parameters for external device access
+    // Check URL parameters for external device access
     const urlParams = new URLSearchParams(window.location.search);
     const hasUserParam = urlParams.get('user') === 'true';
     const hasAdminParam = urlParams.get('admin') === 'true';
     const hasDemoParam = urlParams.get('demo');
     
-    // FIX: Only return fallback data for development, not for external devices
+    // Development mode fallback with any ID support
     if (process.env.NODE_ENV === 'development' && !hasUserParam && !hasAdminParam && !hasDemoParam) {
       console.log('🛠️ Development mode - using fallback Telegram data');
       return {

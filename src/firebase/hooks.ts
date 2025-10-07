@@ -76,27 +76,59 @@ export const useFirebaseUsers = () => {
   return { users, loading, error };
 };
 
-// Function to create or update user
+// Function to create or update user with enhanced error handling
 export const createOrUpdateUser = async (userId: string, userData: Partial<User>): Promise<boolean> => {
   try {
+    console.log(`👤 Creating/updating user: ${userId}`, userData);
+    
+    // Validate userId
+    if (!userId || userId === 'null' || userId === 'undefined') {
+      console.error('❌ Invalid userId provided:', userId);
+      return false;
+    }
+
     const userRef = ref(database, `users/${userId}`);
-    const snapshot = await get(userRef);
+    
+    // Test database connection first
+    if ((window as any).firebaseConnected !== true) {
+      console.warn('⚠️ Firebase not connected, attempting offline operation');
+      // Try to use cached data or return false
+      return false;
+    }
+    
+    let snapshot;
+    try {
+      snapshot = await get(userRef);
+    } catch (dbError) {
+      console.error('❌ Database read error:', dbError);
+      // If read fails, try to create new user anyway
+      snapshot = null;
+    }
     
     let finalUserData: User;
     
-    if (snapshot.exists()) {
+    if (snapshot && snapshot.exists()) {
       // Update existing user
       const existingData = snapshot.val();
-      finalUserData = { ...existingData, ...userData };
+      console.log('📝 Updating existing user data');
+      finalUserData = { 
+        ...existingData, 
+        ...userData,
+        lastActive: Date.now() // Always update last active
+      };
     } else {
-      // Create new user with defaults
+      // Create new user with comprehensive defaults
+      console.log('🆕 Creating new user with defaults');
       finalUserData = {
         id: userId,
         userId,
-        username: userData.username || 'Unknown',
-        stars: userData.stars || 0,
-        coins: userData.coins || 0,
+        username: userData.username || userData.first_name || `user_${userId.slice(-6)}`,
+        firstName: userData.firstName || userData.first_name || 'User',
+        lastName: userData.lastName || userData.last_name || '',
+        stars: userData.stars || 10, // Starting stars
+        coins: userData.coins || 1000, // Starting coins
         tier: userData.tier || 'free',
+        vipType: userData.vipType || 'free',
         dailyWithdrawals: userData.dailyWithdrawals || 0,
         referralCode: userData.referralCode || `REF${userId.slice(-6)}`,
         totalReferrals: userData.totalReferrals || 0,
@@ -111,20 +143,44 @@ export const createOrUpdateUser = async (userId: string, userData: Partial<User>
         referralCount: userData.referralCount || 0,
         totalEarnings: userData.totalEarnings || 0,
         lastActive: Date.now(),
+        banned: userData.banned || false,
         vipExpiry: typeof userData.vipExpiry === 'number' ? userData.vipExpiry : null,
         vip_tier: userData.vip_tier || 'free',
         vip_expiry: userData.vip_expiry || null,
         multiplier: userData.multiplier || 1,
-        withdraw_limit: userData.withdraw_limit || 1,
+        withdraw_limit: userData.withdraw_limit || 1000,
         referral_boost: userData.referral_boost || 1,
+        photo_url: userData.photo_url || undefined,
+        // Add any additional fields from userData
         ...userData
       };
     }
     
-    await set(userRef, finalUserData);
-    return true;
+    // Attempt to save to database with retry logic
+    let saveAttempts = 0;
+    const maxSaveAttempts = 3;
+    
+    while (saveAttempts < maxSaveAttempts) {
+      try {
+        await set(userRef, finalUserData);
+        console.log(`✅ User ${userId} saved successfully to database`);
+        return true;
+      } catch (saveError) {
+        saveAttempts++;
+        console.error(`❌ Database save error (attempt ${saveAttempts}/${maxSaveAttempts}):`, saveError);
+        
+        if (saveAttempts < maxSaveAttempts) {
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, 1000 * saveAttempts));
+        }
+      }
+    }
+    
+    console.error('❌ Failed to save user after all attempts');
+    return false;
+    
   } catch (error) {
-    console.error('Error creating/updating user:', error);
+    console.error('❌ Error in createOrUpdateUser:', error);
     return false;
   }
 };

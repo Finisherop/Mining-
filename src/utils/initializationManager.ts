@@ -190,95 +190,152 @@ export class InitializationManager {
   // Step 2: Wait for Telegram data
   private async waitForTelegramData(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        console.log('⏰ Telegram data timeout, continuing with fallback');
+      console.log('📱 Waiting for Telegram WebApp data...');
+      
+      // Check URL parameters for external access first
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasExternalAccess = urlParams.get('user') || urlParams.get('admin') || urlParams.get('demo');
+      
+      if (hasExternalAccess) {
+        console.log('🌐 External access detected, skipping Telegram data');
+        (window as any).telegramDataReady = false;
         resolve();
-      }, 5000);
-
-      try {
-        if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-          clearTimeout(timeout);
-          console.log('👤 Telegram user data retrieved:', window.Telegram.WebApp.initDataUnsafe.user);
-          (window as any).telegramDataReady = true;
-          resolve();
-        } else {
-          // Check URL parameters for external access
-          const urlParams = new URLSearchParams(window.location.search);
-          const hasExternalAccess = urlParams.get('user') || urlParams.get('admin') || urlParams.get('demo');
-          
-          if (hasExternalAccess) {
-            clearTimeout(timeout);
-            console.log('🌐 External access detected, skipping Telegram data');
-            (window as any).telegramDataReady = false;
-            resolve();
-          } else {
-            // Wait a bit more for Telegram data
-            setTimeout(() => {
-              clearTimeout(timeout);
-              if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-                console.log('👤 Telegram user data retrieved (delayed)');
-                (window as any).telegramDataReady = true;
-              } else {
-                console.log('⚠️ No Telegram user data available');
-                (window as any).telegramDataReady = false;
-              }
-              resolve();
-            }, 2000);
-          }
-        }
-      } catch (error) {
-        clearTimeout(timeout);
-        console.error('❌ Failed to retrieve Telegram data:', error);
-        reject(error);
+        return;
       }
+
+      // Function to check for Telegram data
+      const checkTelegramData = () => {
+        if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+          console.log('👤 Telegram user data found:', {
+            id: window.Telegram.WebApp.initDataUnsafe.user.id,
+            username: window.Telegram.WebApp.initDataUnsafe.user.username,
+            first_name: window.Telegram.WebApp.initDataUnsafe.user.first_name,
+            last_name: window.Telegram.WebApp.initDataUnsafe.user.last_name
+          });
+          (window as any).telegramDataReady = true;
+          return true;
+        }
+        return false;
+      };
+
+      // Check immediately
+      if (checkTelegramData()) {
+        resolve();
+        return;
+      }
+
+      // If no data yet, poll for it with increasing intervals
+      let attempts = 0;
+      const maxAttempts = 10;
+      const baseDelay = 500; // Start with 500ms
+
+      const pollForData = () => {
+        attempts++;
+        console.log(`📱 Polling for Telegram data (attempt ${attempts}/${maxAttempts})`);
+        
+        if (checkTelegramData()) {
+          resolve();
+          return;
+        }
+        
+        if (attempts >= maxAttempts) {
+          console.log('⏰ Telegram data timeout after maximum attempts, continuing without Telegram data');
+          (window as any).telegramDataReady = false;
+          resolve();
+          return;
+        }
+        
+        // Exponential backoff: 500ms, 750ms, 1000ms, 1250ms, etc.
+        const delay = baseDelay + (attempts * 250);
+        setTimeout(pollForData, delay);
+      };
+
+      // Start polling after initial delay
+      setTimeout(pollForData, baseDelay);
     });
   }
 
   // Step 3: Initialize Firebase
   private async initializeFirebase(): Promise<void> {
     return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        console.log('⏰ Firebase connection timeout, continuing with offline mode');
-        (window as any).firebaseConnected = 'timeout';
+      console.log('🔥 Initializing Firebase connection...');
+      
+      // Check if Firebase is already connected
+      if ((window as any).firebaseConnected === true) {
+        console.log('✅ Firebase already connected');
         resolve();
-      }, 8000);
-
-      try {
-        // Check if Firebase is already connected
-        if ((window as any).firebaseConnected === true) {
-          clearTimeout(timeout);
-          console.log('🔥 Firebase already connected');
-          resolve();
-          return;
-        }
-
-        // Listen for Firebase ready event
-        const handleFirebaseReady = () => {
-          clearTimeout(timeout);
-          console.log('🔥 Firebase connection established');
-          window.removeEventListener('firebaseReady', handleFirebaseReady);
-          resolve();
-        };
-
-        const handleFirebaseTimeout = () => {
-          clearTimeout(timeout);
-          console.log('⏰ Firebase timeout event received');
-          window.removeEventListener('firebaseTimeout', handleFirebaseTimeout);
-          resolve();
-        };
-
-        window.addEventListener('firebaseReady', handleFirebaseReady);
-        window.addEventListener('firebaseTimeout', handleFirebaseTimeout);
-
-        // If Firebase is not initialized yet, wait for it
-        if (!(window as any).firebaseApp) {
-          console.log('⏳ Waiting for Firebase initialization...');
-        }
-      } catch (error) {
-        clearTimeout(timeout);
-        console.error('❌ Firebase initialization failed:', error);
-        reject(error);
+        return;
       }
+
+      // Test Firebase connection with retry logic
+      const testFirebaseConnection = async (attempt = 1, maxAttempts = 3) => {
+        try {
+          console.log(`🔥 Testing Firebase connection (attempt ${attempt}/${maxAttempts})`);
+          
+          // Check if Firebase app and database are available
+          if (!(window as any).firebaseApp || !(window as any).database) {
+            throw new Error('Firebase app or database not initialized');
+          }
+
+          // Test a simple read operation
+          const testRef = (window as any).firebaseRef((window as any).database, '.info/connected');
+          const snapshot = await (window as any).firebaseGet(testRef);
+          
+          if (snapshot.exists() && snapshot.val() === true) {
+            console.log('✅ Firebase connection test successful');
+            (window as any).firebaseConnected = true;
+            resolve();
+            return;
+          }
+          
+          // If not connected, wait and retry
+          if (attempt < maxAttempts) {
+            console.log(`⏳ Firebase not ready, retrying in ${attempt * 1000}ms...`);
+            setTimeout(() => testFirebaseConnection(attempt + 1, maxAttempts), attempt * 1000);
+          } else {
+            console.log('⚠️ Firebase connection failed after all attempts, continuing with offline mode');
+            (window as any).firebaseConnected = 'timeout';
+            resolve();
+          }
+        } catch (error) {
+          console.error(`❌ Firebase connection test failed (attempt ${attempt}):`, error);
+          
+          if (attempt < maxAttempts) {
+            setTimeout(() => testFirebaseConnection(attempt + 1, maxAttempts), attempt * 1000);
+          } else {
+            console.log('⚠️ Firebase initialization failed completely, continuing with offline mode');
+            (window as any).firebaseConnected = 'error';
+            resolve(); // Don't reject, continue with offline mode
+          }
+        }
+      };
+
+      // Listen for Firebase ready event (from HTML initialization)
+      const handleFirebaseReady = () => {
+        console.log('🔥 Firebase ready event received');
+        (window as any).firebaseConnected = true;
+        window.removeEventListener('firebaseReady', handleFirebaseReady);
+        resolve();
+      };
+
+      window.addEventListener('firebaseReady', handleFirebaseReady);
+
+      // Start connection test after a short delay to allow HTML Firebase init
+      setTimeout(() => {
+        if ((window as any).firebaseConnected !== true) {
+          testFirebaseConnection();
+        }
+      }, 1000);
+
+      // Absolute timeout as fallback
+      setTimeout(() => {
+        if ((window as any).firebaseConnected !== true) {
+          console.log('⏰ Firebase absolute timeout, continuing with offline mode');
+          window.removeEventListener('firebaseReady', handleFirebaseReady);
+          (window as any).firebaseConnected = 'timeout';
+          resolve();
+        }
+      }, 15000); // 15 second absolute timeout
     });
   }
 

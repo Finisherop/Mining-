@@ -44,37 +44,91 @@
         window.firebasePush = push;
         window.firebaseUpdate = update;
         
-        // Test connection with enhanced logging and timeout
-        const connectedRef = ref(database, '.info/connected');
-        let connectionTimeout;
-        
-        const connectionHandler = (snapshot) => {
-          if (snapshot.val() === true) {
-            console.log('✅ Firebase connected successfully.');
-            window.firebaseConnected = true;
+        // Enhanced Firebase connection testing with retry logic
+        const testFirebaseConnection = async () => {
+          console.log('🔥 Testing Firebase Realtime Database connection...');
+          
+          try {
+            // Test 1: Check .info/connected
+            const connectedRef = ref(database, '.info/connected');
+            const connectedSnapshot = await get(connectedRef);
             
-            // Clear timeout
-            if (connectionTimeout) {
-              clearTimeout(connectionTimeout);
-              connectionTimeout = null;
+            if (connectedSnapshot.exists() && connectedSnapshot.val() === true) {
+              console.log('✅ Firebase connection test 1 passed: .info/connected = true');
+              window.firebaseConnected = true;
+              window.dispatchEvent(new CustomEvent('firebaseReady'));
+              return true;
             }
             
-            // Dispatch ready event
-            window.dispatchEvent(new CustomEvent('firebaseReady'));
-          } else {
-            console.log('❌ Firebase disconnected - retrying connection...');
-            window.firebaseConnected = false;
+            // Test 2: Try to read server timestamp
+            const timestampRef = ref(database, '.info/serverTimeOffset');
+            const timestampSnapshot = await get(timestampRef);
+            
+            if (timestampSnapshot.exists()) {
+              console.log('✅ Firebase connection test 2 passed: server timestamp accessible');
+              window.firebaseConnected = true;
+              window.dispatchEvent(new CustomEvent('firebaseReady'));
+              return true;
+            }
+            
+            // Test 3: Try a simple write/read test
+            const testRef = ref(database, 'connection_test');
+            const testValue = Date.now();
+            await set(testRef, testValue);
+            const readSnapshot = await get(testRef);
+            
+            if (readSnapshot.exists() && readSnapshot.val() === testValue) {
+              console.log('✅ Firebase connection test 3 passed: write/read test successful');
+              // Clean up test data
+              await set(testRef, null);
+              window.firebaseConnected = true;
+              window.dispatchEvent(new CustomEvent('firebaseReady'));
+              return true;
+            }
+            
+            throw new Error('All connection tests failed');
+            
+          } catch (error) {
+            console.error('❌ Firebase connection test failed:', error);
+            return false;
           }
         };
         
-        onValue(connectedRef, connectionHandler);
+        // Set up connection monitoring
+        const connectedRef = ref(database, '.info/connected');
+        onValue(connectedRef, (snapshot) => {
+          if (snapshot.val() === true) {
+            console.log('✅ Firebase realtime connection established');
+            window.firebaseConnected = true;
+            window.dispatchEvent(new CustomEvent('firebaseReady'));
+          } else {
+            console.log('⚠️ Firebase realtime connection lost');
+            window.firebaseConnected = false;
+          }
+        });
         
-        // Set connection timeout (8 seconds)
-        connectionTimeout = setTimeout(() => {
-          console.log('⏰ Firebase connection timeout - continuing with offline mode');
-          window.firebaseConnected = 'timeout';
-          window.dispatchEvent(new CustomEvent('firebaseTimeout'));
-        }, 8000);
+        // Initial connection test with retry logic
+        let connectionAttempts = 0;
+        const maxConnectionAttempts = 3;
+        
+        const attemptConnection = async () => {
+          connectionAttempts++;
+          console.log(`🔥 Firebase connection attempt ${connectionAttempts}/${maxConnectionAttempts}`);
+          
+          const success = await testFirebaseConnection();
+          
+          if (!success && connectionAttempts < maxConnectionAttempts) {
+            console.log(`⏳ Retrying Firebase connection in ${connectionAttempts * 2} seconds...`);
+            setTimeout(attemptConnection, connectionAttempts * 2000);
+          } else if (!success) {
+            console.log('⏰ Firebase connection failed after all attempts - continuing with offline mode');
+            window.firebaseConnected = 'timeout';
+            window.dispatchEvent(new CustomEvent('firebaseTimeout'));
+          }
+        };
+        
+        // Start connection attempts after a short delay
+        setTimeout(attemptConnection, 1000);
         
         console.log('🎯 Firebase initialization complete');
       } catch (error) {
