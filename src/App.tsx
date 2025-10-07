@@ -33,9 +33,10 @@ function App() {
         console.log('👤 Telegram user:', telegramUser);
         console.log('🆔 User ID:', userId);
         
-        // FIX: Handle access from other devices (non-Telegram)
+        // Handle access from other devices (non-Telegram)
         const urlParams = new URLSearchParams(window.location.search);
         const forceUserMode = urlParams.get('user') === 'true';
+        
         // Admin access: URL param OR specific Telegram IDs
         const adminUserIds = [123456789, 987654321]; // Add your Telegram user IDs here
         const isAdminMode = !forceUserMode && (
@@ -44,7 +45,7 @@ function App() {
           (telegramUser && adminUserIds.includes(telegramUser.id))
         );
         
-        // FIX: Check if accessing from external device (no Telegram data)
+        // Check if accessing from external device (no Telegram data)
         const isExternalDevice = !telegramUser && !telegramData;
         const demoUserId = urlParams.get('demo') || 'demo-user-001';
         
@@ -95,144 +96,118 @@ function App() {
           return;
         }
 
-        // FIX: Handle external device access with demo user
+        // Handle external device access with demo user
         if (isExternalDevice) {
           console.log('🌐 External device detected - creating demo user');
           const demoUser: User = {
             id: demoUserId,
             userId: demoUserId,
-            username: `User${Math.floor(Math.random() * 1000)}`,
-            coins: 1250,
-            stars: 45,
+            username: `demo_${demoUserId}`,
+            firstName: 'Demo',
+            lastName: 'User',
+            coins: 1000,
+            stars: 50,
             tier: 'free',
-            isVIP: false,
-            vip_tier: 'free',
-            vip_expiry: null,
-            multiplier: 1,
-            withdraw_limit: 1,
-            referral_boost: 1,
+            vipType: 'free',
+            vipExpiry: null,
             dailyWithdrawals: 0,
-            referralCode: `https://t.me/Mining_tech_bot?start=ref_${demoUserId}`,
-            totalReferrals: 3,
+            referralCode: `DEMO${Date.now().toString().slice(-4)}`,
+            totalReferrals: 0,
             farmingRate: 10,
-            claimStreak: 2,
-            claimedDays: [1, 2],
-            badges: [{
-              type: 'bronze',
-              name: 'Demo User',
-              description: 'Accessing from external device',
-              icon: '🌐',
-              color: '#cd7f32',
-              unlockedAt: Date.now()
-            }],
+            claimStreak: 0,
+            claimedDays: [],
+            badges: [],
             createdAt: Date.now(),
             lastActive: Date.now(),
             totalEarnings: 0,
+            isVIP: false,
+            banned: false,
             earningMultiplier: 1,
             boosts: 0,
             referralCount: 0,
-            vipExpiry: null
+            vip_tier: 'free',
+            vip_expiry: null,
+            multiplier: 1,
+            withdraw_limit: 1000,
+            referral_boost: 1
           };
           
           setCurrentUser(demoUser);
           saveUserToStorage(demoUser);
-          setIsAdmin(false);
           setLoading(false);
           return;
         }
 
-        // User Panel Mode (Telegram users)
-        console.log('👥 Setting user mode');
-        setIsAdmin(false);
-        
-        if (telegramUser && userId) {
-          console.log('✅ Processing Telegram user with ID:', userId);
-          let userPhoto = '';
-          try {
-            userPhoto = await getTelegramUserPhoto(telegramUser.id) || '';
-          } catch (error) {
-            console.log('Could not fetch user photo:', error);
-          }
+        // Handle Telegram user
+        if (telegramUser && firebaseUser) {
+          console.log('👤 Telegram user found, updating profile...');
+          
+          // Get user photo
+          const photoUrl = await getTelegramUserPhoto(telegramUser.id);
+          
+          // Update user with Telegram data
+          const updatedUser = {
+            ...firebaseUser,
+            firstName: telegramUser.first_name || firebaseUser.firstName || 'User',
+            lastName: telegramUser.last_name || firebaseUser.lastName || '',
+            username: telegramUser.username || firebaseUser.username || `user_${telegramUser.id}`,
+            photo_url: photoUrl || firebaseUser.photo_url,
+            lastActive: Date.now()
+          };
 
-          if (firebaseUser) {
-            // Update existing user with latest Telegram data
-            const updatedUser = {
-              ...firebaseUser,
-              username: telegramUser.username || telegramUser.first_name || firebaseUser.username,
-              lastActive: Date.now(),
-              photo_url: userPhoto
-            };
-            
-            await createOrUpdateUser(userId, updatedUser);
-            setCurrentUser(updatedUser);
-          } else {
-            // Create new user
-            const newUser: User = {
-              id: userId,
-              userId,
-              username: telegramUser.username || telegramUser.first_name || 'User',
-              coins: 100, // Starting coins
-              stars: 0,
-              tier: 'free',
-              vipExpiry: null,
-              dailyWithdrawals: 0,
-              referralCode: `@Mining_tech_bot?start=${userId}`,
-              totalReferrals: 0,
-              farmingRate: 10,
-              claimStreak: 0,
-              claimedDays: [],
-              badges: [],
-              createdAt: Date.now(),
-              lastActive: Date.now(),
-              totalEarnings: 0,
-              isVIP: false,
-              earningMultiplier: 1,
-              boosts: 0,
-              referralCount: 0,
-              vip_tier: 'free',
-              vip_expiry: null,
-              multiplier: 1,
-              withdraw_limit: 1,
-              referral_boost: 1,
-              photo_url: userPhoto
-            };
-            
-            await createOrUpdateUser(userId, newUser);
-            setCurrentUser(newUser);
-          }
-        } else if (!telegramUser) {
-          // No Telegram user detected - create a demo user for testing
-          console.log('⚠️ No Telegram user detected, creating demo user for testing');
-          const demoUser: User = {
-            id: 'demo_user',
-            userId: 'demo_user',
-            username: 'Demo User',
-            coins: 500,
-            stars: 25,
+          // Update in Firebase
+          await createOrUpdateUser(telegramUser.id.toString(), updatedUser);
+          setCurrentUser(updatedUser);
+          saveUserToStorage(updatedUser);
+          
+          console.log('✅ User profile updated successfully');
+        } else if (telegramUser && !firebaseUser) {
+          console.log('🆕 New Telegram user, creating profile...');
+          
+          // Get user photo
+          const photoUrl = await getTelegramUserPhoto(telegramUser.id);
+          
+          // Create new user
+          const newUser: User = {
+            id: telegramUser.id.toString(),
+            userId: telegramUser.id.toString(),
+            username: telegramUser.username || `user_${telegramUser.id}`,
+            firstName: telegramUser.first_name || 'User',
+            lastName: telegramUser.last_name || '',
+            coins: 1000, // Starting coins
+            stars: 10,   // Starting stars
             tier: 'free',
+            vipType: 'free',
             vipExpiry: null,
             dailyWithdrawals: 0,
-            referralCode: '@Mining_tech_bot?start=demo_user',
+            referralCode: `REF${telegramUser.id.toString().slice(-6)}`,
             totalReferrals: 0,
             farmingRate: 10,
-            claimStreak: 1,
-            claimedDays: [1],
+            claimStreak: 0,
+            claimedDays: [],
             badges: [],
             createdAt: Date.now(),
             lastActive: Date.now(),
-            totalEarnings: 150,
+            totalEarnings: 0,
             isVIP: false,
+            banned: false,
             earningMultiplier: 1,
             boosts: 0,
             referralCount: 0,
             vip_tier: 'free',
             vip_expiry: null,
             multiplier: 1,
-            withdraw_limit: 1,
+            withdraw_limit: 1000,
             referral_boost: 1,
-            photo_url: ''
+            photo_url: photoUrl || undefined
           };
-          setCurrentUser(demoUser);
+
+          // Save to Firebase
+          await createOrUpdateUser(telegramUser.id.toString(), newUser);
+          setCurrentUser(newUser);
+          saveUserToStorage(newUser);
+          
+          console.log('✅ New user created successfully');
         }
       } catch (error) {
         console.error('Error initializing app:', error);
@@ -266,7 +241,6 @@ function App() {
     }
   }, [currentUser]);
 
-
   if (loading || (isTelegramUser() && firebaseLoading)) {
     return (
       <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
@@ -287,7 +261,7 @@ function App() {
 
   return (
     <div className="App">
-      {/* FIX: Network status indicator for device connectivity */}
+      {/* Network status indicator for device connectivity */}
       <NetworkStatus />
       
       {isAdmin ? (
