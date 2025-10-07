@@ -1,11 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, Suspense, lazy } from 'react';
 import toast from 'react-hot-toast';
 // Import Telegram types
 import './utils/telegramPayments';
 import { Toaster } from 'react-hot-toast';
-import Layout from './components/Layout';
-import TabbedAdminPanel from './components/TabbedAdminPanel';
-import SuperAdminPanel from './components/SuperAdminPanel';
 import NetworkStatus from './components/NetworkStatus';
 import { useFirebaseUser, createOrUpdateUser } from './firebase/hooks';
 import { User } from './types/firebase';
@@ -13,6 +10,13 @@ import { getTelegramWebAppData, getTelegramUserPhoto } from './services/telegram
 import { saveUserToStorage } from './utils/localStorage';
 import { isTelegramUser } from './utils/telegram';
 import { motion } from 'framer-motion';
+import { useCachedData } from './hooks/useSmoothCounter';
+import ErrorBoundary from './components/ErrorBoundary';
+
+// Lazy load components for better initial loading
+const Layout = lazy(() => import('./components/Layout'));
+const TabbedAdminPanel = lazy(() => import('./components/TabbedAdminPanel'));
+const SuperAdminPanel = lazy(() => import('./components/SuperAdminPanel'));
 
 function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -25,16 +29,60 @@ function App() {
     lastRetry: number;
   }>({ telegram: false, firebase: false, retryCount: 0, lastRetry: 0 });
 
-  // Get Telegram user data
-  const telegramData = getTelegramWebAppData();
+  // Get Telegram user data - memoized for performance
+  const telegramData = useMemo(() => getTelegramWebAppData(), []);
   const telegramUser = telegramData?.user;
   const userId = telegramUser?.id.toString() || null;
 
-  // Firebase hooks
+  // Firebase hooks with caching
   const { user: firebaseUser, loading: firebaseLoading } = useFirebaseUser(userId);
+  
+  // Cache user data for instant loading
+  const { data: cachedUser, isLoading: cacheLoading } = useCachedData(
+    `user_${userId || 'anonymous'}`,
+    async () => {
+      if (!userId) return null;
+      // This will be populated by the Firebase hook
+      return firebaseUser;
+    },
+    { 
+      cacheTime: 10 * 60 * 1000, // 10 minutes
+      staleTime: 2 * 60 * 1000,  // 2 minutes
+      backgroundRefresh: true 
+    }
+  );
 
-  // Initialize app with proper Telegram and Firebase checks
+  // Determine access mode early for instant UI rendering
+  const accessMode = useMemo(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const forceUserMode = urlParams.get('user') === 'true';
+    const adminUserIds = [987654321];
+    
+    const isAdminMode = !forceUserMode && (
+      urlParams.get('admin') === 'true' || 
+      urlParams.get('superadmin') === 'true' ||
+      (telegramUser && adminUserIds.includes(telegramUser.id))
+    );
+    
+    const isExternalDevice = !telegramUser && !telegramData;
+    const isSuperAdmin = urlParams.get('superadmin') === 'true';
+    
+    return {
+      isAdmin: isAdminMode,
+      isSuperAdmin,
+      isExternalDevice,
+      forceUserMode
+    };
+  }, [telegramUser, telegramData]);
+
+  // Fast initialization - render UI immediately, fetch data in background
   useEffect(() => {
+    // Set admin mode immediately for instant UI
+    if (accessMode.isAdmin) {
+      setIsAdmin(true);
+      setLoading(false); // Allow admin UI to render immediately
+    }
+    
     const initializeApp = async () => {
       try {
         // Check Telegram WebApp availability
@@ -56,21 +104,26 @@ function App() {
         console.log('👤 Telegram user:', telegramUser);
         console.log('🆔 User ID:', userId);
         
-        // Handle access from other devices (non-Telegram)
-        const urlParams = new URLSearchParams(window.location.search);
-        const forceUserMode = urlParams.get('user') === 'true';
+        // INSTANT UI: Load cached user data immediately for instant rendering
+        const cachedUserData = localStorage.getItem('userData');
+        if (cachedUserData && !currentUser) {
+          try {
+            const cached = JSON.parse(cachedUserData);
+            const cacheAge = Date.now() - (cached.lastSync || 0);
+            
+            // Use cached data if less than 5 minutes old for instant UI
+            if (cacheAge < 5 * 60 * 1000) {
+              console.log('📦 Loading cached user data for instant UI rendering');
+              setCurrentUser(cached);
+            }
+          } catch (e) {
+            console.warn('⚠️ Invalid cached user data, proceeding with fresh fetch');
+          }
+        }
         
-        // Admin access: URL param OR specific Telegram IDs
-        const adminUserIds = [987654321]; // Updated with actual admin IDs
-        const isAdminMode = !forceUserMode && (
-          urlParams.get('admin') === 'true' || 
-          urlParams.get('superadmin') === 'true' ||
-          (telegramUser && adminUserIds.includes(telegramUser.id))
-        );
-        
-        // Check if accessing from external device (no Telegram data)
-        const isExternalDevice = !telegramUser && !telegramData;
-        const demoUserId = urlParams.get('demo') || 'demo-user-001';
+        // Use memoized access mode for consistency
+        const { isAdmin: isAdminMode, isSuperAdmin, isExternalDevice, forceUserMode } = accessMode;
+        const demoUserId = new URLSearchParams(window.location.search).get('demo') || 'demo-user-001';
         
         console.log('⚙️ Force user mode:', forceUserMode);
         console.log('👑 Is admin mode:', isAdminMode);
@@ -415,29 +468,43 @@ function App() {
   }
 
   return (
-    <div className="App">
-      {/* Network status indicator for device connectivity */}
-      <NetworkStatus />
-      
-      {isAdmin ? (
-        (() => {
-          const urlParams = new URLSearchParams(window.location.search);
-          const isSuperAdmin = urlParams.get('superadmin') === 'true';
-          
-          // Debug logs
-          console.log('🔍 Admin panel render:', { isAdmin, isSuperAdmin, currentUser: !!currentUser });
-          
-          if (isSuperAdmin && currentUser) {
-            console.log('🚀 Rendering SuperAdminPanel');
-            return <SuperAdminPanel adminUser={currentUser} />;
-          } else {
-            console.log('📊 Rendering TabbedAdminPanel');
-            return <TabbedAdminPanel />;
-          }
-        })()
-      ) : currentUser ? (
-        <Layout />
-      ) : (
+    <ErrorBoundary>
+      <div className="App">
+        {/* Network status indicator for device connectivity */}
+        <NetworkStatus />
+        
+        <Suspense fallback={
+        <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass-panel p-8 text-center"
+          >
+            <div className="w-12 h-12 border-4 border-primary-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-white mb-2">Loading Dashboard...</h2>
+            <p className="text-gray-400">Preparing your experience</p>
+          </motion.div>
+        </div>
+      }>
+        {isAdmin ? (
+          (() => {
+            // Use memoized access mode
+            const { isSuperAdmin } = accessMode;
+            
+            // Debug logs
+            console.log('🔍 Admin panel render:', { isAdmin, isSuperAdmin, currentUser: !!currentUser });
+            
+            if (isSuperAdmin && currentUser) {
+              console.log('🚀 Rendering SuperAdminPanel');
+              return <SuperAdminPanel adminUser={currentUser} />;
+            } else {
+              console.log('📊 Rendering TabbedAdminPanel');
+              return <TabbedAdminPanel />;
+            }
+          })()
+        ) : currentUser ? (
+          <Layout />
+        ) : (
         <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -488,6 +555,7 @@ function App() {
           </motion.div>
         </div>
       )}
+      </Suspense>
       
       <Toaster
         position="top-center"
@@ -502,7 +570,8 @@ function App() {
           },
         }}
       />
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
 

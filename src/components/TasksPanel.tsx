@@ -18,6 +18,8 @@ import { createOrUpdateUser } from '../firebase/hooks';
 import { cn, formatNumber, triggerCoinBurst, playSound } from '../utils';
 import AdsTaskPanel from './AdsTaskPanel';
 import toast from 'react-hot-toast';
+import { handleError, withErrorHandling } from '../utils/errorHandler';
+import LoadingSkeleton, { InlineLoader } from './LoadingSkeleton';
 
 const TasksPanel: React.FC = () => {
   const { user, setUser } = useAppStore();
@@ -39,31 +41,59 @@ const TasksPanel: React.FC = () => {
   // FIX: Add error handling and loading state for blank screen issue
   if (tasksLoading || completionLoading || verificationLoading) {
     return (
-      <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
-        <div className="glass-panel p-6 text-center">
-          <RefreshCw className="w-8 h-8 text-primary-400 animate-spin mx-auto mb-2" />
-          <p className="text-white">Loading tasks...</p>
+      <div className="min-h-screen bg-gradient-dark p-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Header Skeleton */}
+          <div className="glass-panel p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gray-700 rounded-lg animate-pulse"></div>
+                <div className="space-y-2">
+                  <div className="h-6 w-32 bg-gray-700 rounded animate-pulse"></div>
+                  <div className="h-4 w-24 bg-gray-700 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Tasks Skeleton */}
+          <LoadingSkeleton type="list" />
+          <LoadingSkeleton type="list" />
+          
+          {/* Ads Panel Skeleton */}
+          <LoadingSkeleton type="panel" />
         </div>
       </div>
     );
   }
 
-  // FIX: Handle error states
+  // Enhanced error states with better UX
   if (tasksError || completionError) {
     return (
       <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
-        <div className="glass-panel p-6 text-center">
-          <div className="text-red-400 text-4xl mb-4">⚠️</div>
-          <h3 className="text-lg font-semibold text-white mb-2">Error Loading Tasks</h3>
-          <p className="text-gray-400 mb-4">
-            {tasksError || completionError || 'Unable to load tasks. Please try again.'}
+        <div className="glass-panel p-8 text-center max-w-md mx-4">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h3 className="text-xl font-bold text-white mb-2">Unable to Load Tasks</h3>
+          <p className="text-gray-400 mb-6">
+            {tasksError || completionError || 'Something went wrong while loading your tasks.'}
           </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
-          >
-            Retry
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-colors font-medium"
+            >
+              🔄 Retry Loading
+            </button>
+            <button
+              onClick={() => {
+                localStorage.clear();
+                window.location.reload();
+              }}
+              className="w-full px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              🗑️ Clear Cache & Retry
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -93,28 +123,43 @@ const TasksPanel: React.FC = () => {
     triggerCoinBurst(event.currentTarget);
 
     try {
-      // Complete task in Firebase
+      // Update local state immediately for instant feedback
+      const updatedUser = {
+        ...user,
+        coins: user.coins + task.reward,
+        totalEarnings: user.totalEarnings + task.reward
+      };
+      setUser(updatedUser);
+      
+      // Complete task in Firebase with error handling
       const success = await completeUserTask(user.userId, taskId, task.reward);
       
       if (success) {
-        // Update user coins
-        const updatedUser = {
-          ...user,
-          coins: user.coins + task.reward
-        };
-        
+        // Sync with Firebase
         await createOrUpdateUser(user.userId, updatedUser);
-        setUser(updatedUser);
         
-        toast.success(`Task completed! +${task.reward} coins`);
+        toast.success(`Task completed! +${task.reward} coins`, {
+          icon: '🎉',
+          duration: 3000
+        });
         playSound('success');
       } else {
-        toast.error('Failed to complete task');
+        // Revert local state if Firebase operation failed
+        setUser(user);
+        handleError(new Error('Task completion failed'), {
+          component: 'TasksPanel',
+          action: 'completeTask',
+          userId: user.userId
+        });
         playSound('error');
       }
     } catch (error) {
-      console.error('Error completing task:', error);
-      toast.error('Failed to complete task');
+      // Revert local state on error
+      setUser(user);
+      handleError(
+        error instanceof Error ? error : new Error('Task completion error'),
+        { component: 'TasksPanel', action: 'completeTask', userId: user.userId }
+      );
       playSound('error');
     } finally {
       setCompletingTask(null);

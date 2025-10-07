@@ -354,8 +354,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const now = Date.now();
     const duration = (now - farmingSession.startTime) / 1000 / 60; // minutes
     
-    // FIXED: Calculate earnings every second for real-time display
+    // OPTIMIZED: Calculate earnings with smooth precision
     const totalEarned = Math.floor(duration * farmingSession.baseRate * farmingSession.multiplier);
+    
+    // Prevent unnecessary updates if earnings haven't changed significantly
+    if (Math.abs(totalEarned - farmingSession.totalEarned) < 1) {
+      return;
+    }
     
     // Always update session with current earnings for real-time display
     const updatedSession = { 
@@ -364,46 +369,59 @@ export const useAppStore = create<AppState>((set, get) => ({
       lastUpdate: now 
     };
     
-    // Update user coins only every minute to prevent spam
+    // Update user coins only every minute to prevent spam and flashing
     const minutesPassed = Math.floor(duration);
     const coinsFromMinutes = minutesPassed * farmingSession.baseRate * farmingSession.multiplier;
     const currentSessionCoins = farmingSession.sessionCoinsAdded || 0;
     const newCoinsToAdd = Math.max(0, coinsFromMinutes - currentSessionCoins);
     
-    const updatedUser = newCoinsToAdd > 0 ? {
-      ...user,
-      coins: user.coins + newCoinsToAdd,
-      totalEarnings: user.totalEarnings + newCoinsToAdd
-    } : user;
+    let updatedUser = user;
     
-    // Track coins added this session
-    if (newCoinsToAdd > 0) {
+    // Only update user coins if there's a meaningful change (prevents flashing)
+    if (newCoinsToAdd >= 1) {
+      updatedUser = {
+        ...user,
+        coins: user.coins + newCoinsToAdd,
+        totalEarnings: user.totalEarnings + newCoinsToAdd
+      };
+      
+      // Track coins added this session
       updatedSession.sessionCoinsAdded = (farmingSession.sessionCoinsAdded || 0) + newCoinsToAdd;
     }
     
+    // Batch state updates to prevent multiple re-renders
     set({
       user: updatedUser,
       farmingSession: updatedSession
     });
     
-    // Update farming session in storage with localStorage auto-sync
-    saveFarmingSession(updatedSession);
+    // Debounced storage updates
+    if (newCoinsToAdd >= 1) {
+      // Update farming session in storage with localStorage auto-sync
+      saveFarmingSession(updatedSession);
+      
+      // AUTO-SYNC: Save to localStorage for ultra-fast access (throttled)
+      const lastSave = parseInt(localStorage.getItem('lastUserSave') || '0');
+      if (now - lastSave > 5000) { // Save at most every 5 seconds
+        localStorage.setItem('userData', JSON.stringify({
+          ...updatedUser,
+          lastSync: now
+        }));
+        localStorage.setItem('lastUserSave', now.toString());
+      }
+    }
     
-    // AUTO-SYNC: Save to localStorage for ultra-fast access
-    localStorage.setItem('userData', JSON.stringify({
-      ...updatedUser,
-      lastSync: Date.now()
-    }));
-    
-    console.log('💰 Farming earnings updated:', {
-      duration: duration.toFixed(2),
-      totalEarned,
-      newCoinsToAdd,
-      totalCoins: updatedUser.coins,
-      rate: farmingSession.baseRate,
-      multiplier: farmingSession.multiplier,
-      sessionActive: true
-    });
+    // Reduced logging to prevent console spam
+    if (newCoinsToAdd >= 1) {
+      console.log('💰 Farming earnings updated:', {
+        duration: duration.toFixed(1),
+        totalEarned,
+        newCoinsToAdd,
+        totalCoins: updatedUser.coins,
+        rate: `${farmingSession.baseRate}×${farmingSession.multiplier}`,
+        sessionActive: true
+      });
+    }
   },
   
   // Daily rewards

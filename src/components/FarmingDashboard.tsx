@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, TrendingUp, Zap, Clock, Crown, Sparkles, Star, Timer } from 'lucide-react';
 import { useAppStore, TIER_CONFIGS } from '../store';
 import { cn, formatNumber, triggerCoinBurst, playSound, calculateFarmingEarnings } from '../utils';
+import { useSmoothCounter, useThrottle } from '../hooks/useSmoothCounter';
+import { useOptimizedAnimations, useNetworkOptimization } from '../hooks/usePerformanceMonitor';
 
 const FarmingDashboard: React.FC = () => {
   const {
@@ -13,41 +15,81 @@ const FarmingDashboard: React.FC = () => {
     updateFarmingEarnings
   } = useAppStore();
 
-  // FIX: Use session earnings directly instead of local state
-  const [animateCoins, setAnimateCoins] = useState(false);
-  const [lastEarnings, setLastEarnings] = useState(0);
-  
-  // Calculate current earnings from session data - FIXED FOR REAL-TIME DISPLAY
-  const currentEarnings = farmingSession?.active ? farmingSession.totalEarned : 0;
-  const sessionDuration = farmingSession?.active 
-    ? Math.floor((Date.now() - farmingSession.startTime) / 1000 / 60) 
-    : 0;
-  
-  // Track session time in seconds for better precision
-  const sessionSeconds = farmingSession?.active 
-    ? Math.floor((Date.now() - farmingSession.startTime) / 1000)
-    : 0;
+  // Smooth counter for total coins to prevent flashing
+  const smoothTotalCoins = useSmoothCounter(user?.coins || 0, {
+    duration: 600,
+    precision: 0
+  });
 
+  // Smooth counter for session earnings
+  const smoothSessionEarnings = useSmoothCounter(
+    farmingSession?.active ? farmingSession.totalEarned : 0,
+    { duration: 400, precision: 0 }
+  );
+
+  // Memoized calculations to prevent unnecessary re-renders
+  const farmingStats = useMemo(() => {
+    if (!farmingSession?.active) {
+      return {
+        sessionDuration: 0,
+        sessionSeconds: 0,
+        currentEarnings: 0,
+        isActive: false
+      };
+    }
+
+    const now = Date.now();
+    const sessionSeconds = Math.floor((now - farmingSession.startTime) / 1000);
+    const sessionDuration = Math.floor(sessionSeconds / 60);
+    
+    return {
+      sessionDuration,
+      sessionSeconds,
+      currentEarnings: farmingSession.totalEarned,
+      isActive: true
+    };
+  }, [farmingSession?.active, farmingSession?.startTime, farmingSession?.totalEarned]);
+
+  // Performance optimizations
+  const animationConfig = useOptimizedAnimations();
+  const { recommendedUpdateInterval } = useNetworkOptimization();
+  
+  // Throttled update function with adaptive interval based on network
+  const throttledUpdateEarnings = useThrottle(updateFarmingEarnings, recommendedUpdateInterval);
+
+  // Optimized farming update effect
   useEffect(() => {
-    if (!farmingSession?.active || !user) return;
+    if (!farmingStats.isActive || !user) return;
 
     const interval = setInterval(() => {
-      // Update earnings every second for real-time display
-      updateFarmingEarnings();
-      
-      // Animate coins when earnings increase
-      if (farmingSession.totalEarned > lastEarnings) {
-        setAnimateCoins(true);
-        setLastEarnings(farmingSession.totalEarned);
-        setTimeout(() => setAnimateCoins(false), 500);
-      }
-    }, 1000); // Update every second for smooth experience
+      // Use throttled update to prevent excessive calls
+      throttledUpdateEarnings();
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, [farmingSession?.active, user, updateFarmingEarnings, farmingSession?.totalEarned, lastEarnings]);
+  }, [farmingStats.isActive, user, throttledUpdateEarnings]);
 
-  const handleFarmingToggle = (event: React.MouseEvent<HTMLButtonElement>) => {
-    if (farmingSession?.active) {
+  // Memoized user stats to prevent recalculation
+  const userStats = useMemo(() => {
+    if (!user) return null;
+    
+    const tierConfig = TIER_CONFIGS[user.vip_tier];
+    const isVip = user.vip_tier !== 'free' && user.vip_expiry && user.vip_expiry > Date.now();
+    const farmingRate = user.farmingRate * (user.multiplier || 1);
+    const vipTimeLeft = user.vip_expiry ? Math.max(0, user.vip_expiry - Date.now()) : 0;
+    
+    return {
+      tierConfig,
+      isVip,
+      farmingRate,
+      vipTimeLeft,
+      vipHoursLeft: Math.ceil(vipTimeLeft / (60 * 60 * 1000)),
+      vipDaysLeft: Math.ceil(vipTimeLeft / (24 * 60 * 60 * 1000))
+    };
+  }, [user?.vip_tier, user?.vip_expiry, user?.farmingRate, user?.multiplier]);
+
+  const handleFarmingToggle = useCallback((event: React.MouseEvent<HTMLButtonElement>) => {
+    if (farmingStats.isActive) {
       stopFarming();
       playSound('success');
     } else {
@@ -55,16 +97,28 @@ const FarmingDashboard: React.FC = () => {
       playSound('click');
       triggerCoinBurst(event.currentTarget);
     }
-  };
+  }, [farmingStats.isActive, stopFarming, startFarming]);
 
-  if (!user) return null;
+  // Early return with loading state
+  if (!user || !userStats) {
+    return (
+      <div className="glass-panel p-6 space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-700 rounded mb-4"></div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="glass-panel p-4">
+                <div className="h-6 bg-gray-700 rounded mb-2"></div>
+                <div className="h-8 bg-gray-700 rounded"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  const tierConfig = TIER_CONFIGS[user.vip_tier];
-  const isVip = user.vip_tier !== 'free' && user.vip_expiry && user.vip_expiry > Date.now();
-  const farmingRate = user.farmingRate * (user.multiplier || 1);
-  const vipTimeLeft = user.vip_expiry ? Math.max(0, user.vip_expiry - Date.now()) : 0;
-  const vipHoursLeft = Math.ceil(vipTimeLeft / (60 * 60 * 1000));
-  const vipDaysLeft = Math.ceil(vipTimeLeft / (24 * 60 * 60 * 1000));
+  const { tierConfig, isVip, farmingRate, vipDaysLeft, vipHoursLeft } = userStats;
 
   return (
     <div className="glass-panel p-6 space-y-6">
@@ -108,22 +162,30 @@ const FarmingDashboard: React.FC = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Coins */}
+        {/* Total Coins - Smooth Animation */}
         <motion.div
           className="glass-panel p-4 text-center"
           whileHover={{ scale: 1.02 }}
         >
           <div className="flex items-center justify-center mb-2">
-            <div className={cn("coin-icon mr-2", animateCoins && "coin-flip")} />
+            <motion.div 
+              className="coin-icon mr-2"
+              animate={smoothTotalCoins.isAnimating && animationConfig.enableComplexAnimations ? {
+                rotate: [0, 360],
+                scale: [1, 1.1, 1]
+              } : {}}
+              transition={{ duration: animationConfig.duration }}
+            />
             <span className="text-sm text-gray-400">Total Coins</span>
           </div>
           <motion.div
-            key={user.coins}
-            initial={{ scale: 1.2, color: '#22c5f0' }}
-            animate={{ scale: 1, color: '#ffffff' }}
             className="text-2xl font-bold"
+            animate={smoothTotalCoins.isAnimating && animationConfig.enableComplexAnimations ? {
+              color: ['#ffffff', '#22c5f0', '#ffffff']
+            } : {}}
+            transition={{ duration: animationConfig.duration }}
           >
-            {formatNumber(user.coins)}
+            {formatNumber(Math.floor(smoothTotalCoins.value))}
           </motion.div>
         </motion.div>
 
@@ -147,7 +209,7 @@ const FarmingDashboard: React.FC = () => {
           )}
         </motion.div>
 
-        {/* Current Session */}
+        {/* Current Session - Smooth Animation */}
         <motion.div
           className="glass-panel p-4 text-center"
           whileHover={{ scale: 1.02 }}
@@ -157,12 +219,14 @@ const FarmingDashboard: React.FC = () => {
             <span className="text-sm text-gray-400">Session</span>
           </div>
           <motion.div
-            key={currentEarnings}
-            initial={{ scale: 1.1, color: '#22c5f0' }}
-            animate={{ scale: 1, color: '#ffffff' }}
             className="text-2xl font-bold"
+            animate={smoothSessionEarnings.isAnimating ? {
+              scale: [1, 1.05, 1],
+              color: ['#ffffff', '#22c5f0', '#ffffff']
+            } : {}}
+            transition={{ duration: 0.4 }}
           >
-            {formatNumber(currentEarnings)}
+            {formatNumber(Math.floor(smoothSessionEarnings.value))}
           </motion.div>
         </motion.div>
 
@@ -177,11 +241,11 @@ const FarmingDashboard: React.FC = () => {
           </div>
           <div className={cn(
             "text-sm font-medium",
-            farmingSession?.active ? "text-green-400" : "text-gray-400"
+            farmingStats.isActive ? "text-green-400" : "text-gray-400"
           )}>
-            {farmingSession?.active ? "Active" : "Idle"}
+            {farmingStats.isActive ? "Active" : "Idle"}
           </div>
-          {farmingSession?.active && (
+          {farmingStats.isActive && (
             <div className="flex items-center justify-center mt-1">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse mr-1" />
               <span className="text-xs text-green-400">Farming...</span>
@@ -198,13 +262,13 @@ const FarmingDashboard: React.FC = () => {
             "relative w-32 h-32 rounded-full flex items-center justify-center",
             "text-white font-bold text-lg transition-all duration-300",
             "tap-effect hover-lift",
-            farmingSession?.active
+            farmingStats.isActive
               ? "bg-gradient-to-r from-red-500 to-red-600 neon-glow"
               : "bg-gradient-to-r from-green-500 to-green-600 neon-glow"
           )}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          animate={farmingSession?.active ? { 
+          animate={farmingStats.isActive ? { 
             boxShadow: [
               '0 0 20px rgba(34, 197, 240, 0.3)',
               '0 0 40px rgba(34, 197, 240, 0.6)',
@@ -214,7 +278,7 @@ const FarmingDashboard: React.FC = () => {
           transition={{ duration: 2, repeat: Infinity }}
         >
           <AnimatePresence mode="wait">
-            {farmingSession?.active ? (
+            {farmingStats.isActive ? (
               <motion.div
                 key="pause"
                 initial={{ scale: 0, rotate: -180 }}
@@ -240,7 +304,7 @@ const FarmingDashboard: React.FC = () => {
           </AnimatePresence>
           
           {/* Ripple Effect */}
-          {farmingSession?.active && (
+          {farmingStats.isActive && (
             <motion.div
               className="absolute inset-0 rounded-full border-2 border-white/30"
               animate={{
@@ -255,7 +319,7 @@ const FarmingDashboard: React.FC = () => {
         {/* Farming Tips */}
         <div className="text-center space-y-2">
           <p className="text-sm text-gray-400">
-            {farmingSession?.active
+            {farmingStats.isActive
               ? "Farming in progress... Keep the app open for best results!"
               : "Click to start farming coins automatically"
             }
@@ -319,8 +383,8 @@ const FarmingDashboard: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Progress Bar - ENHANCED WITH REAL SESSION DATA */}
-      {farmingSession?.active && (
+      {/* Progress Bar - OPTIMIZED WITH SMOOTH DATA */}
+      {farmingStats.isActive && farmingSession && (
         <motion.div
           initial={{ opacity: 0, scaleX: 0 }}
           animate={{ opacity: 1, scaleX: 1 }}
@@ -330,10 +394,10 @@ const FarmingDashboard: React.FC = () => {
             <span className="text-gray-400">Session Progress</span>
             <div className="flex items-center space-x-4">
               <span className="text-primary-400">
-                {formatNumber(currentEarnings)} coins earned
+                {formatNumber(Math.floor(smoothSessionEarnings.value))} coins earned
               </span>
               <span className="text-green-400">
-                {Math.floor(sessionSeconds / 60)}m {sessionSeconds % 60}s active
+                {Math.floor(farmingStats.sessionSeconds / 60)}m {farmingStats.sessionSeconds % 60}s active
               </span>
               <span className="text-yellow-400">
                 {farmingSession.baseRate * farmingSession.multiplier} coins/min
@@ -347,7 +411,7 @@ const FarmingDashboard: React.FC = () => {
               className="h-full bg-gradient-to-r from-primary-500 via-secondary-500 to-green-500"
               initial={{ width: '0%' }}
               animate={{ 
-                width: `${Math.min((sessionDuration / 60) * 100, 100)}%`, // Progress based on 1-hour cycle
+                width: `${Math.min((farmingStats.sessionDuration / 60) * 100, 100)}%`, // Progress based on 1-hour cycle
                 backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
               }}
               transition={{ 
@@ -360,10 +424,12 @@ const FarmingDashboard: React.FC = () => {
             />
           </div>
           
-          {/* Session Stats - UPDATED WITH REAL-TIME DATA */}
+          {/* Session Stats - OPTIMIZED WITH SMOOTH DATA */}
           <div className="grid grid-cols-3 gap-4 text-xs">
             <div className="text-center">
-              <div className="text-white font-semibold">{Math.floor(sessionDuration / 60)}h {sessionDuration % 60}m</div>
+              <div className="text-white font-semibold">
+                {Math.floor(farmingStats.sessionDuration / 60)}h {farmingStats.sessionDuration % 60}m
+              </div>
               <div className="text-gray-400">Session Time</div>
             </div>
             <div className="text-center">
@@ -374,7 +440,7 @@ const FarmingDashboard: React.FC = () => {
             </div>
             <div className="text-center">
               <div className="text-primary-400 font-semibold">
-                {formatNumber(currentEarnings)}
+                {formatNumber(Math.floor(smoothSessionEarnings.value))}
               </div>
               <div className="text-gray-400">Session Total</div>
             </div>
