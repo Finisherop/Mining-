@@ -122,9 +122,9 @@ export const createOrUpdateUser = async (userId: string, userData: Partial<User>
       finalUserData = {
         id: userId,
         userId,
-        username: userData.username || userData.first_name || `user_${userId.slice(-6)}`,
-        firstName: userData.firstName || userData.first_name || 'User',
-        lastName: userData.lastName || userData.last_name || '',
+        username: userData.username || userData.firstName || `user_${userId.slice(-6)}`,
+        firstName: userData.firstName || 'User',
+        lastName: userData.lastName || '',
         stars: userData.stars || 10, // Starting stars
         coins: userData.coins || 1000, // Starting coins
         tier: userData.tier || 'free',
