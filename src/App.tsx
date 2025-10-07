@@ -9,6 +9,8 @@ import { User } from './types/firebase';
 import { getTelegramWebAppData, getTelegramUserPhoto } from './services/telegram';
 import { saveUserToStorage } from './utils/localStorage';
 import { isTelegramUser } from './utils/telegram';
+import { createSafeUserData, extractSafeUserId } from './utils/firebaseSanitizer';
+import { initializeSafeFirebaseConnection } from './firebase/safeConnection';
 import { motion } from 'framer-motion';
 import { useCachedData } from './hooks/useSmoothCounter';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -89,9 +91,10 @@ function App() {
         const telegramAvailable = window.Telegram?.WebApp !== undefined;
         console.log(telegramAvailable ? '🚀 Telegram WebApp detected, initializing…' : '🌐 Web browser mode detected');
         
-        // Check Firebase connection
-        const firebaseConnected = (window as any).firebaseConnected === true;
-        console.log(firebaseConnected ? '🔥 Firebase connected successfully.' : '⏳ Waiting for Firebase connection...');
+        // SAFE: Initialize Firebase connection with retry logic
+        console.log('🔥 Initializing safe Firebase connection...');
+        const firebaseConnected = await initializeSafeFirebaseConnection();
+        console.log(firebaseConnected ? '✅ Firebase connected successfully with safe methods.' : '⚠️ Firebase connection failed, will retry...');
         
         setInitializationState(prev => ({
           ...prev,
@@ -133,39 +136,74 @@ function App() {
           console.log('🔧 Setting admin mode');
           setIsAdmin(true);
           
-          // Create admin user for SuperAdmin panel
-          const adminUser: User = {
-            id: 'admin-user',
-            userId: telegramUser?.id.toString() || 'admin-demo',
-            username: telegramUser?.username || 'admin',
-            firstName: telegramUser?.first_name || 'Super',
-            lastName: telegramUser?.last_name || 'Admin',
-            coins: 999999,
-            stars: 999999,
-            tier: 'diamond',
-            vipType: 'diamond',
-            vipExpiry: Date.now() + (365 * 24 * 60 * 60 * 1000), // 1 year
-            dailyWithdrawals: 0,
-            referralCode: 'ADMIN001',
-            totalReferrals: 0,
-            farmingRate: 100,
-            claimStreak: 0,
-            claimedDays: [],
-            badges: [],
-            createdAt: Date.now(),
-            lastActive: Date.now(),
-            totalEarnings: 0,
-            isVIP: true,
-            banned: false,
-            earningMultiplier: 10,
-            boosts: 0,
-            referralCount: 0,
-            vip_tier: 'diamond',
-            vip_expiry: Date.now() + (365 * 24 * 60 * 60 * 1000),
-            multiplier: 10,
-            withdraw_limit: 999999,
-            referral_boost: 10
-          };
+          // SAFE: Create admin user with sanitized data
+          const telegramUserData = telegramUser ? {
+            id: telegramUser.id,
+            username: telegramUser.username,
+            first_name: telegramUser.first_name,
+            last_name: telegramUser.last_name
+          } : null;
+          
+          const adminUser: User = telegramUserData 
+            ? createSafeUserData(telegramUserData, {
+                coins: 999999,
+                stars: 999999,
+                tier: 'diamond',
+                vipType: 'diamond',
+                vipExpiry: Date.now() + (365 * 24 * 60 * 60 * 1000), // 1 year
+                dailyWithdrawals: 0,
+                referralCode: 'ADMIN001',
+                totalReferrals: 0,
+                farmingRate: 100,
+                claimStreak: 0,
+                claimedDays: [],
+                badges: [],
+                createdAt: Date.now(),
+                lastActive: Date.now(),
+                totalEarnings: 0,
+                isVIP: true,
+                banned: false,
+                earningMultiplier: 10,
+                boosts: 0,
+                referralCount: 0,
+                vip_tier: 'diamond',
+                vip_expiry: Date.now() + (365 * 24 * 60 * 60 * 1000),
+                multiplier: 10,
+                withdraw_limit: 999999,
+                referral_boost: 10
+              })
+            : {
+                id: 'admin-demo',
+                userId: 'admin-demo',
+                username: 'admin',
+                firstName: 'Super',
+                lastName: 'Admin',
+                coins: 999999,
+                stars: 999999,
+                tier: 'diamond',
+                vipType: 'diamond',
+                vipExpiry: Date.now() + (365 * 24 * 60 * 60 * 1000),
+                dailyWithdrawals: 0,
+                referralCode: 'ADMIN001',
+                totalReferrals: 0,
+                farmingRate: 100,
+                claimStreak: 0,
+                claimedDays: [],
+                badges: [],
+                createdAt: Date.now(),
+                lastActive: Date.now(),
+                totalEarnings: 0,
+                isVIP: true,
+                banned: false,
+                earningMultiplier: 10,
+                boosts: 0,
+                referralCount: 0,
+                vip_tier: 'diamond',
+                vip_expiry: Date.now() + (365 * 24 * 60 * 60 * 1000),
+                multiplier: 10,
+                withdraw_limit: 999999,
+                referral_boost: 10
+              };
           
           setCurrentUser(adminUser);
           setLoading(false);
@@ -214,52 +252,42 @@ function App() {
           return;
         }
 
-        // Handle Telegram user (existing or new)
+        // SAFE: Handle Telegram user (existing or new) with sanitized data
         if (telegramUser) {
-          console.log('👤 Processing Telegram user...');
+          console.log('👤 Processing Telegram user with safe methods...');
           
           let finalUser: User;
           
           if (firebaseUser) {
-            console.log('📝 Updating existing user profile...');
+            console.log('📝 Updating existing user profile with safe data...');
             // Get user photo
             const photoUrl = await getTelegramUserPhoto(telegramUser.id);
             
-            // Update existing user with latest Telegram data
-            finalUser = {
+            // SAFE: Update existing user with sanitized Telegram data
+            finalUser = createSafeUserData(telegramUser, {
               ...firebaseUser,
-              firstName: telegramUser.first_name || firebaseUser.firstName || 'User',
-              lastName: telegramUser.last_name || firebaseUser.lastName || '',
-              username: telegramUser.username || firebaseUser.username || `user_${telegramUser.id}`,
               photo_url: photoUrl || firebaseUser.photo_url,
               lastActive: Date.now()
-            };
+            });
           } else {
-            console.log('🆕 Creating new user profile...');
+            console.log('🆕 Creating new user profile with safe methods...');
             // Get user photo for new user
             const photoUrl = await getTelegramUserPhoto(telegramUser.id);
             
-            // Create completely new user
-            finalUser = {
-              id: telegramUser.id.toString(),
-              userId: telegramUser.id.toString(),
-              username: telegramUser.username || `user_${telegramUser.id}`,
-              firstName: telegramUser.first_name || 'User',
-              lastName: telegramUser.last_name || '',
+            // SAFE: Create completely new user with sanitized data
+            finalUser = createSafeUserData(telegramUser, {
               coins: 1000, // Starting coins
               stars: 10,   // Starting stars
               tier: 'free',
               vipType: 'free',
               vipExpiry: null,
               dailyWithdrawals: 0,
-              referralCode: `REF${telegramUser.id.toString().slice(-6)}`,
               totalReferrals: 0,
               farmingRate: 10,
               claimStreak: 0,
               claimedDays: [],
               badges: [],
               createdAt: Date.now(),
-              lastActive: Date.now(),
               totalEarnings: 0,
               isVIP: false,
               banned: false,
@@ -272,15 +300,16 @@ function App() {
               withdraw_limit: 1000,
               referral_boost: 1,
               photo_url: photoUrl || undefined
-            };
+            });
           }
 
-          // Save/update in Firebase
+          // SAFE: Save/update in Firebase using sanitized methods
+          console.log('🔒 Saving user data with safe Firebase methods...');
           await createOrUpdateUser(telegramUser.id.toString(), finalUser);
           setCurrentUser(finalUser);
           saveUserToStorage(finalUser);
           
-          console.log('✅ User processed successfully:', finalUser.firstName);
+          console.log('✅ User processed successfully with safe methods:', finalUser.firstName);
         } else if (firebaseUser && !telegramUser) {
           // Handle case where Firebase user exists but no Telegram data
           console.log('📱 Using existing Firebase user without Telegram');

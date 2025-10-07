@@ -3,8 +3,21 @@ import { ref, get, set, onValue, off, push, update, remove } from 'firebase/data
 import { database } from './config';
 import { User } from '../types/firebase';
 import { Task, WithdrawalRequest, AdminConfig } from '../types';
+import { 
+  extractSafeUserId, 
+  createSafeFirebasePath, 
+  sanitizeFirebasePath 
+} from '../utils/firebaseSanitizer';
+import { 
+  createSafeRef, 
+  safeGet, 
+  safeSet, 
+  safeUpdate, 
+  setupSafeListener,
+  safeCreateOrUpdateUser 
+} from './safeConnection';
 
-// Custom hook for Firebase user data
+// SAFE: Custom hook for Firebase user data with path sanitization
 export const useFirebaseUser = (userId: string | null) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -16,27 +29,41 @@ export const useFirebaseUser = (userId: string | null) => {
       return;
     }
 
-    const userRef = ref(database, `users/${userId}`);
-    
-    const unsubscribe = onValue(userRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
-      try {
-        if (snapshot.exists()) {
-          setUser(snapshot.val());
-        } else {
-          setUser(null);
+    try {
+      // SAFE: Use sanitized user ID and safe path creation
+      const safeUserId = extractSafeUserId(userId);
+      const userPath = createSafeFirebasePath('users', safeUserId);
+      
+      console.log(`🔒 Setting up safe user listener for ID: ${safeUserId}`);
+      
+      // SAFE: Use safe listener setup with automatic cleanup
+      const cleanup = setupSafeListener(
+        userPath,
+        (data) => {
+          try {
+            setUser(data);
+            setError(null);
+            console.log(`✅ User data loaded safely for ID: ${safeUserId}`);
+          } catch (err) {
+            console.error('❌ Error processing user data:', err);
+            setError(err instanceof Error ? err.message : 'Unknown error');
+          } finally {
+            setLoading(false);
+          }
+        },
+        (err) => {
+          console.error(`❌ Firebase user listener error for ID ${safeUserId}:`, err);
+          setError(err.message);
+          setLoading(false);
         }
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
-      setError(err.message);
-      setLoading(false);
-    });
+      );
 
-    return () => off(userRef, 'value', unsubscribe);
+      return cleanup;
+    } catch (err) {
+      console.error('❌ Failed to setup user listener:', err);
+      setError(err instanceof Error ? err.message : 'Failed to setup user listener');
+      setLoading(false);
+    }
   }, [userId]);
 
   return { user, loading, error };
@@ -76,55 +103,31 @@ export const useFirebaseUsers = () => {
   return { users, loading, error };
 };
 
-// Function to create or update user
+// SAFE: Function to create or update user with sanitized data
 export const createOrUpdateUser = async (userId: string, userData: Partial<User>): Promise<boolean> => {
   try {
-    const userRef = ref(database, `users/${userId}`);
-    const snapshot = await get(userRef);
+    console.log(`🔒 Creating/updating user with safe methods for ID: ${userId}`);
     
-    let finalUserData: User;
+    // SAFE: Use the safe create/update method with automatic sanitization
+    const success = await safeCreateOrUpdateUser(userId, userData);
     
-    if (snapshot.exists()) {
-      // Update existing user
-      const existingData = snapshot.val();
-      finalUserData = { ...existingData, ...userData };
+    if (success) {
+      console.log(`✅ User created/updated successfully with safe methods for ID: ${userId}`);
     } else {
-      // Create new user with defaults
-      finalUserData = {
-        id: userId,
-        userId,
-        username: userData.username || 'Unknown',
-        stars: userData.stars || 0,
-        coins: userData.coins || 0,
-        tier: userData.tier || 'free',
-        dailyWithdrawals: userData.dailyWithdrawals || 0,
-        referralCode: userData.referralCode || `REF${userId.slice(-6)}`,
-        totalReferrals: userData.totalReferrals || 0,
-        farmingRate: userData.farmingRate || 10,
-        claimStreak: userData.claimStreak || 0,
-        claimedDays: userData.claimedDays || [],
-        badges: userData.badges || [],
-        createdAt: userData.createdAt || Date.now(),
-        isVIP: userData.isVIP || false,
-        earningMultiplier: userData.earningMultiplier || 1,
-        boosts: userData.boosts || 0,
-        referralCount: userData.referralCount || 0,
-        totalEarnings: userData.totalEarnings || 0,
-        lastActive: Date.now(),
-        vipExpiry: typeof userData.vipExpiry === 'number' ? userData.vipExpiry : null,
-        vip_tier: userData.vip_tier || 'free',
-        vip_expiry: userData.vip_expiry || null,
-        multiplier: userData.multiplier || 1,
-        withdraw_limit: userData.withdraw_limit || 1,
-        referral_boost: userData.referral_boost || 1,
-        ...userData
-      };
+      console.error(`❌ Failed to create/update user for ID: ${userId}`);
     }
     
-    await set(userRef, finalUserData);
-    return true;
+    return success;
   } catch (error) {
-    console.error('Error creating/updating user:', error);
+    console.error('❌ Error in createOrUpdateUser:', error);
+    
+    // Additional error context for debugging
+    if (error instanceof Error && error.message.includes('Invalid token in path')) {
+      console.error('🚨 DETECTED: Invalid Firebase path characters in user data');
+      console.error('🔍 User ID:', userId);
+      console.error('🔍 User Data:', userData);
+    }
+    
     return false;
   }
 };
