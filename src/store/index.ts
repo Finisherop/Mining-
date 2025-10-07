@@ -326,15 +326,31 @@ export const useAppStore = create<AppState>((set, get) => ({
     const duration = (now - farmingSession.startTime) / 1000 / 60; // minutes
     const earned = Math.floor(duration * farmingSession.baseRate * farmingSession.multiplier);
     
+    // FIX: Calculate the new earnings since last update
+    const newEarnings = earned - farmingSession.totalEarned;
+    
     const updatedSession = { ...farmingSession, totalEarned: earned };
+    const updatedUser = { 
+      ...user, 
+      coins: user.coins + newEarnings, // Add only new earnings
+      totalEarnings: user.totalEarnings + newEarnings
+    };
     
     set({
-      user: { ...user, coins: user.coins + (earned - farmingSession.totalEarned) },
+      user: updatedUser,
       farmingSession: updatedSession
     });
     
-    // Update farming session in storage
+    // Update farming session in storage with localStorage auto-sync
     saveFarmingSession(updatedSession);
+    
+    // AUTO-SYNC: Continuously save to localStorage for ultra-fast access
+    localStorage.setItem('userData', JSON.stringify({
+      ...updatedUser,
+      lastSync: Date.now()
+    }));
+    
+    console.log('💰 Farming earnings updated:', newEarnings, 'Total coins:', updatedUser.coins);
   },
   
   // Daily rewards
