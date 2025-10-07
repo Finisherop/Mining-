@@ -2,6 +2,8 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+// Import Telegram types
+import './utils/telegramPayments'
 
 // Initialize app only after Telegram WebApp is ready
 const initializeApp = () => {
@@ -12,7 +14,11 @@ const initializeApp = () => {
     (window as any).hideLoadingScreen();
   }
   
-;
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
   
   console.log('🎉 App loaded successfully inside Telegram Mini App.');
 };

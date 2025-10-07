@@ -1,5 +1,7 @@
 import { TELEGRAM_BOT_API } from '../firebase/config';
 import { TelegramWebAppInitData } from '../types/telegram';
+// Import Telegram types
+import '../utils/telegramPayments';
 
 // Get Telegram WebApp init data with enhanced error handling
 export function getTelegramWebAppData(): TelegramWebAppInitData | null {

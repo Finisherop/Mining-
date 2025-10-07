@@ -1,4 +1,6 @@
 import { TelegramUser } from '../types/telegram';
+// Import the global Telegram types from telegramPayments to ensure they're available
+import '../utils/telegramPayments';
 
 // Telegram Bot API Key placeholder
 export const TELEGRAM_BOT_API_KEY = "7795769615:AAH4hhnFG_10vl8tn_dFu8AHdUziQLh6VIA";
@@ -7,8 +9,8 @@ export const TELEGRAM_BOT_API_KEY = "7795769615:AAH4hhnFG_10vl8tn_dFu8AHdUziQLh6
 export const getTelegramUser = (): TelegramUser | null => {
   try {
     // Check if running in Telegram WebApp
-    if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-      const tg = (window as any).Telegram.WebApp;
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp;
       if (tg.initDataUnsafe?.user) {
         return tg.initDataUnsafe.user;
       }
@@ -43,14 +45,14 @@ export const isTelegramUser = (): boolean => {
 // Initialize Telegram WebApp if available
 export const initTelegramWebApp = (): void => {
   try {
-    if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-      const tg = (window as any).Telegram.WebApp;
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp;
       tg.ready();
       tg.expand();
       
       // Set theme
-      tg.setHeaderColor('#0b0f1a');
-      tg.setBackgroundColor('#0b0f1a');
+      tg.setHeaderColor?.('#0b0f1a');
+      tg.setBackgroundColor?.('#0b0f1a');
     }
   } catch (error) {
     console.error('Error initializing Telegram WebApp:', error);
@@ -60,8 +62,8 @@ export const initTelegramWebApp = (): void => {
 // Show Telegram alert
 export const showTelegramAlert = (message: string): void => {
   try {
-    if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-      (window as any).Telegram.WebApp.showAlert(message);
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+      window.Telegram.WebApp.showAlert(message);
     } else {
       alert(message);
     }
@@ -75,8 +77,8 @@ export const showTelegramAlert = (message: string): void => {
 export const showTelegramConfirm = (message: string): Promise<boolean> => {
   return new Promise((resolve) => {
     try {
-      if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp) {
-        (window as any).Telegram.WebApp.showConfirm(message, resolve);
+      if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
+        window.Telegram.WebApp.showConfirm(message, resolve);
       } else {
         resolve(confirm(message));
       }
@@ -90,8 +92,8 @@ export const showTelegramConfirm = (message: string): Promise<boolean> => {
 // Haptic feedback
 export const hapticFeedback = (type: 'light' | 'medium' | 'heavy' | 'success' | 'warning' | 'error' = 'light'): void => {
   try {
-    if (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.HapticFeedback) {
-      const haptic = (window as any).Telegram.WebApp.HapticFeedback;
+    if (typeof window !== 'undefined' && window.Telegram?.WebApp?.HapticFeedback) {
+      const haptic = window.Telegram.WebApp.HapticFeedback;
       
       switch (type) {
         case 'success':
