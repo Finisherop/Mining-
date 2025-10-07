@@ -22,7 +22,8 @@ import { cn, playSound } from '../utils';
 import { Task } from '../types';
 import toast from 'react-hot-toast';
 
-type AdminTab = 'users' | 'tasks' | 'vip-requests' | 'withdrawals' | 'settings';
+type AdminTab = 'dashboard' | 'tasks' | 'users'; // FIX: 3 tabs for top navigation
+type FooterTab = 'withdrawals' | 'settings'; // FIX: 2 tabs for footer navigation
 
 interface TaskFormData {
   title: string;
@@ -35,7 +36,8 @@ interface TaskFormData {
 }
 
 const TabbedAdminPanel: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('users');
+  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard'); // FIX: Start with dashboard
+  const [activeFooterTab, setActiveFooterTab] = useState<FooterTab>('withdrawals'); // FIX: Footer tab state
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [taskForm, setTaskForm] = useState<TaskFormData>({
@@ -53,12 +55,17 @@ const TabbedAdminPanel: React.FC = () => {
   const { withdrawals, loading: withdrawalsLoading } = useFirebaseWithdrawals();
   const { requests: vipRequests } = useVipRequests();
 
-  const tabs = [
-    { id: 'users' as AdminTab, label: 'User Management', icon: Users, count: Object.keys(users).length },
-    { id: 'tasks' as AdminTab, label: 'Task Management', icon: CheckSquare, count: tasks.length },
-    { id: 'vip-requests' as AdminTab, label: 'VIP Requests', icon: Crown, count: Object.values(vipRequests).filter(r => r.status === 'pending').length },
-    { id: 'withdrawals' as AdminTab, label: 'Withdrawals', icon: CreditCard, count: Object.values(withdrawals).filter(w => w.status === 'pending').length },
-    { id: 'settings' as AdminTab, label: 'Settings', icon: Settings, count: 0 }
+  // FIX: Top 3 tabs configuration
+  const topTabs = [
+    { id: 'dashboard' as AdminTab, label: 'Dashboard', icon: Users, count: Object.keys(users).length },
+    { id: 'tasks' as AdminTab, label: 'Task Manager', icon: CheckSquare, count: tasks.length },
+    { id: 'users' as AdminTab, label: 'User Control', icon: Crown, count: Object.values(vipRequests).filter(r => r.status === 'pending').length }
+  ];
+
+  // FIX: Footer 2 tabs configuration  
+  const footerTabs = [
+    { id: 'withdrawals' as FooterTab, label: 'Withdrawals', icon: CreditCard, count: Object.values(withdrawals).filter(w => w.status === 'pending').length },
+    { id: 'settings' as FooterTab, label: 'Settings', icon: Settings, count: 0 }
   ];
 
   const handleTabChange = (tab: AdminTab) => {
@@ -223,32 +230,31 @@ const TabbedAdminPanel: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
-          <p className="text-gray-400">Manage users, tasks, and system settings</p>
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold gradient-text mb-2">🚀 Enhanced Admin Panel</h1>
+          <p className="text-gray-400">Complete control with 3-tab top + 2-tab footer design</p>
         </div>
 
-        {/* Tabs */}
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2 sm:gap-4 bg-gray-800/50 p-2 rounded-xl">
-            {tabs.map((tab) => (
+        {/* FIX: Top Navigation - 3 Tabs */}
+        <div className="flex justify-center mb-6">
+          <div className="glass-panel p-2 flex space-x-2">
+            {topTabs.map((tab) => (
               <motion.button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
                 className={cn(
-                  "flex items-center space-x-2 px-4 py-3 rounded-lg font-medium transition-all duration-300",
-                  "flex-1 sm:flex-none min-w-0",
+                  "flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-all duration-300",
                   activeTab === tab.id
-                    ? "bg-primary-500 text-white shadow-lg"
+                    ? "bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-lg neon-glow"
                     : "text-gray-400 hover:text-white hover:bg-gray-700/50"
                 )}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <tab.icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                <span className="text-sm sm:text-base truncate">{tab.label}</span>
+                <tab.icon className="w-5 h-5" />
+                <span>{tab.label}</span>
                 {tab.count > 0 && (
-                  <span className="bg-white/20 text-xs px-2 py-1 rounded-full">
+                  <span className="bg-white/20 text-xs px-2 py-1 rounded-full font-bold">
                     {tab.count}
                   </span>
                 )}
@@ -257,17 +263,109 @@ const TabbedAdminPanel: React.FC = () => {
           </div>
         </div>
 
-        {/* Tab Content */}
+        {/* Main Content Area */}
         <AnimatePresence mode="wait">
           <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
+            key={`${activeTab}-${activeFooterTab}`}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
-            className="glass-panel p-4 sm:p-6"
+            className="mb-24" // Space for footer tabs
           >
-            {activeTab === 'users' && (
+            {activeTab === 'dashboard' && (
+              <div className="glass-panel p-6">
+                <h2 className="text-2xl font-bold text-white mb-6">📊 Admin Dashboard</h2>
+                
+                {/* Dashboard Stats Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 rounded-lg p-4 text-center">
+                    <Users className="w-8 h-8 text-blue-400 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-white">{Object.keys(users).length}</div>
+                    <div className="text-sm text-blue-400">Total Users</div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-lg p-4 text-center">
+                    <Crown className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-white">
+                      {Object.values(users).filter((u: any) => u.tier !== 'free').length}
+                    </div>
+                    <div className="text-sm text-yellow-400">VIP Members</div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30 rounded-lg p-4 text-center">
+                    <CheckSquare className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-white">{tasks.filter(t => t.active).length}</div>
+                    <div className="text-sm text-green-400">Active Tasks</div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-500/30 rounded-lg p-4 text-center">
+                    <CreditCard className="w-8 h-8 text-red-400 mx-auto mb-2" />
+                    <div className="text-2xl font-bold text-white">
+                      {Object.values(withdrawals).filter(w => w.status === 'pending').length}
+                    </div>
+                    <div className="text-sm text-red-400">Pending Withdrawals</div>
+                  </div>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-lg p-4">
+                    <h3 className="text-lg font-bold text-white mb-4">📈 System Overview</h3>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Total Coins in System:</span>
+                        <span className="text-primary-400">
+                          {Object.values(users).reduce((sum: number, u: any) => sum + (u.coins || 0), 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Total Stars:</span>
+                        <span className="text-yellow-400">
+                          {Object.values(users).reduce((sum: number, u: any) => sum + (u.stars || 0), 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">VIP Conversion Rate:</span>
+                        <span className="text-green-400">
+                          {((Object.values(users).filter((u: any) => u.tier !== 'free').length / Math.max(Object.keys(users).length, 1)) * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-lg p-4">
+                    <h3 className="text-lg font-bold text-white mb-4">⚡ Quick Actions</h3>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button 
+                        onClick={() => setActiveTab('tasks')}
+                        className="p-3 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg text-blue-400 transition-colors text-sm"
+                      >
+                        Manage Tasks
+                      </button>
+                      <button 
+                        onClick={() => setActiveFooterTab('withdrawals')}
+                        className="p-3 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-green-400 transition-colors text-sm"
+                      >
+                        Check Withdrawals
+                      </button>
+                      <button 
+                        onClick={() => setActiveTab('users')}
+                        className="p-3 bg-yellow-500/20 hover:bg-yellow-500/30 rounded-lg text-yellow-400 transition-colors text-sm"
+                      >
+                        Manage Users
+                      </button>
+                      <button 
+                        onClick={() => setActiveFooterTab('settings')}
+                        className="p-3 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-400 transition-colors text-sm"
+                      >
+                        System Settings
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                   <h2 className="text-xl font-bold text-white">User Management</h2>
