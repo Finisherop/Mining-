@@ -64,9 +64,9 @@ export function getTelegramWebAppData(): TelegramWebAppInitData | null {
                   photo_url: parsedUser.photo_url || '',
                   language_code: parsedUser.language_code || 'en'
                 },
-                start_param: initDataParams.get('start_param'),
+                start_param: initDataParams.get('start_param') ?? undefined,
                 auth_date: parseInt(initDataParams.get('auth_date') || Date.now().toString()),
-                hash: initDataParams.get('hash') || ''
+                hash: initDataParams.get('hash') ?? ''
               };
             }
           } catch (parseError) {
