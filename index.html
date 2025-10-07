@@ -64,12 +64,6 @@
         window.firebaseError = error;
       }
     </script>
-    
-    <!-- FIX: Use latest built assets with correct paths -->
-    <script type="module" crossorigin src="/dist/assets/index-fc56408b.js"></script>
-    <link rel="modulepreload" crossorigin href="/dist/assets/vendor-4ed993c7.js">
-    <link rel="modulepreload" crossorigin href="/dist/assets/ui-4ed993c7.js">
-    <link rel="stylesheet" href="/dist/assets/index-6bd67914.css">
   </head>
   <body>
     <div id="root">
@@ -87,6 +81,9 @@
         </div>
       </div>
     </div>
+    
+    <!-- FIX: Vite will inject the correct script tags during build -->
+    <script type="module" src="/src/main.tsx"></script>
     
     <!-- FIX: Enhanced error handling and initialization -->
     <script>

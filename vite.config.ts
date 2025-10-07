@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: './', // ensures correct relative paths for Vercel
   server: {
     port: 3000,
     host: '0.0.0.0', // FIX: Allow external connections from all devices
@@ -20,6 +20,7 @@ export default defineConfig({
     minify: false, // FIX: Disable minification for better error messages
     sourcemap: true, // FIX: Enable sourcemaps for debugging
     rollupOptions: {
+      external: [],
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
