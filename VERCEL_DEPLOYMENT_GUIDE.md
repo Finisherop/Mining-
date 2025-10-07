@@ -92,18 +92,6 @@ npm run build
       }
     }
   ],
-  "routes": [
-    {
-      "src": "/assets/(.*)",
-      "headers": {
-        "Cache-Control": "public, max-age=31536000, immutable"
-      }
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ],
   "headers": [
     {
       "source": "/assets/(.*)",
@@ -144,9 +132,10 @@ npm run build
 ### **Key Features:**
 - ✅ **Static Build:** Uses `@vercel/static-build` for optimal performance
 - ✅ **Asset Caching:** 1-year cache for static assets (CSS, JS)
-- ✅ **SPA Routing:** All routes redirect to `index.html` for React Router
+- ✅ **SPA Routing:** All routes redirect to `index.html` for React Router via `rewrites`
 - ✅ **Security Headers:** XSS protection, content type sniffing prevention
 - ✅ **Performance:** Immutable caching for hashed assets
+- ✅ **Vercel Compliant:** Removed conflicting `routes` section (cannot be used with `rewrites`/`headers`)
 
 ---
 
