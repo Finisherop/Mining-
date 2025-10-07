@@ -23,17 +23,46 @@ const initializeReactApp = () => {
   console.log('⚛️ React app mounted - App.tsx will handle step-by-step initialization');
 };
 
-// Initialize React app immediately - let App.tsx handle Telegram WebApp initialization
+// Enhanced Telegram WebApp initialization with better timing
 if (typeof window !== 'undefined') {
-  // Wait for Telegram WebApp ready if available, otherwise start immediately
-  if (window.Telegram?.WebApp) {
-    console.log('📱 Telegram WebApp detected, waiting for ready state...');
-    window.Telegram.WebApp.ready(() => {
-      console.log('✅ Telegram WebApp is ready');
+  // Function to initialize with proper timing
+  const initWithTiming = () => {
+    if (window.Telegram?.WebApp) {
+      console.log('📱 Telegram WebApp detected, ensuring proper initialization...');
+      
+      const webApp = window.Telegram.WebApp;
+      
+      // Set up WebApp immediately
+      webApp.expand();
+      webApp.ready(() => {
+        console.log('✅ Telegram WebApp ready callback triggered');
+        
+        // Add a small delay to ensure all Telegram data is available
+        setTimeout(() => {
+          console.log('🚀 Starting React app after Telegram initialization');
+          initializeReactApp();
+        }, 100);
+      });
+      
+      // Fallback timeout in case ready() doesn't fire
+      setTimeout(() => {
+        if (!document.getElementById('root')?.hasChildNodes()) {
+          console.log('⏰ Telegram ready timeout, starting app anyway');
+          initializeReactApp();
+        }
+      }, 3000);
+      
+    } else {
+      console.log('🌐 Web browser mode detected, starting immediately');
       initializeReactApp();
-    });
+    }
+  };
+
+  // Check if DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initWithTiming);
   } else {
-    console.log('🌐 Web browser mode detected, starting immediately');
-    initializeReactApp();
+    // DOM is already ready
+    initWithTiming();
   }
 }

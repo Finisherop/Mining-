@@ -240,14 +240,30 @@ function App() {
     }
   }, [firebaseUser, firebaseLoading, telegramUser, appState, isAdmin]);
 
-  // Create new Telegram user
+  // Create new Telegram user with enhanced error handling
   const createNewTelegramUser = async () => {
     try {
-      console.log('🆕 Creating new user profile...');
-      // Get user photo for new user
-      const photoUrl = await getTelegramUserPhoto(telegramUser.id);
+      console.log('🆕 Creating new user profile for Telegram ID:', telegramUser?.id);
       
-      // Create completely new user
+      if (!telegramUser || !telegramUser.id) {
+        console.error('❌ No valid Telegram user data available');
+        return;
+      }
+
+      // Get user photo for new user (with timeout)
+      let photoUrl: string | null = null;
+      try {
+        const photoPromise = getTelegramUserPhoto(telegramUser.id);
+        const timeoutPromise = new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error('Photo fetch timeout')), 5000)
+        );
+        
+        photoUrl = await Promise.race([photoPromise, timeoutPromise]);
+      } catch (photoError) {
+        console.warn('⚠️ Failed to get user photo, continuing without it:', photoError);
+      }
+      
+      // Create comprehensive user data with all required fields
       const newUser: User = {
         id: telegramUser.id.toString(),
         userId: telegramUser.id.toString(),
@@ -282,14 +298,39 @@ function App() {
         photo_url: photoUrl || undefined
       };
 
-      // Save in Firebase
-      await createOrUpdateUser(telegramUser.id.toString(), newUser);
-      setCurrentUser(newUser);
-      saveUserToStorage(newUser);
+      console.log('💾 Saving new user to Firebase:', {
+        id: newUser.id,
+        username: newUser.username,
+        firstName: newUser.firstName
+      });
+
+      // Save in Firebase with retry logic
+      const saveSuccess = await createOrUpdateUser(telegramUser.id.toString(), newUser);
       
-      console.log('✅ New user created successfully:', newUser.firstName);
+      if (saveSuccess) {
+        setCurrentUser(newUser);
+        saveUserToStorage(newUser);
+        console.log('✅ New user created successfully:', newUser.firstName);
+        
+        // Show welcome message
+        toast.success(`Welcome ${newUser.firstName}! Your account has been created.`, {
+          duration: 4000,
+          id: 'welcome-new-user'
+        });
+      } else {
+        console.error('❌ Failed to save new user to Firebase');
+        toast.error('Failed to create user account. Please try again.', {
+          duration: 5000,
+          id: 'user-creation-error'
+        });
+      }
+      
     } catch (error) {
       console.error('❌ Error creating new user:', error);
+      toast.error('Error creating user account. Please refresh and try again.', {
+        duration: 5000,
+        id: 'user-creation-error'
+      });
     }
   };
 
