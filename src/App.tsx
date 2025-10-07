@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import TabbedAdminPanel from './components/TabbedAdminPanel';
+import SuperAdminPanel from './components/SuperAdminPanel';
 import NetworkStatus from './components/NetworkStatus';
 import { useFirebaseUser, createOrUpdateUser } from './firebase/hooks';
 import { User } from './types/firebase';
@@ -35,7 +36,13 @@ function App() {
         // FIX: Handle access from other devices (non-Telegram)
         const urlParams = new URLSearchParams(window.location.search);
         const forceUserMode = urlParams.get('user') === 'true';
-        const isAdminMode = !forceUserMode && (urlParams.get('admin') === 'true' || (telegramUser && telegramUser.id === 123456789));
+        // Admin access: URL param OR specific Telegram IDs
+        const adminUserIds = [123456789, 987654321]; // Add your Telegram user IDs here
+        const isAdminMode = !forceUserMode && (
+          urlParams.get('admin') === 'true' || 
+          urlParams.get('superadmin') === 'true' ||
+          (telegramUser && adminUserIds.includes(telegramUser.id))
+        );
         
         // FIX: Check if accessing from external device (no Telegram data)
         const isExternalDevice = !telegramUser && !telegramData;
@@ -248,7 +255,15 @@ function App() {
       <NetworkStatus />
       
       {isAdmin ? (
-        <TabbedAdminPanel />
+        (() => {
+          const urlParams = new URLSearchParams(window.location.search);
+          const isSuperAdmin = urlParams.get('superadmin') === 'true';
+          return isSuperAdmin && currentUser ? (
+            <SuperAdminPanel adminUser={currentUser} />
+          ) : (
+            <TabbedAdminPanel />
+          );
+        })()
       ) : currentUser ? (
         <Layout />
       ) : (
@@ -268,6 +283,9 @@ function App() {
               </div>
               <div className="bg-gray-800/50 p-2 rounded">
                 <span className="text-green-400">?admin=true</span> - Admin Panel
+              </div>
+              <div className="bg-gray-800/50 p-2 rounded">
+                <span className="text-purple-400">?superadmin=true</span> - Super Admin Panel
               </div>
               <div className="bg-gray-800/50 p-2 rounded">
                 <span className="text-purple-400">?demo=myid</span> - Demo User
