@@ -192,7 +192,18 @@ export const useFirebaseTasks = () => {
             ...tasksData[key],
             id: key
           }));
-          setTasks(tasksList);
+          // FIX: Only update if data actually changed to prevent blinking
+          setTasks(prevTasks => {
+            const currentIds = prevTasks.map(t => t.id).sort().join(',');
+            const newIds = tasksList.map(t => t.id).sort().join(',');
+            
+            // Only update if task list actually changed
+            if (currentIds !== newIds || JSON.stringify(prevTasks) !== JSON.stringify(tasksList)) {
+              console.log('📝 Tasks updated from Firebase:', tasksList.length);
+              return tasksList;
+            }
+            return prevTasks;
+          });
         } else {
           setTasks([]);
         }
@@ -231,9 +242,10 @@ export const updateTask = async (taskId: string, updates: Partial<Task>): Promis
   try {
     const taskRef = ref(database, `tasks/${taskId}`);
     await update(taskRef, updates);
+    console.log('✅ Task updated successfully');
     return true;
   } catch (error) {
-    console.error('Error updating task:', error);
+    console.error('❌ Error updating task:', error);
     return false;
   }
 };
@@ -242,10 +254,11 @@ export const updateTask = async (taskId: string, updates: Partial<Task>): Promis
 export const deleteTask = async (taskId: string): Promise<boolean> => {
   try {
     const taskRef = ref(database, `tasks/${taskId}`);
-    await remove(taskRef);
+    await set(taskRef, null); // Delete by setting to null
+    console.log('✅ Task deleted successfully');
     return true;
   } catch (error) {
-    console.error('Error deleting task:', error);
+    console.error('❌ Error deleting task:', error);
     return false;
   }
 };
@@ -376,7 +389,19 @@ export const useUserTaskCompletion = (userId: string | null) => {
       try {
         if (snapshot.exists()) {
           const tasksData = snapshot.val();
-          setCompletedTasks(Object.keys(tasksData).filter(taskId => tasksData[taskId].completed));
+          const completedTaskIds = Object.keys(tasksData).filter(taskId => tasksData[taskId].completed);
+          
+          // FIX: Only update if completed tasks actually changed to prevent blinking
+          setCompletedTasks(prevCompleted => {
+            const currentIds = prevCompleted.sort().join(',');
+            const newIds = completedTaskIds.sort().join(',');
+            
+            if (currentIds !== newIds) {
+              console.log('✅ Completed tasks updated:', completedTaskIds.length);
+              return completedTaskIds;
+            }
+            return prevCompleted;
+          });
         } else {
           setCompletedTasks([]);
         }

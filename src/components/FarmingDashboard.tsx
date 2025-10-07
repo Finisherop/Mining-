@@ -13,30 +13,32 @@ const FarmingDashboard: React.FC = () => {
     updateFarmingEarnings
   } = useAppStore();
 
-  const [currentEarnings, setCurrentEarnings] = useState(0);
+  // FIX: Use session earnings directly instead of local state
   const [animateCoins, setAnimateCoins] = useState(false);
+  
+  // Calculate current earnings from session data
+  const currentEarnings = farmingSession?.active ? farmingSession.totalEarned : 0;
+  const sessionDuration = farmingSession?.active 
+    ? Math.floor((Date.now() - farmingSession.startTime) / 1000 / 60) 
+    : 0;
 
   useEffect(() => {
     if (!farmingSession?.active || !user) return;
 
     const interval = setInterval(() => {
-      const earnings = calculateFarmingEarnings(
-        new Date(farmingSession.startTime),
-        farmingSession.baseRate,
-        farmingSession.multiplier
-      );
+      // Update earnings every second for real-time display
+      updateFarmingEarnings();
       
-      if (earnings > currentEarnings) {
+      // Animate coins when earnings increase
+      const newEarnings = farmingSession.totalEarned;
+      if (newEarnings > currentEarnings) {
         setAnimateCoins(true);
         setTimeout(() => setAnimateCoins(false), 500);
       }
-      
-      setCurrentEarnings(earnings);
-      updateFarmingEarnings();
-    }, 1000);
+    }, 1000); // Update every second for smooth experience
 
     return () => clearInterval(interval);
-  }, [farmingSession, user, currentEarnings, updateFarmingEarnings]);
+  }, [farmingSession?.active, user, updateFarmingEarnings, farmingSession?.totalEarned, currentEarnings]);
 
   const handleFarmingToggle = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (farmingSession?.active) {
@@ -311,29 +313,65 @@ const FarmingDashboard: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Progress Bar */}
+      {/* Progress Bar - ENHANCED WITH REAL SESSION DATA */}
       {farmingSession?.active && (
         <motion.div
           initial={{ opacity: 0, scaleX: 0 }}
           animate={{ opacity: 1, scaleX: 1 }}
-          className="space-y-2"
+          className="space-y-3"
         >
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Session Progress</span>
-            <span className="text-primary-400">{formatNumber(currentEarnings)} coins</span>
+            <div className="flex items-center space-x-4">
+              <span className="text-primary-400">
+                {formatNumber(currentEarnings)} coins earned
+              </span>
+              <span className="text-green-400">
+                {sessionDuration}min active
+              </span>
+              <span className="text-yellow-400">
+                {farmingSession.baseRate * farmingSession.multiplier} coins/min
+              </span>
+            </div>
           </div>
-          <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+          
+          {/* Real-time Progress Bar */}
+          <div className="h-3 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
             <motion.div
-              className="h-full bg-gradient-to-r from-primary-500 to-secondary-500"
-              animate={{
-                width: ['0%', '100%'],
-                backgroundPosition: ['0% 50%', '100% 50%']
+              className="h-full bg-gradient-to-r from-primary-500 via-secondary-500 to-green-500"
+              initial={{ width: '0%' }}
+              animate={{ 
+                width: `${Math.min((sessionDuration / 60) * 100, 100)}%`, // Progress based on 1-hour cycle
+                backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
               }}
               transition={{ 
-                width: { duration: 60, repeat: Infinity },
-                backgroundPosition: { duration: 2, repeat: Infinity }
+                width: { duration: 1, ease: "easeOut" },
+                backgroundPosition: { duration: 3, repeat: Infinity, ease: "linear" }
+              }}
+              style={{
+                backgroundSize: '200% 100%'
               }}
             />
+          </div>
+          
+          {/* Session Stats */}
+          <div className="grid grid-cols-3 gap-4 text-xs">
+            <div className="text-center">
+              <div className="text-white font-semibold">{Math.floor(sessionDuration / 60)}h {sessionDuration % 60}m</div>
+              <div className="text-gray-400">Session Time</div>
+            </div>
+            <div className="text-center">
+              <div className="text-green-400 font-semibold">
+                +{Math.floor((sessionDuration * farmingSession.baseRate * farmingSession.multiplier) / 60)}/hr
+              </div>
+              <div className="text-gray-400">Earning Rate</div>
+            </div>
+            <div className="text-center">
+              <div className="text-primary-400 font-semibold">
+                {formatNumber(Math.floor(sessionDuration * farmingSession.baseRate * farmingSession.multiplier))} total
+              </div>
+              <div className="text-gray-400">Expected</div>
+            </div>
           </div>
         </motion.div>
       )}
