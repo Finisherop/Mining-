@@ -43,17 +43,17 @@
         window.firebasePush = push;
         window.firebaseUpdate = update;
         
-        // Test connection
+        // Test connection with enhanced logging
         const connectedRef = ref(database, '.info/connected');
         onValue(connectedRef, (snapshot) => {
           if (snapshot.val() === true) {
-            console.log('✅ Firebase connected successfully');
+            console.log('✅ Firebase connected successfully.');
             window.firebaseConnected = true;
             
             // Dispatch ready event
             window.dispatchEvent(new CustomEvent('firebaseReady'));
           } else {
-            console.log('❌ Firebase disconnected');
+            console.log('❌ Firebase disconnected - retrying connection...');
             window.firebaseConnected = false;
           }
         });
@@ -113,29 +113,69 @@
         }
       }
       
-      // Show loading screen if React app fails to mount within 10 seconds
-      setTimeout(() => {
+      // Enhanced loading timeout with retry-safe behavior
+      let loadingTimeout = setTimeout(() => {
         const loadingScreen = document.getElementById('loading-screen');
         if (loadingScreen && loadingScreen.parentNode) {
-          console.warn('React app taking too long to load, showing error message');
+          console.log('App initialization taking longer than expected, showing retry options');
           loadingScreen.innerHTML = `
             <div style="text-align: center;">
-              <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
-              <h2 style="margin: 0 0 15px 0; font-weight: 600;">Loading Error</h2>
+              <div style="font-size: 64px; margin-bottom: 20px; animation: pulse 2s infinite;">🔄</div>
+              <h2 style="margin: 0 0 15px 0; font-weight: 600;">Slow Network Detected</h2>
               <p style="margin: 0 0 20px 0; color: #a0a0a0; line-height: 1.5;">
-                The application is taking longer than expected to load.<br>
-                This might be due to a network issue or server problem.
+                The app is taking longer than usual to load.<br>
+                This might be due to a slow network connection.
               </p>
+              <div style="background: #1a1d3a; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                <div style="margin-bottom: 8px;">
+                  <strong>Checking:</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                  <span>📱 Telegram WebApp</span>
+                  <span id="telegram-status">⏳</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                  <span>🔥 Firebase Connection</span>
+                  <span id="firebase-status">⏳</span>
+                </div>
+              </div>
               <button onclick="window.location.reload()" style="background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; margin-right: 10px; box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);">
-                🔄 Reload Page
+                🔄 Retry Loading
               </button>
               <button onclick="localStorage.clear(); sessionStorage.clear(); window.location.reload();" style="background: #333; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; margin-top: 10px;">
                 🗑️ Clear Cache & Reload
               </button>
             </div>
           `;
+          
+          // Update status indicators
+          const updateStatus = () => {
+            const telegramStatus = document.getElementById('telegram-status');
+            const firebaseStatus = document.getElementById('firebase-status');
+            
+            if (telegramStatus) {
+              telegramStatus.textContent = window.Telegram?.WebApp ? '✓' : '⚠️';
+              telegramStatus.style.color = window.Telegram?.WebApp ? '#10b981' : '#f59e0b';
+            }
+            
+            if (firebaseStatus) {
+              firebaseStatus.textContent = window.firebaseConnected ? '✓' : '⚠️';
+              firebaseStatus.style.color = window.firebaseConnected ? '#10b981' : '#f59e0b';
+            }
+          };
+          
+          updateStatus();
+          setInterval(updateStatus, 1000);
         }
-      }, 10000);
+      }, 15000); // Increased to 15 seconds to give more time
+      
+      // Clear timeout if app loads successfully
+      window.clearLoadingTimeout = () => {
+        if (loadingTimeout) {
+          clearTimeout(loadingTimeout);
+          loadingTimeout = null;
+        }
+      };
       
       // Global error handler
       window.addEventListener('error', function(e) {
@@ -188,42 +228,59 @@
         }
       });
       
-      // FIX: Initialize Telegram WebApp with enhanced error handling
+      // Enhanced Telegram WebApp initialization with detailed logging
       function initializeTelegram() {
         try {
           if (window.Telegram && window.Telegram.WebApp) {
-            console.log('📱 Initializing Telegram WebApp...');
+            console.log('🚀 Telegram WebApp detected, initializing…');
             
             const tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
             
-            // Set theme colors
-            if (tg.setHeaderColor) {
-              tg.setHeaderColor('#0b0f1a');
-            }
-            if (tg.setBackgroundColor) {
-              tg.setBackgroundColor('#0b0f1a');
-            }
+            // Initialize with ready callback
+            tg.ready(() => {
+              console.log('📱 Telegram WebApp ready callback triggered');
+              
+              // Expand the app
+              tg.expand();
+              
+              // Set theme colors
+              if (tg.setHeaderColor) {
+                tg.setHeaderColor('#0b0f1a');
+                console.log('🎨 Telegram header color set');
+              }
+              if (tg.setBackgroundColor) {
+                tg.setBackgroundColor('#0b0f1a');
+                console.log('🎨 Telegram background color set');
+              }
+              
+              // Enable haptic feedback
+              if (tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+                console.log('📱 Haptic feedback enabled');
+              }
+              
+              // Log Telegram user data for debugging
+              if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                console.log('👤 Telegram User detected:', {
+                  id: tg.initDataUnsafe.user.id,
+                  username: tg.initDataUnsafe.user.username,
+                  first_name: tg.initDataUnsafe.user.first_name
+                });
+              } else {
+                console.log('⚠️ No Telegram user data found - running in web browser mode');
+              }
+              
+              console.log('✅ Telegram WebApp initialized successfully');
+              window.telegramReady = true;
+            });
             
-            // Enable haptic feedback
-            if (tg.HapticFeedback) {
-              tg.HapticFeedback.impactOccurred('light');
-            }
-            
-            // Log Telegram user data for debugging
-            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-              console.log('👤 Telegram User:', tg.initDataUnsafe.user);
-            } else {
-              console.log('⚠️ No Telegram user data found - running in web browser mode');
-            }
-            
-            console.log('✅ Telegram WebApp initialized successfully');
           } else {
             console.log('🌐 Running in web browser mode (no Telegram WebApp)');
+            window.telegramReady = false;
           }
         } catch (error) {
           console.error('❌ Telegram initialization error:', error);
+          window.telegramReady = false;
         }
       }
       
@@ -328,18 +385,60 @@
         }, 2000);
       });
       
-      // Export utility functions for debugging
+      // Enhanced debugging utilities
       window.debugApp = function() {
         console.log('🔍 App Debug Info:');
         console.log('- Firebase connected:', window.firebaseConnected);
         console.log('- Firebase app:', window.firebaseApp);
         console.log('- Database:', window.database);
-        console.log('- Telegram WebApp:', window.Telegram?.WebApp);
+        console.log('- Telegram WebApp available:', !!window.Telegram?.WebApp);
+        console.log('- Telegram ready:', window.telegramReady);
         console.log('- React app mounted:', !document.getElementById('loading-screen'));
+        console.log('- User agent:', navigator.userAgent);
+        console.log('- Current URL:', window.location.href);
       };
+      
+      // Auto-retry Firebase connection if it fails
+      let firebaseRetryCount = 0;
+      const maxFirebaseRetries = 5;
+      
+      window.addEventListener('firebaseReady', () => {
+        firebaseRetryCount = 0; // Reset on successful connection
+      });
+      
+      // Monitor Firebase connection and retry if needed
+      setInterval(() => {
+        if (!window.firebaseConnected && firebaseRetryCount < maxFirebaseRetries) {
+          firebaseRetryCount++;
+          console.log(`🔄 Firebase connection retry ${firebaseRetryCount}/${maxFirebaseRetries}`);
+          
+          // Attempt to reinitialize Firebase connection
+          try {
+            const connectedRef = window.firebaseRef(window.database, '.info/connected');
+            window.firebaseOnValue(connectedRef, (snapshot) => {
+              if (snapshot.val() === true) {
+                console.log('✅ Firebase reconnected successfully');
+                window.firebaseConnected = true;
+                window.dispatchEvent(new CustomEvent('firebaseReady'));
+              }
+            });
+          } catch (error) {
+            console.error('❌ Firebase retry failed:', error);
+          }
+        }
+      }, 5000); // Check every 5 seconds
       
       // Make hideLoadingScreen globally available for React app
       window.hideLoadingScreen = hideLoadingScreen;
+      
+      // Enhanced hideLoadingScreen that also clears timeout
+      const originalHideLoadingScreen = hideLoadingScreen;
+      window.hideLoadingScreen = function() {
+        if (window.clearLoadingTimeout) {
+          window.clearLoadingTimeout();
+        }
+        originalHideLoadingScreen();
+      };
     </script>
   </body>
 </html>

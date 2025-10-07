@@ -1,24 +1,33 @@
 import { TELEGRAM_BOT_API } from '../firebase/config';
 import { TelegramWebAppInitData } from '../types/telegram';
 
-// Get Telegram WebApp init data
+// Get Telegram WebApp init data with enhanced error handling
 export function getTelegramWebAppData(): TelegramWebAppInitData | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === 'undefined') {
+    console.log('⚠️ Server-side rendering detected - no Telegram WebApp available');
+    return null;
+  }
   
   try {
-    // Check if running in Telegram WebApp
-    if ((window as any).Telegram?.WebApp) {
-      const webApp = (window as any).Telegram.WebApp;
-      webApp.ready();
+    // Check if running in Telegram WebApp with safe optional chaining
+    if (window.Telegram?.WebApp) {
+      const webApp = window.Telegram.WebApp;
       
+      // Don't call ready() here - it should be called in main.tsx
       if (webApp.initDataUnsafe?.user) {
-        console.log('✅ Telegram WebApp detected');
+        console.log('✅ Telegram WebApp user data found:', {
+          id: webApp.initDataUnsafe.user.id,
+          username: webApp.initDataUnsafe.user.username,
+          first_name: webApp.initDataUnsafe.user.first_name
+        });
         return {
           user: webApp.initDataUnsafe.user,
           start_param: webApp.initDataUnsafe.start_param,
           auth_date: webApp.initDataUnsafe.auth_date || Date.now(),
           hash: webApp.initDataUnsafe.hash || ''
         };
+      } else {
+        console.log('⚠️ Telegram WebApp detected but no user data available - may need to wait for initialization');
       }
     }
     
@@ -45,11 +54,11 @@ export function getTelegramWebAppData(): TelegramWebAppInitData | null {
       };
     }
     
-    // FIX: Return null for external devices - let App.tsx handle this
-    console.log('🌐 External device detected - no Telegram WebApp data');
+    // Return null for external devices - let App.tsx handle this
+    console.log('🌐 External device detected - no Telegram WebApp data available');
     return null;
   } catch (error) {
-    console.error('Error getting Telegram WebApp data:', error);
+    console.error('❌ Error getting Telegram WebApp data:', error);
     return null;
   }
 }

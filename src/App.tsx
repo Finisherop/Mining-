@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import TabbedAdminPanel from './components/TabbedAdminPanel';
@@ -15,6 +16,12 @@ function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [initializationState, setInitializationState] = useState<{
+    telegram: boolean;
+    firebase: boolean;
+    retryCount: number;
+    lastRetry: number;
+  }>({ telegram: false, firebase: false, retryCount: 0, lastRetry: 0 });
 
   // Get Telegram user data
   const telegramData = getTelegramWebAppData();
@@ -24,10 +31,24 @@ function App() {
   // Firebase hooks
   const { user: firebaseUser, loading: firebaseLoading } = useFirebaseUser(userId);
 
-  // Initialize app
+  // Initialize app with proper Telegram and Firebase checks
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        // Check Telegram WebApp availability
+        const telegramAvailable = window.Telegram?.WebApp !== undefined;
+        console.log(telegramAvailable ? '🚀 Telegram WebApp detected, initializing…' : '🌐 Web browser mode detected');
+        
+        // Check Firebase connection
+        const firebaseConnected = (window as any).firebaseConnected === true;
+        console.log(firebaseConnected ? '🔥 Firebase connected successfully.' : '⏳ Waiting for Firebase connection...');
+        
+        setInitializationState(prev => ({
+          ...prev,
+          telegram: telegramAvailable,
+          firebase: firebaseConnected
+        }));
+        
         console.log('🚀 Initializing app...');
         console.log('📱 Telegram data:', telegramData);
         console.log('👤 Telegram user:', telegramUser);
@@ -251,15 +272,44 @@ function App() {
         }
       } catch (error) {
         console.error('Error initializing app:', error);
+        
+        // Auto-retry on error
+        const now = Date.now();
+        if (initializationState.retryCount < 5 && now - initializationState.lastRetry > 3000) {
+          console.log('🔄 Initialization retry due to slow network.');
+          
+          // Show toast notification for retry
+          toast.loading(`Retrying connection... (${initializationState.retryCount + 1}/5)`, {
+            id: 'retry-toast',
+            duration: 2500
+          });
+          
+          setInitializationState(prev => ({
+            ...prev,
+            retryCount: prev.retryCount + 1,
+            lastRetry: now
+          }));
+          
+          // Retry after 3 seconds
+          setTimeout(() => {
+            if (!firebaseLoading) {
+              initializeApp();
+            }
+          }, 3000);
+        }
       } finally {
-        setLoading(false);
+        // Only set loading to false if both Telegram and Firebase are ready or max retries reached
+        if ((initializationState.telegram || !window.Telegram?.WebApp) && 
+            (initializationState.firebase || initializationState.retryCount >= 5)) {
+          setLoading(false);
+        }
       }
     };
 
     if (!firebaseLoading) {
       initializeApp();
     }
-  }, [telegramUser, userId, firebaseUser, firebaseLoading]);
+  }, [telegramUser, userId, firebaseUser, firebaseLoading, initializationState.retryCount]);
 
   // Update current user when Firebase user changes
   useEffect(() => {
@@ -281,19 +331,82 @@ function App() {
     }
   }, [currentUser]);
 
+  // Enhanced loading state with retry options
   if (loading || (isTelegramUser() && firebaseLoading)) {
+    const showRetryOption = initializationState.retryCount >= 3 && Date.now() - initializationState.lastRetry > 8000;
+    
     return (
       <div className="min-h-screen bg-gradient-dark flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="glass-panel p-8 text-center"
+          className="glass-panel p-8 text-center max-w-md mx-4"
         >
-          <div className="w-12 h-12 border-4 border-primary-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">Loading...</h2>
-          <p className="text-gray-400">
-            {isAdmin ? 'Initializing admin panel' : 'Setting up your dashboard'}
-          </p>
+          {!showRetryOption ? (
+            <>
+              <div className="w-12 h-12 border-4 border-primary-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-white mb-2">Loading...</h2>
+              <p className="text-gray-400 mb-4">
+                {isAdmin ? 'Initializing admin panel' : 'Setting up your dashboard'}
+              </p>
+              
+              {/* Initialization status */}
+              <div className="space-y-2 text-sm">
+                <div className={`flex items-center justify-between p-2 rounded ${initializationState.telegram ? 'bg-green-900/30' : 'bg-yellow-900/30'}`}>
+                  <span>Telegram WebApp</span>
+                  <span className={initializationState.telegram ? 'text-green-400' : 'text-yellow-400'}>
+                    {initializationState.telegram ? '✓' : '⏳'}
+                  </span>
+                </div>
+                <div className={`flex items-center justify-between p-2 rounded ${initializationState.firebase ? 'bg-green-900/30' : 'bg-yellow-900/30'}`}>
+                  <span>Firebase Connection</span>
+                  <span className={initializationState.firebase ? 'text-green-400' : 'text-yellow-400'}>
+                    {initializationState.firebase ? '✓' : '⏳'}
+                  </span>
+                </div>
+              </div>
+              
+              {initializationState.retryCount > 0 && (
+                <p className="text-xs text-gray-500 mt-4">
+                  Retry attempt {initializationState.retryCount}/5
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="text-6xl mb-4">🔄</div>
+              <h2 className="text-xl font-bold text-white mb-2">Slow Network Detected</h2>
+              <p className="text-gray-400 mb-6">
+                The app is taking longer than usual to load. This might be due to a slow network connection.
+              </p>
+              
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    setInitializationState({ telegram: false, firebase: false, retryCount: 0, lastRetry: 0 });
+                    setLoading(true);
+                    window.location.reload();
+                  }}
+                  className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-colors font-medium"
+                >
+                  🔄 Retry Loading
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setLoading(false);
+                  }}
+                  className="w-full px-4 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  ⚡ Continue Anyway
+                </button>
+              </div>
+              
+              <p className="text-xs text-gray-500 mt-4">
+                If issues persist, try clearing your browser cache
+              </p>
+            </>
+          )}
         </motion.div>
       </div>
     );
