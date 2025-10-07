@@ -8,9 +8,341 @@
     <meta name="description" content="Premium Bot Dashboard - Farm coins, complete tasks, and earn rewards!" />
     <title>Premium Bot Dashboard</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- FIX: Firebase CDN for immediate availability -->
+    <script type="module">
+      // Import Firebase modules from CDN for immediate availability
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+      import { getDatabase, ref, set, get, onValue, off, push, update } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+      
+      // Firebase Configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyD-EiTLr-bDDDKgR5tvzguyNfdlKDO8Rw8",
+        authDomain: "tap-and-earn-d3583.firebaseapp.com",
+        databaseURL: "https://tap-and-earn-d3583-default-rtdb.firebaseio.com",
+        projectId: "tap-and-earn-d3583",
+        storageBucket: "tap-and-earn-d3583.firebasestorage.app",
+        messagingSenderId: "759083332180",
+        appId: "1:759083332180:web:165eb0bf070956fb0033c1"
+      };
+
+      // Initialize Firebase immediately
+      try {
+        console.log('🔥 Initializing Firebase from CDN...');
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        
+        // Make Firebase globally available
+        window.firebaseApp = app;
+        window.database = database;
+        window.firebaseRef = ref;
+        window.firebaseSet = set;
+        window.firebaseGet = get;
+        window.firebaseOnValue = onValue;
+        window.firebaseOff = off;
+        window.firebasePush = push;
+        window.firebaseUpdate = update;
+        
+        // Test connection
+        const connectedRef = ref(database, '.info/connected');
+        onValue(connectedRef, (snapshot) => {
+          if (snapshot.val() === true) {
+            console.log('✅ Firebase connected successfully');
+            window.firebaseConnected = true;
+            
+            // Dispatch ready event
+            window.dispatchEvent(new CustomEvent('firebaseReady'));
+          } else {
+            console.log('❌ Firebase disconnected');
+            window.firebaseConnected = false;
+          }
+        });
+        
+        console.log('🎯 Firebase initialization complete');
+      } catch (error) {
+        console.error('❌ Firebase initialization failed:', error);
+        window.firebaseError = error;
+      }
+    </script>
+    
+    <!-- FIX: Use latest built assets with correct paths -->
+    <script type="module" crossorigin src="/dist/assets/index-fc56408b.js"></script>
+    <link rel="modulepreload" crossorigin href="/dist/assets/vendor-4ed993c7.js">
+    <link rel="modulepreload" crossorigin href="/dist/assets/ui-4ed993c7.js">
+    <link rel="stylesheet" href="/dist/assets/index-6bd67914.css">
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="root">
+      <!-- FIX: Loading screen while app initializes -->
+      <div id="loading-screen" style="display: flex; align-items: center; justify-content: center; height: 100vh; background: linear-gradient(135deg, #0b0f1a 0%, #1a1d3a 100%); color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <div style="text-align: center;">
+          <div style="font-size: 64px; margin-bottom: 20px; animation: pulse 2s infinite;">🚀</div>
+          <h2 style="margin: 0 0 10px 0; font-weight: 600;">Mining PRO</h2>
+          <p style="margin: 0; color: #a0a0a0;">Loading your dashboard...</p>
+          <div style="margin-top: 20px;">
+            <div style="width: 200px; height: 4px; background: #333; border-radius: 2px; overflow: hidden; margin: 0 auto;">
+              <div style="width: 100%; height: 100%; background: linear-gradient(90deg, #00d4ff, #0099cc); animation: loading 2s infinite;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- FIX: Enhanced error handling and initialization -->
+    <script>
+      // Loading animation styles
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        @keyframes loading {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+      `;
+      document.head.appendChild(style);
+      
+      // Hide loading screen when React app mounts
+      function hideLoadingScreen() {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+          loadingScreen.style.transition = 'opacity 0.5s ease-out';
+          loadingScreen.style.opacity = '0';
+          setTimeout(() => {
+            loadingScreen.remove();
+          }, 500);
+        }
+      }
+      
+      // Show loading screen if React app fails to mount within 10 seconds
+      setTimeout(() => {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen && loadingScreen.parentNode) {
+          console.warn('React app taking too long to load, showing error message');
+          loadingScreen.innerHTML = `
+            <div style="text-align: center;">
+              <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+              <h2 style="margin: 0 0 15px 0; font-weight: 600;">Loading Error</h2>
+              <p style="margin: 0 0 20px 0; color: #a0a0a0; line-height: 1.5;">
+                The application is taking longer than expected to load.<br>
+                This might be due to a network issue or server problem.
+              </p>
+              <button onclick="window.location.reload()" style="background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; margin-right: 10px; box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);">
+                🔄 Reload Page
+              </button>
+              <button onclick="localStorage.clear(); sessionStorage.clear(); window.location.reload();" style="background: #333; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; margin-top: 10px;">
+                🗑️ Clear Cache & Reload
+              </button>
+            </div>
+          `;
+        }
+      }, 10000);
+      
+      // Global error handler
+      window.addEventListener('error', function(e) {
+        console.error('Application Error:', e.error);
+        console.error('Error details:', {
+          message: e.message,
+          filename: e.filename,
+          lineno: e.lineno,
+          colno: e.colno,
+          stack: e.error?.stack
+        });
+        
+        // Show user-friendly error message if main app fails to load
+        if (e.filename && (e.filename.includes('index-') || e.message.includes('Loading chunk'))) {
+          const root = document.getElementById('root');
+          if (root) {
+            root.innerHTML = `
+              <div style="display: flex; align-items: center; justify-content: center; height: 100vh; background: linear-gradient(135deg, #0b0f1a 0%, #1a1d3a 100%); color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px;">
+                <div style="max-width: 400px;">
+                  <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+                  <h2 style="margin: 0 0 15px 0; font-weight: 600;">Loading Error</h2>
+                  <p style="margin: 0 0 20px 0; color: #a0a0a0; line-height: 1.5;">
+                    Unable to load the application. This might be due to a network issue or outdated cache.
+                  </p>
+                  <div style="background: #1a1d3a; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                    <strong>Error:</strong> ${e.message}<br>
+                    <strong>File:</strong> ${e.filename || 'Unknown'}<br>
+                    <strong>Line:</strong> ${e.lineno || 'Unknown'}
+                  </div>
+                  <button onclick="window.location.reload()" style="background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; margin-right: 10px; box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);">
+                    🔄 Reload Page
+                  </button>
+                  <button onclick="localStorage.clear(); sessionStorage.clear(); window.location.reload();" style="background: #333; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; margin-top: 10px;">
+                    🗑️ Clear Cache & Reload
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+        }
+      });
+      
+      // Handle Promise rejections
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('Unhandled Promise Rejection:', e.reason);
+        
+        // If Firebase connection fails, show specific message
+        if (e.reason && e.reason.toString().includes('Firebase')) {
+          console.warn('Firebase connection issue detected:', e.reason);
+        }
+      });
+      
+      // FIX: Initialize Telegram WebApp with enhanced error handling
+      function initializeTelegram() {
+        try {
+          if (window.Telegram && window.Telegram.WebApp) {
+            console.log('📱 Initializing Telegram WebApp...');
+            
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            
+            // Set theme colors
+            if (tg.setHeaderColor) {
+              tg.setHeaderColor('#0b0f1a');
+            }
+            if (tg.setBackgroundColor) {
+              tg.setBackgroundColor('#0b0f1a');
+            }
+            
+            // Enable haptic feedback
+            if (tg.HapticFeedback) {
+              tg.HapticFeedback.impactOccurred('light');
+            }
+            
+            // Log Telegram user data for debugging
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+              console.log('👤 Telegram User:', tg.initDataUnsafe.user);
+            } else {
+              console.log('⚠️ No Telegram user data found - running in web browser mode');
+            }
+            
+            console.log('✅ Telegram WebApp initialized successfully');
+          } else {
+            console.log('🌐 Running in web browser mode (no Telegram WebApp)');
+          }
+        } catch (error) {
+          console.error('❌ Telegram initialization error:', error);
+        }
+      }
+      
+      // Initialize when DOM is ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeTelegram);
+      } else {
+        initializeTelegram();
+      }
+      
+      // FIX: Sample Tasks Initialization
+      window.addEventListener('firebaseReady', function() {
+        console.log('🔥 Firebase ready, initializing sample data...');
+        
+        // Sample tasks for immediate availability
+        const SAMPLE_TASKS = [
+          {
+            title: "Welcome to Mining PRO! 🎯",
+            description: "Complete your first task to get started! Click 'Claim Reward' to earn your first coins.",
+            reward: 100,
+            type: "daily",
+            icon: "🎯",
+            active: true,
+            verification: "auto"
+          },
+          {
+            title: "Join Our Telegram Channel 📢",
+            description: "Join our official Telegram channel for updates and exclusive content.",
+            reward: 250,
+            type: "channel_join",
+            icon: "📢",
+            url: "https://t.me/Mining_tech_bot",
+            active: true,
+            verification: "manual"
+          },
+          {
+            title: "Follow on YouTube 🎥",
+            description: "Subscribe to our YouTube channel and ring the notification bell.",
+            reward: 300,
+            type: "youtube",
+            icon: "🎥",
+            url: "https://youtube.com/@miningtechbot",
+            active: true,
+            verification: "manual"
+          },
+          {
+            title: "Daily Login Bonus 📅",
+            description: "Login daily to claim your bonus rewards. Streak multiplier applies!",
+            reward: 50,
+            type: "daily",
+            icon: "📅",
+            active: true,
+            verification: "auto"
+          },
+          {
+            title: "Weekly Mining Challenge ⛏️",
+            description: "Complete 7 days of continuous mining to earn this special reward.",
+            reward: 1000,
+            type: "weekly",
+            icon: "⛏️",
+            active: true,
+            verification: "auto"
+          },
+          {
+            title: "Special Launch Bonus 🚀",
+            description: "Limited time offer! Claim your special launch bonus now.",
+            reward: 500,
+            type: "special",
+            icon: "🚀",
+            active: true,
+            verification: "auto",
+            expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000) // 7 days from now
+          }
+        ];
+        
+        // Initialize sample tasks if none exist
+        setTimeout(async () => {
+          try {
+            const tasksRef = window.firebaseRef(window.database, 'tasks');
+            const snapshot = await window.firebaseGet(tasksRef);
+            
+            if (!snapshot.exists()) {
+              console.log('📝 No tasks found, creating sample tasks...');
+              
+              for (const task of SAMPLE_TASKS) {
+                const newTaskRef = window.firebasePush(tasksRef);
+                await window.firebaseSet(newTaskRef, {
+                  ...task,
+                  id: newTaskRef.key,
+                  createdAt: Date.now()
+                });
+                console.log(`✅ Added sample task: ${task.title}`);
+              }
+              
+              console.log('🎉 Sample tasks created successfully');
+            } else {
+              console.log('📋 Tasks already exist, skipping sample creation');
+            }
+          } catch (error) {
+            console.error('❌ Failed to initialize sample tasks:', error);
+          }
+        }, 2000);
+      });
+      
+      // Export utility functions for debugging
+      window.debugApp = function() {
+        console.log('🔍 App Debug Info:');
+        console.log('- Firebase connected:', window.firebaseConnected);
+        console.log('- Firebase app:', window.firebaseApp);
+        console.log('- Database:', window.database);
+        console.log('- Telegram WebApp:', window.Telegram?.WebApp);
+        console.log('- React app mounted:', !document.getElementById('loading-screen'));
+      };
+      
+      // Make hideLoadingScreen globally available for React app
+      window.hideLoadingScreen = hideLoadingScreen;
+    </script>
   </body>
 </html>
