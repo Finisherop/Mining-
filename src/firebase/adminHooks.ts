@@ -106,6 +106,76 @@ export const updateAdminSettings = async (
 };
 
 // Log admin action
+// Hook to get all users for admin dashboard
+export const useAllUsers = () => {
+  const [users, setUsers] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const usersRef = ref(database, 'users');
+    
+    const unsubscribe = onValue(usersRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
+      try {
+        if (snapshot.exists()) {
+          setUsers(snapshot.val());
+        } else {
+          setUsers({});
+        }
+        setError(null);
+      } catch (err) {
+        console.error('Error loading users:', err);
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
+      console.error('Firebase users error:', err);
+      setError(err.message);
+      setLoading(false);
+    });
+
+    return () => off(usersRef, 'value', unsubscribe);
+  }, []);
+
+  return { users, loading, error };
+};
+
+// Hook to get all withdrawals for admin dashboard
+export const useWithdrawals = () => {
+  const [withdrawals, setWithdrawals] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const withdrawalsRef = ref(database, 'withdrawals');
+    
+    const unsubscribe = onValue(withdrawalsRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
+      try {
+        if (snapshot.exists()) {
+          setWithdrawals(snapshot.val());
+        } else {
+          setWithdrawals({});
+        }
+        setError(null);
+      } catch (err) {
+        console.error('Error loading withdrawals:', err);
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      } finally {
+        setLoading(false);
+      }
+    }, (err: any) => { // <-- ERROR FIX: Add explicit type for Firebase error callback
+      console.error('Firebase withdrawals error:', err);
+      setError(err.message);
+      setLoading(false);
+    });
+
+    return () => off(withdrawalsRef, 'value', unsubscribe);
+  }, []);
+
+  return { withdrawals, loading, error };
+};
+
 export const logAdminAction = async (action: Omit<AdminAction, 'id'>): Promise<boolean> => {
   try {
     const actionsRef = ref(database, 'adminActions'); // ERROR: TS6133 'actionsRef' is declared but never read - currently unused, do not delete

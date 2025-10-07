@@ -12,7 +12,7 @@ import {
   Users,
   Star
 } from 'lucide-react';
-import { cn, playSound } from '../utils';
+import { cn, playSound, formatNumber } from '../utils'; // FIX: Add missing formatNumber import
 // ERROR: TS6133 'cn' is declared but never read - currently unused, do not delete
 import toast from 'react-hot-toast';
 
@@ -20,6 +20,7 @@ interface AdminControlsConfig {
   farmingRate: number;
   farmingDuration: number; // hours
   coinToInrRate: number; // coins per INR
+  starToInrRate: number; // stars per INR - NEW EXCHANGE RATE SETTING
   taskRewards: {
     youtube: number;
     channelJoin: number;
@@ -45,6 +46,7 @@ const AdminControlsPanel: React.FC = () => {
     farmingRate: 10,
     farmingDuration: 24,
     coinToInrRate: 100, // 100 coins = 1 INR
+    starToInrRate: 10,  // 10 stars = 1 INR - NEW EXCHANGE RATE SETTING
     taskRewards: {
       youtube: 50,
       channelJoin: 25,
@@ -94,6 +96,7 @@ const AdminControlsPanel: React.FC = () => {
       farmingRate: 10,
       farmingDuration: 24,
       coinToInrRate: 100,
+      starToInrRate: 10, // FIX: Add missing property
       taskRewards: {
         youtube: 50,
         channelJoin: 25,
@@ -345,11 +348,11 @@ const AdminControlsPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Conversion Rates */}
+      {/* Conversion Rates - ENHANCED WITH NEW EXCHANGE SETTINGS */}
       <div className="glass-panel p-6 space-y-4">
         <h3 className="text-lg font-semibold text-white flex items-center">
           <DollarSign className="w-5 h-5 mr-2 text-green-400" />
-          Conversion Rates
+          Exchange Rate Settings (Admin Control)
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -368,6 +371,50 @@ const AdminControlsPanel: React.FC = () => {
             </p>
           </div>
           
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Stars to INR Rate (stars per ₹1) - NEW SETTING
+            </label>
+            <input
+              type="number"
+              value={config.starToInrRate}
+              onChange={(e) => setConfig(prev => ({ ...prev, starToInrRate: parseInt(e.target.value) || 0 }))}
+              className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-2 text-white focus:border-primary-500 focus:outline-none"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Current: {config.starToInrRate} stars = ₹1
+            </p>
+          </div>
+        </div>
+
+        {/* Live Exchange Calculator */}
+        <div className="bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 rounded-lg p-4">
+          <h4 className="text-lg font-semibold text-green-400 mb-3">📊 Live Exchange Calculator</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">{formatNumber(1000)}</div>
+              <div className="text-gray-400">Coins</div>
+              <div className="text-green-400">= ₹{(1000 / config.coinToInrRate).toFixed(2)}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">{formatNumber(100)}</div>
+              <div className="text-gray-400">Stars</div>
+              <div className="text-yellow-400">= ₹{(100 / config.starToInrRate).toFixed(2)}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">₹100</div>
+              <div className="text-gray-400">INR</div>
+              <div className="text-blue-400">= {100 * config.coinToInrRate} coins</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">₹100</div>
+              <div className="text-gray-400">INR</div>
+              <div className="text-purple-400">= {100 * config.starToInrRate} stars</div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Minimum Withdrawal (₹)
