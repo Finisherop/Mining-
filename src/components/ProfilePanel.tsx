@@ -15,10 +15,10 @@ const ProfilePanel: React.FC = () => {
   const [isLoadingPhoto, setIsLoadingPhoto] = useState(false);
   const [lastPhotoFetch, setLastPhotoFetch] = useState<number | null>(null);
 
-  if (!user) return null;
-
   // Auto-fetch Telegram profile data
   useEffect(() => {
+    if (!user) return; // Guard clause to prevent null access
+    
     const fetchTelegramProfile = async () => {
       try {
         console.log('🔄 Fetching Telegram profile data...');
@@ -33,7 +33,7 @@ const ProfilePanel: React.FC = () => {
           const telegramName = telegramData.user.username || 
                               `${telegramData.user.first_name}${telegramData.user.last_name ? ' ' + telegramData.user.last_name : ''}`;
           
-          if (user.username !== telegramName || user.userId !== telegramData.user.id.toString()) {
+          if (user && (user.username !== telegramName || user.userId !== telegramData.user.id.toString())) {
             console.log('🔄 Updating user data with Telegram info');
             const updatedUser = {
               ...user,
@@ -120,6 +120,9 @@ const ProfilePanel: React.FC = () => {
 
     fetchTelegramProfile();
   }, [user, setUser, lastPhotoFetch]);
+
+  // Handle early return AFTER all hooks
+  if (!user) return null;
 
   // Manual refresh function
   const handleRefreshProfile = async () => {
