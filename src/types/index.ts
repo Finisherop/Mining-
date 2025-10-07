@@ -95,6 +95,8 @@ export interface FarmingSession {
   baseRate: number;
   multiplier: number;
   totalEarned: number;
+  sessionCoinsAdded?: number; // Track coins added to user's balance this session
+  lastUpdate?: number; // Last update timestamp
   active: boolean;
 }
 

@@ -33,8 +33,8 @@ import { useFirebaseTasks, addTask, updateTask, deleteTask } from '../firebase/h
 import { cn, formatNumber } from '../utils';
 import toast from 'react-hot-toast';
 
-type AdminTab = 'dashboard' | 'settings' | 'tasks' | 'users';
-type FooterTab = 'analytics' | 'reports';
+type AdminTab = 'dashboard' | 'users' | 'tasks';
+type FooterTab = 'analytics' | 'settings';
 
 interface TaskForm {
   title: string;
@@ -732,29 +732,31 @@ const SuperEnhancedAdminPanel: React.FC = () => {
         <p className="text-gray-400">Complete control over your Mining Tech Bot</p>
       </motion.div>
 
-      {/* Top Navigation - 4 Tabs */}
+      {/* Top Navigation - 3 MAIN TABS */}
       <div className="flex justify-center mb-6">
         <div className="glass-panel p-2 flex space-x-2">
           {[
-            { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
-            { id: 'tasks', label: 'Tasks', icon: CheckSquare },
-            { id: 'settings', label: 'Settings', icon: Settings },
-            { id: 'users', label: 'Users', icon: Users }
-          ].map(({ id, label, icon: Icon }) => (
+            { id: 'dashboard', label: 'Dashboard', icon: BarChart3, description: 'Overview & Analytics' },
+            { id: 'tasks', label: 'Task Manager', icon: CheckSquare, description: 'Create & Manage Tasks' },
+            { id: 'users', label: 'User Manager', icon: Users, description: 'Manage Users & VIP' }
+          ].map(({ id, label, icon: Icon, description }) => (
             <motion.button
               key={id}
               onClick={() => setActiveTab(id as AdminTab)}
               className={cn(
-                "flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all",
+                "flex items-center space-x-3 px-6 py-3 rounded-lg font-medium transition-all min-w-[150px]",
                 activeTab === id
-                  ? "bg-primary-500 text-white"
+                  ? "bg-primary-500 text-white shadow-lg"
                   : "text-gray-400 hover:text-white hover:bg-gray-800"
               )}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Icon className="w-4 h-4" />
-              <span>{label}</span>
+              <Icon className="w-5 h-5" />
+              <div className="text-left">
+                <div className="font-semibold">{label}</div>
+                <div className="text-xs opacity-75">{description}</div>
+              </div>
             </motion.button>
           ))}
         </div>
@@ -771,36 +773,68 @@ const SuperEnhancedAdminPanel: React.FC = () => {
         >
           {activeTab === 'dashboard' && <DashboardContent />}
           {activeTab === 'tasks' && <TasksContent />}
-          {activeTab === 'settings' && <SettingsContent />}
           {activeTab === 'users' && <UsersContent />}
         </motion.div>
       </AnimatePresence>
 
-      {/* Footer Navigation - 2 Tabs */}
+      {/* Footer Content Overlay - Settings */}
+      <AnimatePresence>
+        {activeFooterTab === 'settings' && (
+          <motion.div
+            key="settings-overlay"
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex items-center justify-center p-4"
+            onClick={() => setActiveFooterTab('analytics')}
+          >
+            <motion.div
+              onClick={(e) => e.stopPropagation()}
+              className="glass-panel p-6 max-w-4xl max-h-[80vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-white">System Settings</h2>
+                <button
+                  onClick={() => setActiveFooterTab('analytics')}
+                  className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <Eye className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+              <SettingsContent />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Footer Navigation - 2 ENHANCED TABS */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="fixed bottom-4 left-4 right-4 flex justify-center"
       >
-        <div className="glass-panel p-2 flex space-x-2">
+        <div className="glass-panel p-3 flex space-x-3">
           {[
-            { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-            { id: 'reports', label: 'Reports', icon: BarChart3 }
-          ].map(({ id, label, icon: Icon }) => (
+            { id: 'analytics', label: 'Analytics & Reports', icon: TrendingUp, description: 'Performance Analytics' },
+            { id: 'settings', label: 'System Settings', icon: Settings, description: 'Global Configuration' }
+          ].map(({ id, label, icon: Icon, description }) => (
             <motion.button
               key={id}
               onClick={() => setActiveFooterTab(id as FooterTab)}
               className={cn(
-                "flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all",
+                "flex items-center space-x-3 px-5 py-3 rounded-lg font-medium transition-all min-w-[160px]",
                 activeFooterTab === id
-                  ? "bg-secondary-500 text-white"
+                  ? "bg-secondary-500 text-white shadow-lg"
                   : "text-gray-400 hover:text-white hover:bg-gray-800"
               )}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Icon className="w-4 h-4" />
-              <span>{label}</span>
+              <Icon className="w-5 h-5" />
+              <div className="text-left">
+                <div className="font-semibold text-sm">{label}</div>
+                <div className="text-xs opacity-75">{description}</div>
+              </div>
             </motion.button>
           ))}
         </div>

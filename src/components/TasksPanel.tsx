@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   CheckSquare, 
@@ -106,9 +106,10 @@ const TasksPanel: React.FC = () => {
 
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        key={`${task.id}-${isCompleted}`} // FIXED: Stable key to prevent blinking
+        initial={false} // Prevent initial animation on re-renders
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: index * 0.1 }}
+        transition={{ delay: Math.min(index * 0.05, 0.5) }} // Reduced delay to prevent lag
         className={cn(
           "glass-panel p-4 transition-all duration-300",
           isCompleted && "bg-green-500/10 border-green-500/30",
@@ -215,14 +216,14 @@ const TasksPanel: React.FC = () => {
     );
   }
 
-  const activeTasks = tasks.filter(task => task.active);
-  const dailyTasks = activeTasks.filter(t => t.type === 'daily');
-  const weeklyTasks = activeTasks.filter(t => t.type === 'weekly');
-  const specialTasks = activeTasks.filter(t => t.type === 'special');
-  const socialTasks = activeTasks.filter(t => ['youtube', 'channel_join', 'group_join', 'link'].includes(t.type));
+  const activeTasks = useMemo(() => tasks.filter(task => task.active), [tasks]);
+  const dailyTasks = useMemo(() => activeTasks.filter(t => t.type === 'daily'), [activeTasks]);
+  const weeklyTasks = useMemo(() => activeTasks.filter(t => t.type === 'weekly'), [activeTasks]);
+  const specialTasks = useMemo(() => activeTasks.filter(t => t.type === 'special'), [activeTasks]);
+  const socialTasks = useMemo(() => activeTasks.filter(t => ['youtube', 'channel_join', 'group_join', 'link'].includes(t.type)), [activeTasks]);
 
-  const completedCount = activeTasks.filter(t => completedTasks.includes(t.id)).length;
-  const remainingCount = activeTasks.length - completedCount;
+  const completedCount = useMemo(() => activeTasks.filter(t => completedTasks.includes(t.id)).length, [activeTasks, completedTasks]);
+  const remainingCount = useMemo(() => activeTasks.length - completedCount, [activeTasks.length, completedCount]);
 
   return (
     <div className="space-y-6">

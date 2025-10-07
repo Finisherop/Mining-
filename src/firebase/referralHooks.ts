@@ -16,16 +16,16 @@ export interface Referral {
   lastActiveAt: number;
 }
 
-// Generate referral link with proper HTTPS URL
+// Generate SINGLE referral link with proper HTTPS URL - NO DUPLICATES
 export const generateReferralLink = (userId: string, username: string): string => {
-  // FIX: Generate proper HTTPS link instead of @ format
+  // FIXED: Generate single stable HTTPS link based on userId only
   const botUsername = 'Mining_tech_bot'; // Your actual bot username
-  const referralCode = `ref_${userId}_${Date.now().toString().slice(-6)}`;
+  const referralCode = `${userId}`; // Simple, stable referral code
   
   // Create proper Telegram bot HTTPS link
   const httpsLink = `https://t.me/${botUsername}?start=${referralCode}`;
   
-  console.log('✅ Generated HTTPS referral link:', httpsLink);
+  console.log('✅ Generated single HTTPS referral link:', httpsLink);
   return httpsLink;
 };
 

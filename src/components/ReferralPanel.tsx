@@ -183,7 +183,7 @@ const ReferralPanel: React.FC = () => {
       <div className="glass-panel p-6 space-y-4">
         <h3 className="text-lg font-semibold text-white flex items-center">
           <Share2 className="w-5 h-5 mr-2 text-primary-400" />
-          Your Referral Link (HTTPS)
+          Your Referral Link
         </h3>
         
         <div className="flex items-center space-x-3">
@@ -194,7 +194,7 @@ const ReferralPanel: React.FC = () => {
               </div>
               <div className="flex items-center justify-center space-x-2 text-sm text-gray-400">
                 <ExternalLink className="w-4 h-4 text-green-400" />
-                <span>HTTPS Telegram Link - Works everywhere!</span>
+                <span>Secure Telegram Link - Works everywhere!</span>
               </div>
             </div>
           </div>
@@ -229,14 +229,13 @@ const ReferralPanel: React.FC = () => {
           </div>
         </div>
 
-        {/* Link Info */}
+        {/* Link Info - REMOVED HTTPS GUIDE AS REQUESTED */}
         <div className="bg-gradient-to-r from-blue-500/10 to-green-500/10 border border-blue-500/20 rounded-lg p-3">
-          <h4 className="text-sm font-semibold text-blue-400 mb-1">✅ HTTPS Link Features:</h4>
+          <h4 className="text-sm font-semibold text-blue-400 mb-1">🔗 Your Referral Link</h4>
           <ul className="text-xs text-gray-300 space-y-1">
-            <li>• Works in all browsers and messaging apps</li>
-            <li>• Secure HTTPS protocol</li>
-            <li>• Direct link to Telegram bot</li>
-            <li>• No @ symbol issues</li>
+            <li>• Share this link with friends to earn rewards</li>
+            <li>• Both you and your friend get bonus coins</li>
+            <li>• Earn 10% of their farming rewards automatically</li>
           </ul>
         </div>
       </div>
