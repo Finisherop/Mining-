@@ -55,6 +55,42 @@ function App() {
         if (isAdminMode) {
           console.log('🔧 Setting admin mode');
           setIsAdmin(true);
+          
+          // Create admin user for SuperAdmin panel
+          const adminUser: User = {
+            id: 'admin-user',
+            userId: telegramUser?.id.toString() || 'admin-demo',
+            username: telegramUser?.username || 'admin',
+            firstName: telegramUser?.first_name || 'Super',
+            lastName: telegramUser?.last_name || 'Admin',
+            coins: 999999,
+            stars: 999999,
+            tier: 'diamond',
+            vipType: 'diamond',
+            vipExpiry: Date.now() + (365 * 24 * 60 * 60 * 1000), // 1 year
+            dailyWithdrawals: 0,
+            referralCode: 'ADMIN001',
+            totalReferrals: 0,
+            farmingRate: 100,
+            claimStreak: 0,
+            claimedDays: [],
+            badges: [],
+            createdAt: Date.now(),
+            lastActive: Date.now(),
+            totalEarnings: 0,
+            isVIP: true,
+            banned: false,
+            earningMultiplier: 10,
+            boosts: 0,
+            referralCount: 0,
+            vip_tier: 'diamond',
+            vip_expiry: Date.now() + (365 * 24 * 60 * 60 * 1000),
+            multiplier: 10,
+            withdraw_limit: 999999,
+            referral_boost: 10
+          };
+          
+          setCurrentUser(adminUser);
           setLoading(false);
           return;
         }
@@ -258,11 +294,17 @@ function App() {
         (() => {
           const urlParams = new URLSearchParams(window.location.search);
           const isSuperAdmin = urlParams.get('superadmin') === 'true';
-          return isSuperAdmin && currentUser ? (
-            <SuperAdminPanel adminUser={currentUser} />
-          ) : (
-            <TabbedAdminPanel />
-          );
+          
+          // Debug logs
+          console.log('🔍 Admin panel render:', { isAdmin, isSuperAdmin, currentUser: !!currentUser });
+          
+          if (isSuperAdmin && currentUser) {
+            console.log('🚀 Rendering SuperAdminPanel');
+            return <SuperAdminPanel adminUser={currentUser} />;
+          } else {
+            console.log('📊 Rendering TabbedAdminPanel');
+            return <TabbedAdminPanel />;
+          }
         })()
       ) : currentUser ? (
         <Layout />
@@ -294,6 +336,26 @@ function App() {
             <p className="text-xs text-gray-500 mt-4">
               Or access through Telegram bot for full features
             </p>
+            <div className="mt-6 space-y-2">
+              <button
+                onClick={() => window.location.href = '?user=true'}
+                className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-colors"
+              >
+                🚀 Launch User Panel
+              </button>
+              <button
+                onClick={() => window.location.href = '?admin=true'}
+                className="w-full px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-colors"
+              >
+                🔧 Launch Admin Panel
+              </button>
+              <button
+                onClick={() => window.location.href = '?superadmin=true'}
+                className="w-full px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors"
+              >
+                👑 Launch Super Admin Panel
+              </button>
+            </div>
           </motion.div>
         </div>
       )}
