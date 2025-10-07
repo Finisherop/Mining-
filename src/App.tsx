@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import TabbedAdminPanel from './components/TabbedAdminPanel';
+import NetworkStatus from './components/NetworkStatus';
 import { useFirebaseUser, createOrUpdateUser } from './firebase/hooks';
 import { User } from './types/firebase';
 import { getTelegramWebAppData, getTelegramUserPhoto } from './services/telegram';
@@ -30,13 +31,19 @@ function App() {
         console.log('📱 Telegram data:', telegramData);
         console.log('👤 Telegram user:', telegramUser);
         console.log('🆔 User ID:', userId);
-        // Check if admin mode (specific admin ID or admin parameter)
+        
+        // FIX: Handle access from other devices (non-Telegram)
         const urlParams = new URLSearchParams(window.location.search);
         const forceUserMode = urlParams.get('user') === 'true';
-        const isAdminMode = !forceUserMode && (urlParams.get('admin') === 'true' || (telegramUser && telegramUser.id === 123456789)); // Replace 123456789 with actual admin ID
+        const isAdminMode = !forceUserMode && (urlParams.get('admin') === 'true' || (telegramUser && telegramUser.id === 123456789));
+        
+        // FIX: Check if accessing from external device (no Telegram data)
+        const isExternalDevice = !telegramUser && !telegramData;
+        const demoUserId = urlParams.get('demo') || 'demo-user-001';
         
         console.log('⚙️ Force user mode:', forceUserMode);
         console.log('👑 Is admin mode:', isAdminMode);
+        console.log('📱 Is external device:', isExternalDevice);
         
         if (isAdminMode) {
           console.log('🔧 Setting admin mode');
@@ -45,7 +52,53 @@ function App() {
           return;
         }
 
-        // User Panel Mode
+        // FIX: Handle external device access with demo user
+        if (isExternalDevice) {
+          console.log('🌐 External device detected - creating demo user');
+          const demoUser: User = {
+            id: demoUserId,
+            userId: demoUserId,
+            username: `User${Math.floor(Math.random() * 1000)}`,
+            coins: 1250,
+            stars: 45,
+            tier: 'free',
+            isVIP: false,
+            vip_tier: 'free',
+            vip_expiry: null,
+            multiplier: 1,
+            withdraw_limit: 1,
+            referral_boost: 1,
+            dailyWithdrawals: 0,
+            referralCode: `https://t.me/Mining_tech_bot?start=ref_${demoUserId}`,
+            totalReferrals: 3,
+            farmingRate: 10,
+            claimStreak: 2,
+            claimedDays: [1, 2],
+            badges: [{
+              type: 'bronze',
+              name: 'Demo User',
+              description: 'Accessing from external device',
+              icon: '🌐',
+              color: '#cd7f32',
+              unlockedAt: Date.now()
+            }],
+            createdAt: Date.now(),
+            lastActive: Date.now(),
+            totalEarnings: 0,
+            earningMultiplier: 1,
+            boosts: 0,
+            referralCount: 0,
+            vipExpiry: null
+          };
+          
+          setCurrentUser(demoUser);
+          saveUserToStorage(demoUser);
+          setIsAdmin(false);
+          setLoading(false);
+          return;
+        }
+
+        // User Panel Mode (Telegram users)
         console.log('👥 Setting user mode');
         setIsAdmin(false);
         
@@ -191,6 +244,9 @@ function App() {
 
   return (
     <div className="App">
+      {/* FIX: Network status indicator for device connectivity */}
+      <NetworkStatus />
+      
       {isAdmin ? (
         <TabbedAdminPanel />
       ) : currentUser ? (
@@ -200,11 +256,25 @@ function App() {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="glass-panel p-8 text-center"
+            className="glass-panel p-8 text-center max-w-md mx-4"
           >
-            <h2 className="text-xl font-bold text-white mb-2">Welcome!</h2>
-            <p className="text-gray-400">
-              Please open this app through the Telegram bot to access your dashboard.
+            <h2 className="text-xl font-bold text-white mb-2">🌐 Welcome to Mining Tech Bot!</h2>
+            <p className="text-gray-400 mb-4">
+              Access from any device! Use the URL parameters below:
+            </p>
+            <div className="space-y-2 text-sm">
+              <div className="bg-gray-800/50 p-2 rounded">
+                <span className="text-blue-400">?user=true</span> - User Panel
+              </div>
+              <div className="bg-gray-800/50 p-2 rounded">
+                <span className="text-green-400">?admin=true</span> - Admin Panel
+              </div>
+              <div className="bg-gray-800/50 p-2 rounded">
+                <span className="text-purple-400">?demo=myid</span> - Demo User
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-4">
+              Or access through Telegram bot for full features
             </p>
           </motion.div>
         </div>

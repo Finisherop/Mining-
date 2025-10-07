@@ -324,17 +324,28 @@ export const useAppStore = create<AppState>((set, get) => ({
     
     const now = Date.now();
     const duration = (now - farmingSession.startTime) / 1000 / 60; // minutes
-    const earned = Math.floor(duration * farmingSession.baseRate * farmingSession.multiplier);
     
-    // FIX: Calculate the new earnings since last update
-    const newEarnings = earned - farmingSession.totalEarned;
+    // FIX: Ensure we have a minimum duration before calculating earnings
+    if (duration < 0.1) return; // Wait at least 6 seconds
     
-    const updatedSession = { ...farmingSession, totalEarned: earned };
-    const updatedUser = { 
-      ...user, 
-      coins: user.coins + newEarnings, // Add only new earnings
-      totalEarnings: user.totalEarnings + newEarnings
+    const totalEarned = Math.floor(duration * farmingSession.baseRate * farmingSession.multiplier);
+    
+    // Calculate new earnings since last update
+    const previousEarned = farmingSession.totalEarned || 0;
+    const newEarnings = Math.max(0, totalEarned - previousEarned);
+    
+    const updatedSession = { 
+      ...farmingSession, 
+      totalEarned: totalEarned,
+      lastUpdate: now 
     };
+    
+    // Only update user coins if there are new earnings
+    const updatedUser = newEarnings > 0 ? { 
+      ...user, 
+      coins: user.coins + newEarnings,
+      totalEarnings: user.totalEarnings + newEarnings
+    } : user;
     
     set({
       user: updatedUser,
@@ -345,12 +356,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     saveFarmingSession(updatedSession);
     
     // AUTO-SYNC: Continuously save to localStorage for ultra-fast access
-    localStorage.setItem('userData', JSON.stringify({
-      ...updatedUser,
-      lastSync: Date.now()
-    }));
-    
-    console.log('💰 Farming earnings updated:', newEarnings, 'Total coins:', updatedUser.coins);
+    if (newEarnings > 0) {
+      localStorage.setItem('userData', JSON.stringify({
+        ...updatedUser,
+        lastSync: Date.now()
+      }));
+      
+      console.log('💰 Farming earnings updated:', {
+        duration: duration.toFixed(2),
+        newEarnings,
+        totalEarned,
+        totalCoins: updatedUser.coins,
+        rate: farmingSession.baseRate,
+        multiplier: farmingSession.multiplier
+      });
+    }
   },
   
   // Daily rewards
