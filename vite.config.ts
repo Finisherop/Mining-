@@ -17,6 +17,8 @@ export default defineConfig({
     cors: true
   },
   build: {
+    minify: false, // FIX: Disable minification for better error messages
+    sourcemap: true, // FIX: Enable sourcemaps for debugging
     rollupOptions: {
       output: {
         manualChunks: {
@@ -25,5 +27,9 @@ export default defineConfig({
         }
       }
     }
+  },
+  define: {
+    // FIX: Enable React dev mode for better error messages
+    __DEV__: JSON.stringify(true)
   }
 })

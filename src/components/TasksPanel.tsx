@@ -117,8 +117,6 @@ const TasksPanel: React.FC = () => {
     }
   };
 
-  if (!user) return null;
-
   const getTaskIcon = (task: any) => {
     switch (task.type) {
       case 'youtube': return <Youtube className="w-5 h-5 text-red-400" />;
@@ -254,6 +252,7 @@ const TasksPanel: React.FC = () => {
     );
   };
 
+  // Move all useMemo hooks to top level to avoid hook order violations
   const activeTasks = useMemo(() => tasks.filter(task => task.active), [tasks]);
   const dailyTasks = useMemo(() => activeTasks.filter(t => t.type === 'daily'), [activeTasks]);
   const weeklyTasks = useMemo(() => activeTasks.filter(t => t.type === 'weekly'), [activeTasks]);
@@ -262,6 +261,9 @@ const TasksPanel: React.FC = () => {
 
   const completedCount = useMemo(() => activeTasks.filter(t => completedTasks.includes(t.id)).length, [activeTasks, completedTasks]);
   const remainingCount = useMemo(() => activeTasks.length - completedCount, [activeTasks, completedCount]);
+
+  // Handle early returns AFTER all hooks
+  if (!user) return null;
 
   return (
     <div className="space-y-6">
