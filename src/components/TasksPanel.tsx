@@ -25,6 +25,15 @@ const TasksPanel: React.FC = () => {
   const { completedTasks, loading: completionLoading, error: completionError } = useUserTaskCompletion(user?.userId || null);
   const [completingTask, setCompletingTask] = useState<string | null>(null);
 
+  // Move all useMemo hooks to top level to avoid hook order violations
+  const activeTasks = useMemo(() => tasks.filter(task => task.active), [tasks]);
+  const dailyTasks = useMemo(() => activeTasks.filter(t => t.type === 'daily'), [activeTasks]);
+  const weeklyTasks = useMemo(() => activeTasks.filter(t => t.type === 'weekly'), [activeTasks]);
+  const specialTasks = useMemo(() => activeTasks.filter(t => t.type === 'special'), [activeTasks]);
+  const socialTasks = useMemo(() => activeTasks.filter(t => ['youtube', 'channel_join', 'group_join', 'link'].includes(t.type)), [activeTasks]);
+  const completedCount = useMemo(() => activeTasks.filter(t => completedTasks.includes(t.id)).length, [activeTasks, completedTasks]);
+  const remainingCount = useMemo(() => activeTasks.length - completedCount, [activeTasks, completedCount]);
+
   // FIX: Add error handling and loading state for blank screen issue
   if (tasksLoading || completionLoading) {
     return (
@@ -251,16 +260,6 @@ const TasksPanel: React.FC = () => {
       </motion.div>
     );
   };
-
-  // Move all useMemo hooks to top level to avoid hook order violations
-  const activeTasks = useMemo(() => tasks.filter(task => task.active), [tasks]);
-  const dailyTasks = useMemo(() => activeTasks.filter(t => t.type === 'daily'), [activeTasks]);
-  const weeklyTasks = useMemo(() => activeTasks.filter(t => t.type === 'weekly'), [activeTasks]);
-  const specialTasks = useMemo(() => activeTasks.filter(t => t.type === 'special'), [activeTasks]);
-  const socialTasks = useMemo(() => activeTasks.filter(t => ['youtube', 'channel_join', 'group_join', 'link'].includes(t.type)), [activeTasks]);
-
-  const completedCount = useMemo(() => activeTasks.filter(t => completedTasks.includes(t.id)).length, [activeTasks, completedTasks]);
-  const remainingCount = useMemo(() => activeTasks.length - completedCount, [activeTasks, completedCount]);
 
   // Handle early returns AFTER all hooks
   if (!user) return null;
