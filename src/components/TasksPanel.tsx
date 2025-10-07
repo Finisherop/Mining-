@@ -261,7 +261,7 @@ const TasksPanel: React.FC = () => {
   const socialTasks = useMemo(() => activeTasks.filter(t => ['youtube', 'channel_join', 'group_join', 'link'].includes(t.type)), [activeTasks]);
 
   const completedCount = useMemo(() => activeTasks.filter(t => completedTasks.includes(t.id)).length, [activeTasks, completedTasks]);
-  const remainingCount = useMemo(() => activeTasks.length - completedCount, [activeTasks.length, completedCount]);
+  const remainingCount = useMemo(() => activeTasks.length - completedCount, [activeTasks, completedCount]);
 
   return (
     <div className="space-y-6">
