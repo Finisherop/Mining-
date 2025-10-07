@@ -693,6 +693,184 @@ const SuperEnhancedAdminPanel: React.FC = () => {
         </div>
       </motion.div>
 
+      {/* VIP Pricing Settings - ENHANCED */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="glass-panel p-6"
+      >
+        <div className="flex items-center space-x-3 mb-6">
+          <Crown className="w-6 h-6 text-yellow-400" />
+          <h3 className="text-xl font-bold text-white">VIP Upgrade Pricing</h3>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Bronze VIP */}
+          <div className="bg-gradient-to-r from-orange-500/10 to-yellow-500/10 border border-orange-500/20 rounded-lg p-6">
+            <div className="flex items-center space-x-2 mb-4">
+              <Crown className="w-5 h-5 text-orange-400" />
+              <h4 className="text-lg font-bold text-orange-400">Bronze VIP</h4>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Price in Stars
+                </label>
+                <input
+                  type="number"
+                  value={localSettings.vipPricing.bronze.stars}
+                  onChange={(e) => setLocalSettings(prev => ({
+                    ...prev,
+                    vipPricing: {
+                      ...prev.vipPricing,
+                      bronze: { ...prev.vipPricing.bronze, stars: parseInt(e.target.value) || 0 }
+                    }
+                  }))}
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-orange-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Price in INR
+                </label>
+                <input
+                  type="number"
+                  value={localSettings.vipPricing.bronze.inr}
+                  onChange={(e) => setLocalSettings(prev => ({
+                    ...prev,
+                    vipPricing: {
+                      ...prev.vipPricing,
+                      bronze: { ...prev.vipPricing.bronze, inr: parseInt(e.target.value) || 0 }
+                    }
+                  }))}
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-orange-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Duration (Days)
+                </label>
+                <input
+                  type="number"
+                  value={localSettings.vipPricing.bronze.duration}
+                  onChange={(e) => setLocalSettings(prev => ({
+                    ...prev,
+                    vipPricing: {
+                      ...prev.vipPricing,
+                      bronze: { ...prev.vipPricing.bronze, duration: parseInt(e.target.value) || 0 }
+                    }
+                  }))}
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-orange-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Diamond VIP */}
+          <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg p-6">
+            <div className="flex items-center space-x-2 mb-4">
+              <Crown className="w-5 h-5 text-blue-400" />
+              <h4 className="text-lg font-bold text-blue-400">Diamond VIP</h4>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Price in Stars
+                </label>
+                <input
+                  type="number"
+                  value={localSettings.vipPricing.diamond.stars}
+                  onChange={(e) => setLocalSettings(prev => ({
+                    ...prev,
+                    vipPricing: {
+                      ...prev.vipPricing,
+                      diamond: { ...prev.vipPricing.diamond, stars: parseInt(e.target.value) || 0 }
+                    }
+                  }))}
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Price in INR
+                </label>
+                <input
+                  type="number"
+                  value={localSettings.vipPricing.diamond.inr}
+                  onChange={(e) => setLocalSettings(prev => ({
+                    ...prev,
+                    vipPricing: {
+                      ...prev.vipPricing,
+                      diamond: { ...prev.vipPricing.diamond, inr: parseInt(e.target.value) || 0 }
+                    }
+                  }))}
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Duration (Days)
+                </label>
+                <input
+                  type="number"
+                  value={localSettings.vipPricing.diamond.duration}
+                  onChange={(e) => setLocalSettings(prev => ({
+                    ...prev,
+                    vipPricing: {
+                      ...prev.vipPricing,
+                      diamond: { ...prev.vipPricing.diamond, duration: parseInt(e.target.value) || 0 }
+                    }
+                  }))}
+                  className="w-full bg-gray-800/50 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Preview Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="glass-panel p-6"
+      >
+        <h3 className="text-lg font-bold text-white mb-4">Pricing Preview</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <Crown className="w-4 h-4 text-orange-400" />
+              <span className="text-orange-400 font-semibold">Bronze VIP</span>
+            </div>
+            <div className="space-y-1 text-sm">
+              <div>⭐ {localSettings.vipPricing.bronze.stars} Stars</div>
+              <div>💰 ₹{localSettings.vipPricing.bronze.inr} INR</div>
+              <div>📅 {localSettings.vipPricing.bronze.duration} Days</div>
+            </div>
+          </div>
+          
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <Crown className="w-4 h-4 text-blue-400" />
+              <span className="text-blue-400 font-semibold">Diamond VIP</span>
+            </div>
+            <div className="space-y-1 text-sm">
+              <div>⭐ {localSettings.vipPricing.diamond.stars} Stars</div>
+              <div>💰 ₹{localSettings.vipPricing.diamond.inr} INR</div>
+              <div>📅 {localSettings.vipPricing.diamond.duration} Days</div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Save Button */}
       <div className="flex justify-end">
         <motion.button
