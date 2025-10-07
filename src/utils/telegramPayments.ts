@@ -1,19 +1,50 @@
 import { UserTier } from '../types';
+import { TelegramUser, TelegramWebAppInitData } from '../types/telegram';
 
 // Telegram WebApp payment utilities
 declare global {
   interface Window {
     Telegram?: {
       WebApp?: {
+        // Payment methods
         openInvoice: (url: string, callback?: (status: string) => void) => void;
+        
+        // UI methods
         showAlert: (message: string) => void;
         showConfirm: (message: string, callback: (confirmed: boolean) => void) => void;
-        HapticFeedback: {
+        
+        // Haptic feedback
+        HapticFeedback?: {
           impactOccurred: (style: 'light' | 'medium' | 'heavy') => void;
           notificationOccurred: (type: 'error' | 'success' | 'warning') => void;
         };
-        ready: () => void;
+        
+        // Initialization methods
+        ready: (callback?: () => void) => void;
         expand: () => void;
+        
+        // Theme methods
+        setHeaderColor?: (color: string) => void;
+        setBackgroundColor?: (color: string) => void;
+        
+        // Data properties
+        initData?: string;
+        initDataUnsafe?: TelegramWebAppInitData & {
+          user?: TelegramUser;
+          start_param?: string;
+          auth_date?: number;
+          hash?: string;
+        };
+        
+        // Version and platform info
+        version?: string;
+        platform?: string;
+        colorScheme?: 'light' | 'dark';
+        
+        // Viewport info
+        viewportHeight?: number;
+        viewportStableHeight?: number;
+        isExpanded?: boolean;
       };
     };
   }

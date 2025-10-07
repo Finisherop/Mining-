@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+// Import Telegram types
+import './utils/telegramPayments';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
 import TabbedAdminPanel from './components/TabbedAdminPanel';
