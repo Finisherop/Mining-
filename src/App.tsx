@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout';
-import TabbedAdminPanel from './components/TabbedAdminPanel';
 import SuperAdminPanel from './components/SuperAdminPanel';
 import NetworkStatus from './components/NetworkStatus';
 import { useFirebaseUser, createOrUpdateUser } from './firebase/hooks';
@@ -28,40 +27,25 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
-        console.log('🚀 Initializing app...');
-        console.log('📱 Telegram data:', telegramData);
-        console.log('👤 Telegram user:', telegramUser);
-        console.log('🆔 User ID:', userId);
-        
-        // FIX: Handle access from other devices (non-Telegram)
         const urlParams = new URLSearchParams(window.location.search);
         const forceUserMode = urlParams.get('user') === 'true';
-        // Admin access: URL param OR specific Telegram IDs
-        const adminUserIds = [6779644494, 987654321]; // Add your Telegram user IDs here
+        const adminUserIds = [6779644494, 987654321]; // Admin IDs
         const isAdminMode = !forceUserMode && (
           urlParams.get('admin') === 'true' || 
           urlParams.get('superadmin') === 'true' ||
           (telegramUser && adminUserIds.includes(telegramUser.id))
         );
-        
-        // FIX: Check if accessing from external device (no Telegram data)
+
         const isExternalDevice = !telegramUser && !telegramData;
         const demoUserId = urlParams.get('demo') || 'demo-user-001';
-        
-        console.log('⚙️ Force user mode:', forceUserMode);
-        console.log('👑 Is admin mode:', isAdminMode);
-        console.log('📱 Is external device:', isExternalDevice);
-        
+
         if (isAdminMode) {
-          console.log('🔧 Setting admin mode');
           setIsAdmin(true);
           setLoading(false);
           return;
         }
 
-        // FIX: Handle external device access with demo user
         if (isExternalDevice) {
-          console.log('🌐 External device detected - creating demo user');
           const demoUser: User = {
             id: demoUserId,
             userId: demoUserId,
@@ -97,7 +81,7 @@ function App() {
             referralCount: 0,
             vipExpiry: null
           };
-          
+
           setCurrentUser(demoUser);
           saveUserToStorage(demoUser);
           setIsAdmin(false);
@@ -105,37 +89,30 @@ function App() {
           return;
         }
 
-        // User Panel Mode (Telegram users)
-        console.log('👥 Setting user mode');
         setIsAdmin(false);
-        
+
         if (telegramUser && userId) {
-          console.log('✅ Processing Telegram user with ID:', userId);
           let userPhoto = '';
           try {
             userPhoto = await getTelegramUserPhoto(telegramUser.id) || '';
-          } catch (error) {
-            console.log('Could not fetch user photo:', error);
-          }
+          } catch {}
 
           if (firebaseUser) {
-            // Update existing user with latest Telegram data
             const updatedUser = {
               ...firebaseUser,
               username: telegramUser.username || telegramUser.first_name || firebaseUser.username,
               lastActive: Date.now(),
               photo_url: userPhoto
             };
-            
+
             await createOrUpdateUser(userId, updatedUser);
             setCurrentUser(updatedUser);
           } else {
-            // Create new user
             const newUser: User = {
               id: userId,
               userId,
               username: telegramUser.username || telegramUser.first_name || 'User',
-              coins: 100, // Starting coins
+              coins: 100,
               stars: 0,
               tier: 'free',
               vipExpiry: null,
@@ -160,13 +137,11 @@ function App() {
               referral_boost: 1,
               photo_url: userPhoto
             };
-            
+
             await createOrUpdateUser(userId, newUser);
             setCurrentUser(newUser);
           }
         } else if (!telegramUser) {
-          // No Telegram user detected - create a demo user for testing
-          console.log('⚠️ No Telegram user detected, creating demo user for testing');
           const demoUser: User = {
             id: 'demo_user',
             userId: 'demo_user',
@@ -205,12 +180,9 @@ function App() {
       }
     };
 
-    if (!firebaseLoading) {
-      initializeApp();
-    }
+    if (!firebaseLoading) initializeApp();
   }, [telegramUser, userId, firebaseUser, firebaseLoading]);
 
-  // Update current user when Firebase user changes
   useEffect(() => {
     if (firebaseUser && !isAdmin) {
       setCurrentUser(firebaseUser);
@@ -218,18 +190,14 @@ function App() {
     }
   }, [firebaseUser, isAdmin]);
 
-  // Sync user data with store on app load
   useEffect(() => {
     if (currentUser) {
-      // Import store dynamically to avoid circular dependency
       import('./store').then(({ useAppStore }) => {
         const { setUser } = useAppStore.getState();
         setUser(currentUser);
-        console.log('✅ User data synced with store');
       });
     }
   }, [currentUser]);
-
 
   if (loading || (isTelegramUser() && firebaseLoading)) {
     return (
@@ -251,9 +219,8 @@ function App() {
 
   return (
     <div className="App">
-      {/* FIX: Network status indicator for device connectivity */}
       <NetworkStatus />
-      
+
       {isAdmin ? (
         (() => {
           const urlParams = new URLSearchParams(window.location.search);
@@ -261,7 +228,9 @@ function App() {
           return isSuperAdmin && currentUser ? (
             <SuperAdminPanel adminUser={currentUser} />
           ) : (
-            <TabbedAdminPanel />
+            <div className="min-h-screen flex items-center justify-center text-white">
+              <p>No admin panel available.</p>
+            </div>
           );
         })()
       ) : currentUser ? (
@@ -282,9 +251,6 @@ function App() {
                 <span className="text-blue-400">?user=true</span> - User Panel
               </div>
               <div className="bg-gray-800/50 p-2 rounded">
-                <span className="text-green-400">?admin=true</span> - Admin Panel
-              </div>
-              <div className="bg-gray-800/50 p-2 rounded">
                 <span className="text-purple-400">?superadmin=true</span> - Super Admin Panel
               </div>
               <div className="bg-gray-800/50 p-2 rounded">
@@ -297,7 +263,7 @@ function App() {
           </motion.div>
         </div>
       )}
-      
+
       <Toaster
         position="top-center"
         toastOptions={{
