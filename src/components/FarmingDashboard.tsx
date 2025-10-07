@@ -15,11 +15,17 @@ const FarmingDashboard: React.FC = () => {
 
   // FIX: Use session earnings directly instead of local state
   const [animateCoins, setAnimateCoins] = useState(false);
+  const [lastEarnings, setLastEarnings] = useState(0);
   
-  // Calculate current earnings from session data
+  // Calculate current earnings from session data - FIXED FOR REAL-TIME DISPLAY
   const currentEarnings = farmingSession?.active ? farmingSession.totalEarned : 0;
   const sessionDuration = farmingSession?.active 
     ? Math.floor((Date.now() - farmingSession.startTime) / 1000 / 60) 
+    : 0;
+  
+  // Track session time in seconds for better precision
+  const sessionSeconds = farmingSession?.active 
+    ? Math.floor((Date.now() - farmingSession.startTime) / 1000)
     : 0;
 
   useEffect(() => {
@@ -30,15 +36,15 @@ const FarmingDashboard: React.FC = () => {
       updateFarmingEarnings();
       
       // Animate coins when earnings increase
-      const newEarnings = farmingSession.totalEarned;
-      if (newEarnings > currentEarnings) {
+      if (farmingSession.totalEarned > lastEarnings) {
         setAnimateCoins(true);
+        setLastEarnings(farmingSession.totalEarned);
         setTimeout(() => setAnimateCoins(false), 500);
       }
     }, 1000); // Update every second for smooth experience
 
     return () => clearInterval(interval);
-  }, [farmingSession?.active, user, updateFarmingEarnings, farmingSession?.totalEarned, currentEarnings]);
+  }, [farmingSession?.active, user, updateFarmingEarnings, farmingSession?.totalEarned, lastEarnings]);
 
   const handleFarmingToggle = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (farmingSession?.active) {
@@ -327,7 +333,7 @@ const FarmingDashboard: React.FC = () => {
                 {formatNumber(currentEarnings)} coins earned
               </span>
               <span className="text-green-400">
-                {sessionDuration}min active
+                {Math.floor(sessionSeconds / 60)}m {sessionSeconds % 60}s active
               </span>
               <span className="text-yellow-400">
                 {farmingSession.baseRate * farmingSession.multiplier} coins/min
@@ -354,7 +360,7 @@ const FarmingDashboard: React.FC = () => {
             />
           </div>
           
-          {/* Session Stats */}
+          {/* Session Stats - UPDATED WITH REAL-TIME DATA */}
           <div className="grid grid-cols-3 gap-4 text-xs">
             <div className="text-center">
               <div className="text-white font-semibold">{Math.floor(sessionDuration / 60)}h {sessionDuration % 60}m</div>
@@ -362,15 +368,15 @@ const FarmingDashboard: React.FC = () => {
             </div>
             <div className="text-center">
               <div className="text-green-400 font-semibold">
-                +{Math.floor((sessionDuration * farmingSession.baseRate * farmingSession.multiplier) / 60)}/hr
+                +{farmingSession.baseRate * farmingSession.multiplier}/min
               </div>
               <div className="text-gray-400">Earning Rate</div>
             </div>
             <div className="text-center">
               <div className="text-primary-400 font-semibold">
-                {formatNumber(Math.floor(sessionDuration * farmingSession.baseRate * farmingSession.multiplier))} total
+                {formatNumber(currentEarnings)}
               </div>
-              <div className="text-gray-400">Expected</div>
+              <div className="text-gray-400">Session Total</div>
             </div>
           </div>
         </motion.div>

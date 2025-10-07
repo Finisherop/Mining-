@@ -276,18 +276,20 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { user } = get();
     if (!user) return;
     
-    const tierConfig = TIER_CONFIGS[user.tier];
+    const tierConfig = TIER_CONFIGS[user.vip_tier || user.tier];
     const session: FarmingSession = {
       startTime: Date.now(),
-      baseRate: user.farmingRate,
-      multiplier: tierConfig.farmingMultiplier,
+      baseRate: user.farmingRate || 10, // Default to 10 coins per minute
+      multiplier: user.multiplier || tierConfig.farmingMultiplier || 1,
       totalEarned: 0,
+      sessionCoinsAdded: 0, // Initialize coins added tracker
+      lastUpdate: Date.now(),
       active: true
     };
     
     set({ farmingSession: session });
     saveFarmingSession(session);
-    console.log('🚀 Farming session started and saved');
+    console.log('🚀 Farming session started with proper initialization:', session);
   },
   
   stopFarming: async () => {
@@ -325,27 +327,32 @@ export const useAppStore = create<AppState>((set, get) => ({
     const now = Date.now();
     const duration = (now - farmingSession.startTime) / 1000 / 60; // minutes
     
-    // FIX: Ensure we have a minimum duration before calculating earnings
-    if (duration < 0.1) return; // Wait at least 6 seconds
-    
+    // FIXED: Calculate earnings every second for real-time display
     const totalEarned = Math.floor(duration * farmingSession.baseRate * farmingSession.multiplier);
     
-    // Calculate new earnings since last update
-    const previousEarned = farmingSession.totalEarned || 0;
-    const newEarnings = Math.max(0, totalEarned - previousEarned);
-    
+    // Always update session with current earnings for real-time display
     const updatedSession = { 
       ...farmingSession, 
       totalEarned: totalEarned,
       lastUpdate: now 
     };
     
-    // Only update user coins if there are new earnings
-    const updatedUser = newEarnings > 0 ? { 
-      ...user, 
-      coins: user.coins + newEarnings,
-      totalEarnings: user.totalEarnings + newEarnings
+    // Update user coins only every minute to prevent spam
+    const minutesPassed = Math.floor(duration);
+    const coinsFromMinutes = minutesPassed * farmingSession.baseRate * farmingSession.multiplier;
+    const currentSessionCoins = farmingSession.sessionCoinsAdded || 0;
+    const newCoinsToAdd = Math.max(0, coinsFromMinutes - currentSessionCoins);
+    
+    const updatedUser = newCoinsToAdd > 0 ? {
+      ...user,
+      coins: user.coins + newCoinsToAdd,
+      totalEarnings: user.totalEarnings + newCoinsToAdd
     } : user;
+    
+    // Track coins added this session
+    if (newCoinsToAdd > 0) {
+      updatedSession.sessionCoinsAdded = (farmingSession.sessionCoinsAdded || 0) + newCoinsToAdd;
+    }
     
     set({
       user: updatedUser,
@@ -355,22 +362,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     // Update farming session in storage with localStorage auto-sync
     saveFarmingSession(updatedSession);
     
-    // AUTO-SYNC: Continuously save to localStorage for ultra-fast access
-    if (newEarnings > 0) {
-      localStorage.setItem('userData', JSON.stringify({
-        ...updatedUser,
-        lastSync: Date.now()
-      }));
-      
-      console.log('💰 Farming earnings updated:', {
-        duration: duration.toFixed(2),
-        newEarnings,
-        totalEarned,
-        totalCoins: updatedUser.coins,
-        rate: farmingSession.baseRate,
-        multiplier: farmingSession.multiplier
-      });
-    }
+    // AUTO-SYNC: Save to localStorage for ultra-fast access
+    localStorage.setItem('userData', JSON.stringify({
+      ...updatedUser,
+      lastSync: Date.now()
+    }));
+    
+    console.log('💰 Farming earnings updated:', {
+      duration: duration.toFixed(2),
+      totalEarned,
+      newCoinsToAdd,
+      totalCoins: updatedUser.coins,
+      rate: farmingSession.baseRate,
+      multiplier: farmingSession.multiplier,
+      sessionActive: true
+    });
   },
   
   // Daily rewards
