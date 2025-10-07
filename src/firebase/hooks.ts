@@ -3,6 +3,8 @@ import { ref, get, set, onValue, off, push, update, remove } from 'firebase/data
 import { database } from './config';
 import { User } from '../types/firebase';
 import { Task, WithdrawalRequest, AdminConfig } from '../types';
+import { extractSafeUserId, sanitizeFirebasePath } from '../utils/firebaseSanitizer';
+import { safeCreateOrUpdateUser, createSafeRef } from './safeConnection';
 
 // Custom hook for Firebase user data
 export const useFirebaseUser = (userId: string | null) => {
@@ -16,7 +18,11 @@ export const useFirebaseUser = (userId: string | null) => {
       return;
     }
 
-    const userRef = ref(database, `users/${userId}`);
+    try {
+      // SAFE: Use sanitized user ID for Firebase path
+      const safeUserId = extractSafeUserId(userId);
+      const userRef = ref(database, `users/${safeUserId}`);
+      console.log(`🔒 Setting up safe user listener for ID: ${safeUserId}`);
     
     const unsubscribe = onValue(userRef, (snapshot: any) => { // <-- ERROR FIX: Add explicit type for Firebase callback
       try {
@@ -37,6 +43,11 @@ export const useFirebaseUser = (userId: string | null) => {
     });
 
     return () => off(userRef, 'value', unsubscribe);
+    } catch (err) {
+      console.error('❌ Failed to setup user listener:', err);
+      setError(err instanceof Error ? err.message : 'Failed to setup user listener');
+      setLoading(false);
+    }
   }, [userId]);
 
   return { user, loading, error };
@@ -76,10 +87,10 @@ export const useFirebaseUsers = () => {
   return { users, loading, error };
 };
 
-// Function to create or update user with enhanced error handling
+// SAFE: Function to create or update user with path sanitization
 export const createOrUpdateUser = async (userId: string, userData: Partial<User>): Promise<boolean> => {
   try {
-    console.log(`👤 Creating/updating user: ${userId}`, userData);
+    console.log(`🔒 Creating/updating user with safe methods: ${userId}`);
     
     // Validate userId
     if (!userId || userId === 'null' || userId === 'undefined') {
@@ -87,7 +98,16 @@ export const createOrUpdateUser = async (userId: string, userData: Partial<User>
       return false;
     }
 
-    const userRef = ref(database, `users/${userId}`);
+    // SAFE: Use sanitized methods for user creation/update
+    const success = await safeCreateOrUpdateUser(userId, userData);
+    
+    if (success) {
+      console.log(`✅ User created/updated successfully with safe methods: ${userId}`);
+    } else {
+      console.error(`❌ Failed to create/update user: ${userId}`);
+    }
+    
+    return success;
     
     // Test database connection first
     if ((window as any).firebaseConnected !== true) {
