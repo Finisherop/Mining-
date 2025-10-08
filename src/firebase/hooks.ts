@@ -19,11 +19,8 @@ export const useFirebaseUser = (userId: string | null) => {
     
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
-      if (loading) {
-        console.warn('Firebase user loading timeout');
-        setError('Connection timeout');
-        setLoading(false);
-      }
+      setError('Connection timeout');
+      setLoading(false);
     }, 8000);
     
     const unsubscribe = onValue(userRef, (snapshot) => {
@@ -66,11 +63,8 @@ export const useFirebaseUsers = () => {
     
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
-      if (loading) {
-        console.warn('Firebase users loading timeout');
-        setError('Connection timeout');
-        setLoading(false);
-      }
+      setError('Connection timeout');
+      setLoading(false);
     }, 8000);
     
     const unsubscribe = onValue(usersRef, (snapshot) => {
@@ -127,7 +121,7 @@ export const createOrUpdateUser = async (userId: string, userData: Partial<User>
         totalEarnings: userData.totalEarnings || 0,
         lastActive: Date.now(),
         createdAt: userData.createdAt || Date.now(),
-        vipExpiry: userData.vipExpiry || null,
+        vipExpiry: userData.vipExpiry ?? null,
         ...userData
       };
     }
